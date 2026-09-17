@@ -35,6 +35,8 @@ uv run python scripts/wave1d_demo.py          # two-panel MP4 + snapshot PNG, na
 uv run python scripts/wave2d_nodes.py         # interface-fitted node set (dissertation Fig. 3-3)
 uv run python scripts/wave2d_eigenvalues.py   # operator spectrum with/without hyperviscosity (Fig. 3-2)
 uv run python scripts/wave2d_hyperviscosity.py  # error and stability vs hyperviscosity amplitude
+uv run python scripts/wave2d_convergence.py   # 2-D error vs resolution, flat and curved interfaces (Fig. 3-5 / 3-8)
+uv run python scripts/wave2d_demo.py          # 2-D two-panel MP4 + snapshot PNG; --amplitude 0.02 for curved interfaces
 ```
 
 ## Layout
@@ -82,7 +84,9 @@ and are used as a read-only reference for the Python ports here.
 - [x] 2-D interface-aware stencils: coupled piecewise-polynomial bases
       across interfaces, error down to the resolution floor on the analytic
       test problem (2026-09-17)
-- [ ] 2-D curved-interface runs, two-panel video
+- [x] 2-D curved-interface runs, convergence figure, two-panel videos with
+      error maps (flat: vs the exact solution; curved: vs a 4x finer
+      interface-aware run) (2026-09-17)
 - [ ] Rehearsal
 
 ## License

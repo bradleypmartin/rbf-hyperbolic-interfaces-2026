@@ -87,6 +87,43 @@ class StencilWeights:
     condition: np.ndarray | None  # (s,) 1-norm condition estimates if requested
 
 
+def _saddle_point_system(
+    off: np.ndarray, shape: float, shape_neighbor: int, exps: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Left-hand sides of the saddle-point systems for a chunk of stencils.
+
+    ``off`` is ``(c, n, 2)``. Returns ``(lhs, eps2, r, r_max)``: the
+    ``(c, n + m, n + m)`` matrices, the squared shape parameter per stencil,
+    the node distances from the evaluation point ``(c, n)`` and the
+    polynomial scaling distance ``(c,)``.
+    """
+    n = off.shape[1]
+    m = len(exps)
+    r = np.linalg.norm(off, axis=2)  # (c, n)
+    r_sorted = np.sort(r, axis=1)
+    d_shape = r_sorted[:, shape_neighbor]
+    r_max = r_sorted[:, -1]
+    if np.any(d_shape <= 0) or np.any(r_max <= 0):
+        raise ValueError("degenerate stencil (coincident nodes)")
+    eps2 = (shape / d_shape) ** 2  # (c,)
+
+    diff = off[:, :, None, :] - off[:, None, :, :]  # (c, n, n, 2)
+    r2 = np.sum(diff**2, axis=3)
+    r2_off = r2 + np.diag(np.full(n, np.inf))
+    if np.any(r2_off.min(axis=(1, 2)) <= 0):
+        raise ValueError("degenerate stencil (coincident nodes)")
+    a = np.exp(-eps2[:, None, None] * r2)
+    xt = off / r_max[:, None, None]  # scaled coordinates (c, n, 2)
+    p = xt[:, :, 0:1] ** exps[:, 0] * xt[:, :, 1:2] ** exps[:, 1]  # (c, n, m)
+
+    c = off.shape[0]
+    lhs = np.zeros((c, n + m, n + m))
+    lhs[:, :n, :n] = a
+    lhs[:, :n, n:] = p
+    lhs[:, n:, :n] = np.transpose(p, (0, 2, 1))
+    return lhs, eps2, r, r_max
+
+
 def rbf_fd_weights(
     offsets: np.ndarray,
     *,
@@ -102,7 +139,9 @@ def rbf_fd_weights(
     ``offsets`` has shape ``(s, n, 2)``: displacements of the ``n`` stencil
     nodes from the evaluation point of each of the ``s`` stencils (the
     centre node itself may be one of them, at offset 0). Nodes need not be
-    sorted by distance.
+    sorted by distance. ``shape_neighbor`` indexes the sorted distances that
+    set ``eps``; the default 3 is the 3rd-nearest neighbour when the centre
+    node is in the stencil at distance 0.
     """
     offsets = np.asarray(offsets, dtype=float)
     if offsets.ndim != 3 or offsets.shape[2] != 2:
@@ -124,29 +163,9 @@ def rbf_fd_weights(
     for start in range(0, s_total, chunk):
         sl = slice(start, min(start + chunk, s_total))
         off = offsets[sl]
-        r = np.linalg.norm(off, axis=2)  # (c, n)
-        r_sorted = np.sort(r, axis=1)
-        d_shape = r_sorted[:, shape_neighbor]  # 3rd-nearest, centre excluded
-        r_max = r_sorted[:, -1]
-        if np.any(d_shape <= 0) or np.any(r_max <= 0):
-            raise ValueError("degenerate stencil (coincident nodes)")
-        eps2 = (shape / d_shape) ** 2  # (c,)
+        lhs, eps2, r, r_max = _saddle_point_system(off, shape, shape_neighbor, exps)
         eps2_all[sl] = eps2
-
-        diff = off[:, :, None, :] - off[:, None, :, :]  # (c, n, n, 2)
-        r2 = np.sum(diff**2, axis=3)
-        r2_off = r2 + np.diag(np.full(n, np.inf))
-        if np.any(r2_off.min(axis=(1, 2)) <= 0):
-            raise ValueError("degenerate stencil (coincident nodes)")
-        a = np.exp(-eps2[:, None, None] * r2)
-        xt = off / r_max[:, None, None]  # scaled coordinates (c, n, 2)
-        p = xt[:, :, 0:1] ** exps[:, 0] * xt[:, :, 1:2] ** exps[:, 1]  # (c, n, m)
-
         c = off.shape[0]
-        lhs = np.zeros((c, n + m, n + m))
-        lhs[:, :n, :n] = a
-        lhs[:, :n, n:] = p
-        lhs[:, n:, :n] = np.transpose(p, (0, 2, 1))
 
         phi = np.exp(-eps2[:, None] * r**2)  # (c, n), phi(|x_c - x_i|)
         n_rhs = 3 if hyper_power is not None else 2
@@ -178,3 +197,45 @@ def rbf_fd_weights(
     return StencilWeights(
         dx=dx, dy=dy, hyper=hyper, shape_scale=eps2_all, condition=cond
     )
+
+
+def rbf_interpolation_weights(
+    offsets: np.ndarray,
+    *,
+    shape: float = 0.4,
+    shape_neighbor: int = 2,
+    poly_degree: int = 4,
+    chunk: int = 2048,
+) -> np.ndarray:
+    """Weights ``(s, n)`` interpolating nodal values to each stencil's evaluation point.
+
+    The saddle-point system of :func:`rbf_fd_weights` with the identity in
+    place of the differential operator: the right-hand side is
+    ``phi(|x_e - x_i|)`` over the nodes and the monomials at the evaluation
+    point, ``(1, 0, ..., 0)``. The weights are exact for every polynomial in
+    the augmentation and reduce to a Kronecker delta when the evaluation
+    point is a stencil node. Evaluation points are generally not nodes, so
+    ``shape_neighbor`` defaults to 2: ``eps = shape / d`` with ``d`` the
+    distance to the third-nearest node, as for the derivative stencils.
+    """
+    offsets = np.asarray(offsets, dtype=float)
+    if offsets.ndim != 3 or offsets.shape[2] != 2:
+        raise ValueError("offsets must have shape (s, n, 2)")
+    s_total, n, _ = offsets.shape
+    exps = monomial_exponents(poly_degree)
+    m = len(exps)
+    if n < m:
+        raise ValueError(f"{n} nodes cannot support {m} polynomial terms")
+    if shape_neighbor >= n:
+        raise ValueError("shape_neighbor must index a stencil node")
+
+    w = np.empty((s_total, n))
+    for start in range(0, s_total, chunk):
+        sl = slice(start, min(start + chunk, s_total))
+        off = offsets[sl]
+        lhs, eps2, r, _ = _saddle_point_system(off, shape, shape_neighbor, exps)
+        rhs = np.zeros((off.shape[0], n + m, 1))
+        rhs[:, :n, 0] = np.exp(-eps2[:, None] * r**2)
+        rhs[:, n, 0] = 1.0  # the constant monomial comes first in exps
+        w[sl] = np.linalg.solve(lhs, rhs)[:, :n, 0]
+    return w

@@ -117,12 +117,18 @@ def run(
     pulse_center: float = 0.75,
     pulse_sharpness: float = 23.0,
     operators: Operators | None = None,
+    align_snapshots: bool = False,
 ) -> Snapshots2D:
     """Build operators (unless given), set the plane pulse, integrate to ``t_end``.
 
     ``t_end`` is hit exactly by shrinking the step so an integer number of
     steps lands on it. ``gamma_scale`` multiplies the MATLAB hyperviscosity
     amplitude of :func:`hyperviscosity_gamma`.
+
+    With ``align_snapshots`` the step count is rounded up to a multiple of
+    ``n_snapshots``, so the stored times are exactly ``j t_end / n_snapshots``
+    whatever the stable step: runs on different node sets then share their
+    snapshot times and can be compared frame by frame.
     """
     ops = (
         operators
@@ -134,6 +140,8 @@ def run(
 
     dt_target = stable_dt(nodes, medium, cfl, hyper=ops.hyper, gamma=gamma)
     n_steps = max(1, math.ceil(t_end / dt_target))
+    if align_snapshots and n_snapshots is not None:
+        n_steps = n_snapshots * math.ceil(n_steps / n_snapshots)
     dt = t_end / n_steps
     store_every = 1 if n_snapshots is None else max(1, n_steps // n_snapshots)
 
