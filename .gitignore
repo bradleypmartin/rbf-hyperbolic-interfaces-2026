@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- project-specific ---
+# Downloaded papers (public repo; see papers/README.md for sources)
+papers/*.pdf
+# Generated figures / animations / data
+outputs/
