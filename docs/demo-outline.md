@@ -180,3 +180,13 @@ the IMQ/GA formulation used in 2016.
   coding. Audience assumed to have no PDE background.
 - 2026-09-17: Repo is intentionally public. Nothing in Brad's own work is
   secret; keep it in mind, don't commit PDFs or anything employer-related.
+- 2026-09-17: 2-D work is an epic (#2) with sub-issues #5 domain, #6
+  operators, #7 naive simulation, #8 interface-aware, #9 video; one PR each.
+- 2026-09-17: RBF flavour is **Gaussian with a relative shape parameter**
+  (`eps = 0.4 / d`), Brad's call and what the MATLAB uses; not PHS.
+- 2026-09-17: 2-D goes naive-first: plain RBF-FD everywhere plus
+  hyperviscosity, validated against the flat-interface analytic solution,
+  before any interface-aware stencils. No Cartesian/FD hybrid far field for
+  now ("all RBF"); it is a runtime optimisation we can add if needed.
+- 2026-09-17: Node sets keep fixed hex-staggered rows straddling every
+  interface orthogonally (Brad: empirically the key to 2-D stability).
