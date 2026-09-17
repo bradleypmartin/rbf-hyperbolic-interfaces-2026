@@ -128,6 +128,26 @@ Demo beats:
    formulas (Z = ρc); convergence order plot.
 5. Animation.
 
+### 1-D results (2026-09-17, `scripts/wave1d_convergence.py`)
+
+Relative l2 error in stress at t = 1 against the exact ray-sum solution,
+c: 1 -> 2, rho: 1 -> 1, RK4 at CFL 0.4. Matches dissertation Fig. 2-8:
+naive is first order, interface-aware is fourth order, also when the layer
+(width 0.01) is thinner than the stencil.
+
+| nodes | naive, layer 0.5 | aware, layer 0.5 | naive, layer 0.01 | aware, layer 0.01 |
+| --- | --- | --- | --- | --- |
+| 200 | 1.2e-1 | 6.4e-2 | 1.3e-1 | 7.5e-2 |
+| 400 | 5.3e-2 | 4.5e-3 | 1.4e-2 | 5.5e-3 |
+| 800 | 2.6e-2 | 2.9e-4 | 6.1e-3 | 3.5e-4 |
+| 1600 | 1.3e-2 | 1.8e-5 | 3.0e-3 | 2.2e-5 |
+
+At 400 nodes (the dissertation's resolution) the naive solution's ringing is
+visible but not dramatic to a lay eye, so the video carries an error strip
+under each panel. Running longer does not widen the gap much (both errors
+grow; ratio stays ~5-10x), so the clip stops at t = 1.25, just before the
+transmitted pulse wraps around the periodic domain.
+
 ### 2-D problem (stretch)
 
 RBF-FD on a scattered, repulsion-relaxed node set in the doubly periodic unit

@@ -27,7 +27,12 @@ uv run pytest                  # tests
 ./papers/fetch_papers.sh       # download the public reference PDFs (gitignored)
 ```
 
-Drivers in `scripts/` write figures and animations to `outputs/` (gitignored).
+Drivers in `scripts/` write figures and animations to `outputs/` (gitignored):
+
+```sh
+uv run python scripts/wave1d_convergence.py   # error vs resolution (dissertation Fig. 2-8)
+uv run python scripts/wave1d_demo.py          # two-panel MP4 + snapshot PNG, naive vs aware
+```
 
 ## Layout
 
@@ -64,8 +69,9 @@ and are used as a read-only reference for the Python ports here.
 ## Status
 
 - [x] Environment, papers, plan (2026-09-17)
-- [ ] 1-D wave equation: Fornberg FD weights, interface-aware stencils,
-      thin-layer "double-cross", RK4, tests, animation
+- [x] 1-D wave equation: Fornberg FD weights, interface-aware stencils,
+      thin-layer "double-cross", RK4, exact reference solution, tests,
+      convergence figure, two-panel video (2026-09-17)
 - [ ] Navier–Stokes notes and slides
 - [ ] 2-D RBF-FD (stretch): periodic node set, kNN stencils, sparse operators,
       hyperviscosity, curved interfaces

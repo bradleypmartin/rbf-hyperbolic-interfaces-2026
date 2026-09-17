@@ -19,11 +19,20 @@ interface-aware, same resolution; 1-D and 2-D) in `outputs/`, and a short
 slide deck PDF in `slides/` covering both halves.
 
 Plan and timeline: `docs/demo-outline.md`. Papers: `papers/README.md`.
+**Before reading a PDF, check `docs/paper-index.md`** for the page ranges that
+matter and read only those (`pdftotext -f A -l B -layout <pdf> -`).
 
 ## Repo layout
 
 ```
-src/pdes_demo/   library code (solvers, stencil builders, node sets)
+src/pdes_demo/   library code
+  fd_weights.py    Fornberg FD weights (shared)
+  plotting.py      matplotlib style + validated two-series palette
+  wave1d/          domain.py (grid, materials, pulse) / operators.py (naive vs
+                   interface-aware differentiation matrices) / simulate.py (RK4)
+                   / exact.py (ray-sum reference solution)
+  wave2d/          (planned) same split: domain, operators, simulate, + node
+                   sets, periodic kNN, RBF-FD weights, hyperviscosity
 scripts/         runnable drivers that produce figures/animations in outputs/
 tests/           pytest; every new numerical routine gets a test
 docs/            demo outline, Navier–Stokes notes, derivations

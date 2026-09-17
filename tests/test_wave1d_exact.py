@@ -1,0 +1,63 @@
+import numpy as np
+import pytest
+
+from pdes_demo.wave1d import LayeredMedium, Material, exact_solution, right_going_pulse
+from pdes_demo.wave1d.domain import periodic_grid
+
+MEDIUM = LayeredMedium(layer=Material(c=2.0, rho=1.0), layer_width=0.5)  # Z: 1 -> 2
+
+
+def test_matches_initial_condition() -> None:
+    grid = periodic_grid(400)
+    u0, f0 = right_going_pulse(grid.x, MEDIUM)
+    u, f = exact_solution(grid.x, 0.0, MEDIUM)
+    np.testing.assert_allclose(f, f0, atol=1e-14)
+    np.testing.assert_allclose(u, u0, atol=1e-14)
+
+
+def test_reflection_and_transmission_amplitudes() -> None:
+    # Z1 = 1, Z2 = 2: R = 1/3, T = 4/3 into the layer; T' = 2/3, R' = -1/3 out.
+    # At t = 1.2 the pulses are well separated: reflected (1/3) at -0.7,
+    # transmitted (4/3 * 2/3) at 0.95, once-bounced back out (4/3 * -1/3 * 2/3)
+    # at -0.2, twice-bounced inside the layer (4/3 * -1/3 * -1/3) at 0.4.
+    _, f = exact_solution(np.array([-0.7, -0.2, 0.95]), 1.2, MEDIUM)
+    np.testing.assert_allclose(f, [1 / 3, -8 / 27, 8 / 9], atol=1e-9)
+    # Inside the layer the leading tail has already begun reflecting off the
+    # far edge, so the peak is only approximately the ray amplitude.
+    _, f_layer = exact_solution(np.array([0.4]), 1.2, MEDIUM)
+    np.testing.assert_allclose(f_layer, [4 / 27], atol=2e-4)
+
+
+@pytest.mark.parametrize("t", [0.5, 0.75, 1.0, 1.3, 1.9])
+def test_u_and_f_continuous_at_interfaces(t: float) -> None:
+    eps = 1e-9
+    for xi in (MEDIUM.layer_start, MEDIUM.layer_end):
+        ul, fl = exact_solution(np.array([xi - eps]), t, MEDIUM)
+        ur, fr = exact_solution(np.array([xi + eps]), t, MEDIUM)
+        assert abs(fl[0] - fr[0]) < 1e-6
+        assert abs(ul[0] - ur[0]) < 1e-6
+
+
+def test_energy_is_conserved() -> None:
+    # Energy density = rho u^2 / 2 + f^2 / (2 rho c^2); constant in time for
+    # the lossless problem, including after wrap-around on the periodic domain.
+    grid = periodic_grid(4000)
+    rho, c = MEDIUM.rho_at(grid.x), MEDIUM.c_at(grid.x)
+    energies = []
+    for t in (0.0, 0.6, 1.1, 2.3):
+        u, f = exact_solution(grid.x, t, MEDIUM)
+        energies.append(np.sum(0.5 * rho * u**2 + 0.5 * f**2 / (rho * c**2)) * grid.h)
+    np.testing.assert_allclose(energies, energies[0], rtol=1e-6)
+
+
+def test_uniform_medium_is_pure_translation() -> None:
+    uniform = LayeredMedium(layer=Material(c=1.0, rho=1.0))
+    grid = periodic_grid(400)
+    _, f = exact_solution(grid.x, 0.3, uniform)
+    _, f0 = right_going_pulse(grid.x - 0.3, uniform)
+    np.testing.assert_allclose(f, f0, atol=1e-12)
+
+
+def test_pulse_must_start_outside_layer() -> None:
+    with pytest.raises(ValueError):
+        exact_solution(np.zeros(3), 0.1, MEDIUM, center=0.25)
