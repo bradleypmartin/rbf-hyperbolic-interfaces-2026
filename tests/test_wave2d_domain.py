@@ -25,11 +25,10 @@ def test_material_wave_speeds_and_impedance() -> None:
     assert bg.c_p == pytest.approx(math.sqrt(3))
     assert ly.c_p == pytest.approx(math.sqrt(6))
     assert bg.c_s == pytest.approx(1.0)
-    # Reflection coefficient of dissertation eq. 49 for the default contrast.
+    # Reflection coefficient of dissertation eq. 49 for the default contrast,
+    # Z: sqrt(3) -> 2 sqrt(6), evaluated by hand.
     z1, z2 = bg.p_impedance, ly.p_impedance
-    assert (z1 - z2) / (z1 + z2) == pytest.approx(
-        (math.sqrt(3) - 2 * math.sqrt(6)) / (math.sqrt(3) + 2 * math.sqrt(6))
-    )
+    assert (z1 - z2) / (z1 + z2) == pytest.approx(-0.47759, abs=1e-5)
     assert FLAT.c_max == pytest.approx(math.sqrt(6))
 
 
@@ -141,3 +140,9 @@ def test_plane_p_wave_amplitudes_follow_the_start_material() -> None:
     np.testing.assert_allclose(s2[2], 0.5 * s2[4])
     with pytest.raises(ValueError):
         plane_p_wave(nodes, FLAT, center=0.3)
+    # Curved interfaces: the guard covers the whole sinusoid, not just x = 0.
+    with pytest.raises(ValueError):
+        plane_p_wave(nodes, CURVED, center=0.51)
+    with pytest.raises(ValueError):
+        plane_p_wave(nodes, CURVED, center=0.24)
+    plane_p_wave(nodes, CURVED, center=0.53)  # clear of the crests

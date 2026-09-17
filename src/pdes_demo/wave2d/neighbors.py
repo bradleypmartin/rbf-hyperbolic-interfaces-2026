@@ -14,8 +14,12 @@ BOX = 1.0
 
 
 def wrap(xy: np.ndarray) -> np.ndarray:
-    """Map coordinates onto [0, 1) componentwise."""
-    return np.mod(xy, BOX)
+    """Map coordinates onto [0, 1) componentwise.
+
+    ``np.mod`` of a negative number smaller than the ULP at 1 rounds up to
+    exactly 1.0, which ``cKDTree(boxsize=...)`` rejects; clamp it back.
+    """
+    return np.minimum(np.mod(xy, BOX), np.nextafter(BOX, 0.0))
 
 
 def minimal_image(disp: np.ndarray) -> np.ndarray:

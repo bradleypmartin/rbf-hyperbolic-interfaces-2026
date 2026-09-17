@@ -16,9 +16,11 @@ def test_minimal_image_measures_the_short_way_round() -> None:
 
 
 def test_wrap_lands_in_unit_square() -> None:
-    xy = wrap(np.array([[-0.25, 1.0], [1.75, -1e-9]]))
+    xy = wrap(np.array([[-0.25, 1.0], [1.75, -1e-9], [-1e-17, 0.3]]))
     assert np.all((xy >= 0) & (xy < 1))
     np.testing.assert_allclose(xy[0], [0.75, 0.0])
+    # Sub-ULP negatives used to round to exactly 1.0 and crash the KD-tree.
+    periodic_knn(np.array([[-1e-17, 0.5], [0.5, 0.5], [0.2, 0.2]]), 2)
 
 
 def test_periodic_knn_matches_brute_force() -> None:

@@ -72,7 +72,7 @@ class SineInterface:
         return np.stack([-np.sin(th), np.cos(th)], axis=-1)
 
     def vertical_offset(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        """Signed vertical distance ``y - height(x)`` wrapped to (-1/2, 1/2]."""
+        """Signed vertical distance ``y - height(x)`` wrapped to [-1/2, 1/2]."""
         return minimal_image(np.asarray(y) - self.height(x))
 
 
@@ -189,6 +189,8 @@ def _repulsion_step(
     disp = minimal_image(xy[free][:, None, :] - xy[idx])
     force = np.sum(disp / dist[..., None] ** 5, axis=1)
     norm = np.linalg.norm(force, axis=1, keepdims=True)
+    # Deliberate deviation from the MATLAB, which divides by zero here: a
+    # node with no net force (a perfectly symmetric neighbourhood) stays put.
     norm[norm == 0] = 1.0
     new = xy.copy()
     new[free] = wrap(xy[free] + delta * force / norm)
@@ -309,8 +311,10 @@ def plane_p_wave(
     that is ``h = sqrt(3) v`` and ``f = v / sqrt(3)``.
     """
     mat = medium.background
-    if medium.in_layer(np.array([0.0]), np.array([center]))[0]:
-        raise ValueError("pulse must start in the background material")
+    lowest = medium.lower.y0 - abs(medium.lower.amplitude)
+    highest = medium.upper.y0 + abs(medium.upper.amplitude)
+    if lowest <= center % 1.0 < highest:
+        raise ValueError("pulse must start in the background material for all x")
     v = np.exp(-(sharpness**2) * minimal_image(nodes.y - center) ** 2)
     state = np.zeros((len(FIELDS), nodes.n))
     state[1] = v
