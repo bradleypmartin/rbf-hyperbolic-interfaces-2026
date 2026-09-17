@@ -157,6 +157,36 @@ treatment in the 2017 JCP preprint: default to polyharmonic splines +
 polynomials (shape-parameter free) unless the interface treatment leans on
 the IMQ/GA formulation used in 2016.
 
+### 2-D results so far (2026-09-17, naive RBF-FD everywhere)
+
+Node sets: fixed hex rows straddling each interface plus a repulsion-relaxed
+field (`scripts/wave2d_nodes.py`). Operators: 30-node Gaussian RBF-FD
+stencils with degree-4 polynomials, `eps = 0.4 / d_3`, `Delta^3`
+hyperviscosity with the MATLAB amplitude `gamma = 2.4e-11 (h/0.02)^5`, RK4 at
+CFL 0.5 capped by the hyperviscosity spectrum.
+
+- Spectrum (`scripts/wave2d_eigenvalues.py`, 900 nodes): max Re(lambda) goes
+  from +26 without hyperviscosity to +0.01 with it; 10x gamma pushes the
+  damped modes past RK4's real-axis limit. In a uniform medium the MATLAB
+  gamma is exactly the smallest value that puts every eigenvalue in the
+  left half-plane (`scripts/wave2d_hyperviscosity.py`).
+- Uniform medium, plane P-wave (sigma = 10), t = 0.2, relative error in v
+  against the exact solution: 4.2e-3 (1600 nodes), 1.9e-3 (2500), 9.9e-4
+  (3600), 5.5e-4 (4900); rates 3.6-3.7. Errors are insensitive to gamma
+  between 0.25x and 4x the MATLAB value; larger gamma only shrinks the time
+  step.
+- Flat two-interface problem (dissertation §3.4.1, sigma = 23), t = 0.3,
+  naive stencils across the impedance jump, vs the ray-sum reference:
+
+  | nodes | naive, rel. error in v |
+  | --- | --- |
+  | 2500 | 1.1e-1 |
+  | 4900 | 6.9e-2 |
+  | 10000 | 3.1e-2 |
+
+  Rates 1.5-2.2: the baseline the interface-aware stencils (#8) must beat,
+  and the "before" panel of the 2-D video.
+
 ## Timeline (13 days from 2026-09-17)
 
 | Dates | Work |
