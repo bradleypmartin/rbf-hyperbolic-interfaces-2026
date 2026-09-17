@@ -47,9 +47,44 @@ alternatives (A)–(D) are on p. 2.
 
 ## Martin & Fornberg preprints
 
-- `martin-fornberg-2017-rbf-fd-seismic-interfaces-jcp-preprint.pdf` (44 pp.):
-  the 2-D interface treatment the dissertation ch. 3 builds on. Index the
-  relevant sections when 2-D work starts.
-- `martin-fornberg-stcyr-2015-rbf-fd-2d-seismic-geophysics-preprint.pdf`
-  (26 pp.): 2-D elastic RBF-FD without interfaces (node sets, hyperviscosity,
-  stencil sizes). Index when 2-D work starts.
+Both are indexed below; page numbers are PDF pages.
+
+### Geophysics 2015 (`martin-fornberg-stcyr-2015-rbf-fd-2d-seismic-geophysics-preprint.pdf`, 26 pp.)
+
+PDF page = printed page. The 3rd-order predecessor of the dissertation's
+2-D method; best source for the plain RBF-FD setup (Cases 1–3) and the
+elastic test problems.
+
+| PDF pages | Section | Use for |
+| --- | --- | --- |
+| 2–3 | Abstract, introduction (dispersive vs interface errors; FD is first order across interfaces) | Slide framing |
+| 4–8 | RBF-FD methodology: Case 1 (Cartesian FD), Case 2 (RBF-FD, eq. 1–6: interpolant, weights `A w = L phi`, polynomial augmentation eq. 5–6, "rows in P about half the rows in A"), IMQ used here, hyperviscosity citation (Fornberg–Lehto 2011) | Naive operator construction (#6) |
+| 8–13 | Case 3 in 1-D (eq. 7 EWE, eq. 8–17 continuity via powers of D; null space of `C^T`) | Cross-check of the 1-D method |
+| 13–18 | Case 3 in 2-D (eq. 18 expansions, eq. 19 five-field D, eq. 20 continuity of u', v', g', h', eq. 21–22 rotations, eq. 23–24; curvature via local expansion of the interface in x') | Interface-aware stencils (#8) |
+| 18–20 | Example 1: plane P-wave, two curved interfaces (Fig. 4 node set N = 1600, Fig. 5 errors at t = 0.3 vs pseudospectral) | Test case and expected error maps |
+| 21–23 | Example 2: point source in a mini-Marmousi model | Out of scope |
+| 23–24 | Conclusions, references | — |
+
+### JCP 2017 (`martin-fornberg-2017-rbf-fd-seismic-interfaces-jcp-preprint.pdf`, 44 pp.)
+
+PDF page = printed page. The 4th-order "simplified" interface treatment the
+dissertation ch. 3 is built on (square-matrix inversion instead of null
+spaces of rectangular matrices).
+
+| PDF pages | Section | Use for |
+| --- | --- | --- |
+| 2–4 | Abstract, introduction (advantages list; what changed vs the 2015 method) | Slide framing |
+| 4–8 | Methodology: Type 1/2/3 stencils, Fig. 1, eq. 1 (RBF-FD with polynomials) | — (same as Geophysics) |
+| 8–13 | Type 3 in 1-D (eq. 2–5), specific 1-D example (Fig. 2 wave-speed profile) | Cross-check of `wave1d` |
+| 13–23 | 1-D basis construction in detail (Fig. 3 basis functions, Fig. 4 weights near the interface), why the f-basis is one order lower and how to recover it | Already ported in `wave1d/operators.py` |
+| 23–31 | **2-D Type 3**: nearest interface point as origin, Fig. 5 (two rows straddle the interface; the layout "has been key in maintaining stability"; rest via static repulsion), eq. 33 continuity of u', v', g', h', eq. 34–35 rotations, u/v basis by inverting square continuity matrices, then f/g/h basis, elimination of dependent columns, curvature terms | Interface-aware stencils (#8) |
+| 31–33 | **Numerical parameters**: GA with `eps = 0.4/d` (eq. 42), 30 nodes / degree 4 away from interfaces, 19 / degree 3 across, Δ³ hyperviscosity on the same piecewise basis, RK4 | Defaults for #6, #7 |
+| 33–38 | Test case 1: two curved interfaces, λ = μ = 4 + sin(2πx) sin(2πy), ρ = 2 in the band (eq. 43; Fig. 6–10: fields, FD4 / PS / RBF / hybrid convergence, wall-clock, linear-vs-curved interface treatment) | Expected convergence (4th order) |
+| 39–42 | Test case 2: mini-Marmousi point source (Fig. 11–13), conclusions | Out of scope |
+| 42–43 | Acknowledgements, references | — |
+
+MATLAB counterpart of both: `~/MathGraduateResearchAndCourseWork/waveEq2DMatlab/`
+(see the breadcrumbs on issue #2). Note that the MATLAB uses GA for the
+dx/dy and hyperviscosity stencils (`GAshp = 0.4`, distance normalised by the
+4th column of `knnsearch`, i.e. the 3rd-nearest neighbour excluding self);
+the IMQ shape 0.2 only appears in the post-hoc error interpolant.
