@@ -48,19 +48,11 @@ is worth seeing both.
   Leray–Hopf solutions with forcing; Córdoba–Martínez-Zoroa forced Euler
   blowup and the hypodissipative NS extension with Zheng.
 
-### Reported in press, not yet verified by us (read before using)
+### Reported in press
 
-- "10,000 agents, 88 hours"; effort began 2026-09-01, result 2026-09-05.
-  (CNBC 2026-09-09)
-- Alpöge & Buckmaster released a paper on 2026-09-07 on the inviscid (Euler)
-  case, reportedly using Anthropic models; reporting describes a dispute over
-  priority and conduct, with comments from Tao. (Fortune 2026-09-08; Nature)
-- Clay still lists the problem as "Active" (2026-09-10); OpenAI says it does
-  not intend to claim the prize. (MLQ, kingy.ai summaries)
-
-Sources to read in full: CNBC, Nature, Fortune, The Week, and the OpenAI post
-(403s to scripted fetch; open in a browser). URLs in `papers/README.md` and
-the search log.
+Verified against CNBC, Fortune, and The Week on 2026-09-17; see
+`docs/navier-stokes-notes.md` for the attributed details and what remains
+unread (Nature, New Scientist, Axios, the Alpöge–Buckmaster paper).
 
 ### Discussion prompts
 
@@ -127,6 +119,26 @@ Demo beats:
 4. Verification: reflected/transmitted amplitudes vs. the analytic impedance
    formulas (Z = ρc); convergence order plot.
 5. Animation.
+
+### 1-D results (2026-09-17, `scripts/wave1d_convergence.py`)
+
+Relative l2 error in stress at t = 1 against the exact ray-sum solution,
+c: 1 -> 2, rho: 1 -> 1, RK4 at CFL 0.4. Matches dissertation Fig. 2-8:
+naive is first order, interface-aware is fourth order, also when the layer
+(width 0.01) is thinner than the stencil.
+
+| nodes | naive, layer 0.5 | aware, layer 0.5 | naive, layer 0.01 | aware, layer 0.01 |
+| --- | --- | --- | --- | --- |
+| 200 | 1.2e-1 | 6.4e-2 | 1.3e-1 | 7.5e-2 |
+| 400 | 5.3e-2 | 4.5e-3 | 1.4e-2 | 5.5e-3 |
+| 800 | 2.6e-2 | 2.9e-4 | 6.1e-3 | 3.5e-4 |
+| 1600 | 1.3e-2 | 1.8e-5 | 3.0e-3 | 2.2e-5 |
+
+At 400 nodes (the dissertation's resolution) the naive solution's ringing is
+visible but not dramatic to a lay eye, so the video carries an error strip
+under each panel. Running longer does not widen the gap much (both errors
+grow; ratio stays ~5-10x), so the clip stops at t = 1.25, just before the
+transmitted pulse wraps around the periodic domain.
 
 ### 2-D problem (stretch)
 
