@@ -19,6 +19,13 @@ Two halves:
    1-D wave equation with a thin heterogeneous layer first; 2-D RBF-FD on a
    scattered node set with curved interfaces if time allows.
 
+## Talk materials
+
+Hosted from `main` by GitHub Pages: [landing page](https://bradleypmartin.github.io/20260930-zd-ai-pdes-demo/),
+[slides (PDF)](https://bradleypmartin.github.io/20260930-zd-ai-pdes-demo/slides/talk.pdf),
+[the three clips](https://bradleypmartin.github.io/20260930-zd-ai-pdes-demo/slides/clips.html).
+Sources: `slides/` (see its README for the build and the clip player).
+
 ## Quickstart
 
 ```sh
