@@ -58,6 +58,26 @@ def test_uniform_medium_is_pure_translation() -> None:
     np.testing.assert_allclose(f, f0, atol=1e-12)
 
 
+@pytest.mark.parametrize("center", [-0.9, 0.2, 0.7])
+def test_non_default_pulse_center(center: float) -> None:
+    # Regression: the ray-pruning threshold once had the sign of ``center``
+    # backwards, which silently zeroed the field for centers >= 0.
+    uniform = LayeredMedium(layer=Material(c=1.0, rho=1.0), layer_start=-0.6)
+    t = 1.2
+    peak = (center + t + 1.0) % 2.0 - 1.0  # translate, then wrap onto [-1, 1)
+    _, f = exact_solution(np.array([peak]), t, uniform, center=center)
+    np.testing.assert_allclose(f, [1.0], atol=1e-12)
+    # And through the layer: energy still conserved for a pulse starting right
+    # of the layer and wrapping around into it.
+    grid = periodic_grid(4000)
+    rho, c = MEDIUM.rho_at(grid.x), MEDIUM.c_at(grid.x)
+    energies = []
+    for t in (0.0, 0.9, 1.7):
+        u, f = exact_solution(grid.x, t, MEDIUM, center=0.7)
+        energies.append(np.sum(0.5 * rho * u**2 + 0.5 * f**2 / (rho * c**2)) * grid.h)
+    np.testing.assert_allclose(energies, energies[0], rtol=1e-6)
+
+
 def test_pulse_must_start_outside_layer() -> None:
     with pytest.raises(ValueError):
         exact_solution(np.zeros(3), 0.1, MEDIUM, center=0.25)

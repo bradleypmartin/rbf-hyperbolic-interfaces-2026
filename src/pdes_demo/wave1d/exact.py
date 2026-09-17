@@ -61,9 +61,10 @@ def _trace_rays(
         rays.append(ray)
         x_b, region_b, is_interface = next_hop[(ray.region, ray.direction)]
         delay = ray.delay + ray.direction * (x_b - ray.x_emit) / speed[ray.region]
-        # The pulse peak reaches x_b at time delay + center; later than t_max
-        # (plus the pulse half-width) means nothing downstream can matter yet.
-        if delay + center > t_max + margin:
+        # The phase at x_b is delay - t and the pulse peaks at phase == center,
+        # so the peak reaches x_b at t = delay - center. Later than t_max (plus
+        # the pulse half-width) means nothing downstream can matter yet.
+        if delay - center > t_max + margin:
             continue
         if is_interface:
             z_a, z_b = imped[ray.region], imped[region_b]

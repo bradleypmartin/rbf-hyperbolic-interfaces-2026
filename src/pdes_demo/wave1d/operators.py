@@ -64,15 +64,9 @@ def build_operators(
     wf = np.empty(n * p)
 
     for i in range(n):
-        idx = np.arange(i - half, i + half + 1) % n
+        idx, xs = _stencil(grid, i, half)
         xe = grid.x[i]
-        xs = grid.x[idx]
-        # Unwrap periodic neighbours so stencil coordinates are contiguous.
-        xs = xs + PERIOD * ((xe - xs) > PERIOD / 2) - PERIOD * ((xe - xs) < -PERIOD / 2)
-
-        crossed = []
-        if mode == "aware":
-            crossed = [ifc for ifc in medium.interfaces if xs[0] < ifc.x <= xs[-1]]
+        crossed = _crossed_interfaces(xs, medium) if mode == "aware" else []
 
         if crossed:
             w_u, w_f = interface_weights(xs, xe, crossed, order)
@@ -87,6 +81,37 @@ def build_operators(
     du = sp.csr_array((wu, (rows, cols)), shape=(n, n))
     df = sp.csr_array((wf, (rows, cols)), shape=(n, n))
     return du, df
+
+
+def _stencil(grid: Grid1D, i: int, half: int) -> tuple[np.ndarray, np.ndarray]:
+    """Indices and unwrapped coordinates of the centred stencil at node ``i``."""
+    idx = np.arange(i - half, i + half + 1) % grid.n
+    xe = grid.x[i]
+    xs = grid.x[idx]
+    # Unwrap periodic neighbours so stencil coordinates are contiguous.
+    xs = xs + PERIOD * ((xe - xs) > PERIOD / 2) - PERIOD * ((xe - xs) < -PERIOD / 2)
+    return idx, xs
+
+
+def _crossed_interfaces(xs: np.ndarray, medium: LayeredMedium) -> list[Interface]:
+    """Interfaces with a stencil node strictly left and a node at-or-right."""
+    return [ifc for ifc in medium.interfaces if xs[0] < ifc.x <= xs[-1]]
+
+
+def stencil_crossings(
+    grid: Grid1D, medium: LayeredMedium, order: int = 4
+) -> np.ndarray:
+    """Number of interfaces (0, 1 or 2) each node's stencil straddles.
+
+    Diagnostic: a count of 2 means the thin-layer "double-cross" path is in
+    use for that node.
+    """
+    half = order // 2
+    counts = np.empty(grid.n, dtype=int)
+    for i in range(grid.n):
+        _, xs = _stencil(grid, i, half)
+        counts[i] = len(_crossed_interfaces(xs, medium))
+    return counts
 
 
 # --- interface-aware stencils -------------------------------------------------
