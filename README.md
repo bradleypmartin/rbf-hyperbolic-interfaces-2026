@@ -79,7 +79,10 @@ and are used as a read-only reference for the Python ports here.
 - [x] 2-D RBF-FD, naive: interface-fitted periodic node set, kNN stencils,
       Gaussian RBF-FD weights, hyperviscosity, sparse block operators, RK4,
       analytic plane-wave reference (2026-09-17)
-- [ ] 2-D interface-aware stencils, curved interfaces, two-panel video
+- [x] 2-D interface-aware stencils: coupled piecewise-polynomial bases
+      across interfaces, error down to the resolution floor on the analytic
+      test problem (2026-09-17)
+- [ ] 2-D curved-interface runs, two-panel video
 - [ ] Rehearsal
 
 ## License
