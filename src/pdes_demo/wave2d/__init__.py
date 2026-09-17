@@ -8,6 +8,7 @@ Same split as ``wave1d``:
 - ``operators``: sparse derivative, hyperviscosity and block elastic operators
 - ``simulate``: RK4 time stepping
 - ``exact``: analytic reference for the flat-interface plane-wave problem
+- ``resample``: one-sided interpolation to pixel grids and other node sets
 """
 
 from .domain import (
@@ -24,6 +25,7 @@ from .domain import (
 from .exact import exact_plane_wave
 from .neighbors import minimal_image, periodic_knn, stencil_offsets, wrap
 from .operators import Operators, build_operators, hyperviscosity_gamma
+from .resample import pixel_grid, resample_matrix
 from .simulate import Snapshots2D, energy, run, stable_dt
 
 __all__ = [
@@ -42,7 +44,9 @@ __all__ = [
     "minimal_image",
     "nearest_spacing",
     "periodic_knn",
+    "pixel_grid",
     "plane_p_wave",
+    "resample_matrix",
     "run",
     "stable_dt",
     "stencil_offsets",

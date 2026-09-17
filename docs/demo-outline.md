@@ -95,7 +95,9 @@ it to Python, and verified it against analytic results in an afternoon."
   Left: naive FD straight across the interfaces. Right: interface-aware FD.
   The naive panel should visibly ring / get the reflection wrong.
 - `outputs/wave2d_naive_vs_aware.mp4`: same idea for 2-D elastic waves on a
-  scattered node set with curved interfaces (naive RBF-FD vs interface-aware).
+  scattered node set (naive RBF-FD vs interface-aware), with error maps under
+  the two |v| panels. `outputs/wave2d_naive_vs_aware_curved.mp4` is the
+  curved-interface variant (`--amplitude 0.02`).
 - `slides/`: brief deck as PDF covering both halves. Tooling: `tectonic` is
   installed (Beamer works offline); Marp via `npx` is the alternative (Google Chrome
   is installed, so PDF export works).
@@ -169,7 +171,7 @@ treatment in the 2017 JCP preprint: default to polyharmonic splines +
 polynomials (shape-parameter free) unless the interface treatment leans on
 the IMQ/GA formulation used in 2016.
 
-### 2-D results so far (2026-09-17, naive RBF-FD everywhere)
+### 2-D results (2026-09-17)
 
 Node sets: fixed hex rows straddling each interface plus a repulsion-relaxed
 field (`scripts/wave2d_nodes.py`). Operators: 30-node Gaussian RBF-FD
@@ -204,6 +206,49 @@ CFL 0.5 capped by the hyperviscosity spectrum.
   entirely at these resolutions: the error equals the resolution floor,
   which itself converges at 3.2-3.5 towards 4th order. At 19600 nodes the
   aware solution is 6x more accurate than naive.
+- Curved interfaces (§3.4.2 geometry, amplitude 0.02, constant Lamé
+  parameters in the band), t = 0.3, relative error in v against a
+  40000-node interface-aware run resampled onto each node set
+  (`scripts/wave2d_convergence.py`):
+
+  | nodes | naive | interface-aware |
+  | --- | --- | --- |
+  | 2500 | 1.2e-1 | 9.8e-2 |
+  | 4900 | 6.5e-2 | 3.3e-2 |
+  | 10000 | 3.0e-2 | 8.9e-3 |
+
+  Same picture as the flat case, so the locally flat interface
+  approximation costs nothing at these resolutions (JCP Fig. 10 puts the
+  crossover near 40000 nodes). Both runs are stable to t = 1.5 at 2500
+  nodes with the default hyperviscosity.
+- Measuring errors against a resampled reference: the interpolant uses
+  one-sided stencils (source nodes from the target's own material only,
+  `wave2d/resample.py`). v has a kink at an interface, and a stencil that
+  mixes both sides adds its own error there: with the pulse centred on
+  y = 0.5 the two-sided interpolant's error in the interface band is 40x
+  the one-sided one's (3.0e-3 vs 7.6e-5 from 10000 to 2500 nodes), while
+  away from the band the two agree. One-sided, the reference is usable at
+  any time, not only when the pulses are clear of the interfaces. For the
+  record, at the dissertation's t = 0.3 only 0.6% of ||v||^2 lies within
+  4h of an interface (h = 0.01); at t = 0.15 it is 75%, and the reflections
+  bouncing inside the band keep it at a few percent later on.
+- Video (`scripts/wave2d_demo.py`, 10000 nodes, 250 frames to t = 0.5,
+  36 s end to end flat, 67 s curved including the 40000-node reference).
+  Relative error in v, flat / curved:
+
+  | t | naive | aware |
+  | --- | --- | --- |
+  | 0.2 | 2.4e-2 / 2.3e-2 | 7.6e-3 / 6.9e-3 |
+  | 0.3 | 3.1e-2 / 3.0e-2 | 9.5e-3 / 8.9e-3 |
+  | 0.4 | 5.0e-2 / 4.6e-2 | 2.1e-2 / 1.5e-2 |
+  | 0.5 | 3.2e-2 / 3.0e-2 | 1.3e-2 / 1.2e-2 |
+
+  The clip ends at t = 0.5, after the pulse has split at the upper
+  interface, crossed the band, split at the lower one and the in-band
+  reflection has split again at the upper interface. 2500 nodes would
+  render in a few seconds but both methods sit at the resolution floor
+  there (11% vs 10%), so the panels would look alike; at 10000 the naive
+  error is 3x the aware one for the whole clip and the error maps show it.
 
 ## Timeline (13 days from 2026-09-17)
 
@@ -238,3 +283,17 @@ CFL 0.5 capped by the hyperviscosity spectrum.
   now ("all RBF"); it is a runtime optimisation we can add if needed.
 - 2026-09-17: Node sets keep fixed hex-staggered rows straddling every
   interface orthogonally (Brad: empirically the key to 2-D stability).
+- 2026-09-17: Errors against a resampled reference, and all colour-map
+  rendering, use one-sided interpolation stencils that never cross an
+  interface (Brad: an interpolant straddling the interface would need the
+  interface-aware treatment itself, or the comparison must stay well away
+  from the interfaces). Two-sided stencils are kept only for the test that
+  demonstrates the problem.
+- 2026-09-17: The 2-D video defaults to 10000 nodes (2 s per run) rather
+  than the 2500 of the issue text: at 2500 both methods are at the
+  resolution floor and the panels look identical. Flat interfaces are the
+  default clip because the error maps are then against the exact solution;
+  the curved clip is behind `--amplitude 0.02` with a 4x finer reference.
+- 2026-09-17: 2-D colour maps use two single-hue sequential ramps from the
+  1-D palette, blue for |v| and orange for error; the orange steps were
+  derived from the blue ramp's OKLCH lightness ladder so the two read alike.
