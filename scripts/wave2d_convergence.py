@@ -101,8 +101,10 @@ def plot_series(
         style = "s--" if key == "floor" else "o-"
         color = INK_SECONDARY if key == "floor" else COLORS[key]
         ax.loglog(ns_arr, values, style, color=color, label=LABELS[key], ms=6, lw=1.6)
-    # Reference slopes in h = 1/sqrt(N), anchored at the second-coarsest point.
-    for key, order, label in (("naive", 2, "2nd order"), ("aware", 4, "4th order")):
+    # Reference slopes in h = 1/sqrt(N), anchored at the second-coarsest point;
+    # a single-resolution sanity run has no slope to draw.
+    slopes = (("naive", 2, "2nd order"), ("aware", 4, "4th order"))
+    for key, order, label in slopes if len(ns) >= 2 else ():
         anchor = errors[key][1]
         ref = anchor * (ns_arr[1] / ns_arr) ** (order / 2)
         ax.loglog(ns_arr, ref, ":", color=INK_MUTED, lw=1.2)
@@ -133,12 +135,17 @@ def main() -> None:
         "--out", type=Path, default=Path("outputs/wave2d_convergence.png")
     )
     args = parser.parse_args()
+    curved_ns = [n for n in args.ns if 4 * n <= args.ref_n]
+    if not curved_ns:
+        parser.error(
+            f"--ref-n {args.ref_n} is not at least 4x any of --ns {args.ns}; "
+            "the curved panel needs a reference that fine"
+        )
 
     t0 = time.perf_counter()
     flat = flat_errors(args.ns, args.t_end, args.seed)
     elapsed = time.perf_counter() - t0
     print_table(f"flat interfaces, exact reference ({elapsed:.0f}s)", args.ns, flat)
-    curved_ns = [n for n in args.ns if 4 * n <= args.ref_n]
     t0 = time.perf_counter()
     curved = curved_errors(curved_ns, args.ref_n, args.amplitude, args.t_end, args.seed)
     elapsed = time.perf_counter() - t0
