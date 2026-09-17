@@ -32,6 +32,9 @@ Drivers in `scripts/` write figures and animations to `outputs/` (gitignored):
 ```sh
 uv run python scripts/wave1d_convergence.py   # error vs resolution (dissertation Fig. 2-8)
 uv run python scripts/wave1d_demo.py          # two-panel MP4 + snapshot PNG, naive vs aware
+uv run python scripts/wave2d_nodes.py         # interface-fitted node set (dissertation Fig. 3-3)
+uv run python scripts/wave2d_eigenvalues.py   # operator spectrum with/without hyperviscosity (Fig. 3-2)
+uv run python scripts/wave2d_hyperviscosity.py  # error and stability vs hyperviscosity amplitude
 ```
 
 ## Layout
@@ -73,8 +76,10 @@ and are used as a read-only reference for the Python ports here.
       thin-layer "double-cross", RK4, exact reference solution, tests,
       convergence figure, two-panel video (2026-09-17)
 - [ ] Navier–Stokes notes and slides
-- [ ] 2-D RBF-FD (stretch): periodic node set, kNN stencils, sparse operators,
-      hyperviscosity, curved interfaces
+- [x] 2-D RBF-FD, naive: interface-fitted periodic node set, kNN stencils,
+      Gaussian RBF-FD weights, hyperviscosity, sparse block operators, RK4,
+      analytic plane-wave reference (2026-09-17)
+- [ ] 2-D interface-aware stencils, curved interfaces, two-panel video
 - [ ] Rehearsal
 
 ## License

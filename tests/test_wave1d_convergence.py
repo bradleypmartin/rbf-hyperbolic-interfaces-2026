@@ -1,6 +1,7 @@
 """End-to-end: reproduces dissertation Fig. 2-8 (naive first order, aware fourth)."""
 
 import numpy as np
+import pytest
 
 from pdes_demo.wave1d import LayeredMedium, exact_solution, periodic_grid, run
 from pdes_demo.wave1d.operators import stencil_crossings
@@ -53,3 +54,11 @@ def test_uniform_medium_translation_error_is_small() -> None:
     medium = LayeredMedium(layer=Material(c=1.0, rho=1.0))
     err = _rel_l2_error(400, medium, "naive", t_end=0.5)
     assert err < 5e-3
+
+
+def test_final_snapshot_lands_on_t_end_for_any_snapshot_count() -> None:
+    grid = periodic_grid(100)
+    for n_snapshots in (3, 7, 11):
+        snaps = run(grid, LayeredMedium(), t_end=0.3, n_snapshots=n_snapshots)
+        assert snaps.t[-1] == pytest.approx(0.3)
+        assert np.all(np.diff(snaps.t) > 0)
