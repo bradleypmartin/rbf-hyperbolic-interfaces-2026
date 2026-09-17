@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from pdes_demo.wave2d import (
+    ElasticMaterial,
     LayeredMedium2D,
     SineInterface,
     exact_plane_wave,
@@ -76,9 +77,38 @@ def test_non_default_interfaces_and_center() -> None:
     )
     eps = 1e-9
     for y_i in (0.3, 0.6):
-        below = exact_plane_wave(_column(0.1, np.array([y_i - eps])), 0.25, medium)
-        above = exact_plane_wave(_column(0.1, np.array([y_i + eps])), 0.25, medium)
+        lo = _column(0.1, np.array([y_i - eps]))
+        hi = _column(0.1, np.array([y_i + eps]))
+        below = exact_plane_wave(lo, 0.25, medium, center=center)
+        above = exact_plane_wave(hi, 0.25, medium, center=center)
         assert abs(below[4, 0] - above[4, 0]) < 1e-6
+    # The default centre (0.75) is only 0.15 from the moved upper interface:
+    # its tail there is 7e-6, which the ray sum cannot carry, so it refuses.
+    with pytest.raises(ValueError):
+        exact_plane_wave(lo, 0.25, medium)
+
+
+def test_stress_ratio_follows_the_local_material() -> None:
+    # Different lam / (lam + 2 mu) on the two sides: f = ratio * h with the
+    # local ratio, because f_t and h_t share v_y and both start at zero in
+    # the layer. (The defaults have the same ratio on both sides, which
+    # would hide a wrong choice here.)
+    medium = LayeredMedium2D(layer=ElasticMaterial(lam=2.0, mu=0.5, rho=1.5))
+    nodes = make_node_set(medium, 400, repulsion_steps=5)
+    np.testing.assert_allclose(
+        exact_plane_wave(nodes, 0.0, medium), plane_p_wave(nodes, medium), atol=1e-13
+    )
+    ys = np.linspace(0.01, 0.99, 197)
+    state = exact_plane_wave(_column(0.4, ys), 0.3, medium)
+    inside = medium.in_layer(np.full_like(ys, 0.4), ys)
+    np.testing.assert_allclose(state[2][inside], 2 / 3 * state[4][inside], atol=1e-14)
+    np.testing.assert_allclose(state[2][~inside], 1 / 3 * state[4][~inside], atol=1e-14)
+    assert np.abs(state[4][inside]).max() > 0.1  # the wave is actually there
+
+
+def test_broad_pulse_whose_tail_crosses_an_interface_is_refused() -> None:
+    with pytest.raises(ValueError, match="tails"):
+        exact_plane_wave(np.zeros((3, 2)), 0.1, FLAT, sharpness=3.0)
 
 
 def test_rejects_curved_interfaces() -> None:

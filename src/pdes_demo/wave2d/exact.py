@@ -14,7 +14,10 @@ after a change of variables:
 Impedances are unchanged (``rho' c' = rho c_p``), hence so are the
 reflection and transmission coefficients of eq. 49. Field mapping:
 ``h = Z_p f_1D``, ``v = -Z_p u_1D`` (the mirror flips velocity), with the
-factor ``Z_p`` giving unit amplitude in v.
+factor ``Z_p`` giving unit amplitude in v. ``f = lam / (lam + 2 mu) h`` holds
+with the local ratio on each side because ``f_t = lam v_y`` and
+``h_t = (lam + 2 mu) v_y`` share ``v_y``, and both f and h start at zero
+inside the layer (the 1-D solver enforces negligible tails there).
 """
 
 import numpy as np
@@ -29,6 +32,8 @@ def _as_1d_medium(medium: LayeredMedium2D) -> LayeredMedium:
         raise ValueError("exact solution needs flat interfaces")
     bg, ly = medium.background, medium.layer
     y1, y2 = medium.lower.y0, medium.upper.y0
+    # The order-reversing map turns y in [y1, y2) into x in (1 - 2 y2, 1 - 2 y1];
+    # the 1-D medium closes the other end. Only the two boundary points differ.
     return LayeredMedium(
         background=Material(c=2 * bg.c_p, rho=bg.rho / 2),
         layer=Material(c=2 * ly.c_p, rho=ly.rho / 2),
@@ -52,9 +57,15 @@ def exact_plane_wave(
     medium_1d = _as_1d_medium(medium)
     x = 1 - 2 * xy[:, 1]
     # exp(-s^2 (y - c)^2) = exp(-(s^2 / 4) (x - x_c)^2) in the mapped coordinate.
-    u1, f1 = exact_1d(
-        x, t, medium_1d, center=1 - 2 * center, sharpness=sharpness**2 / 4
-    )
+    try:
+        u1, f1 = exact_1d(
+            x, t, medium_1d, center=1 - 2 * center, sharpness=sharpness**2 / 4
+        )
+    except ValueError as err:
+        raise ValueError(
+            "plane pulse must start in the background with negligible tails at "
+            f"both interfaces ({err})"
+        ) from err
     z = medium.background.p_impedance
     lam = medium.lam_at(xy[:, 0], xy[:, 1])
     mu = medium.mu_at(xy[:, 0], xy[:, 1])

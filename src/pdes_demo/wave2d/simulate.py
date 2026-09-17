@@ -32,18 +32,22 @@ class Snapshots2D:
 def hyperviscosity_extreme(hyper: sp.csr_array) -> float:
     """Magnitude of the most negative eigenvalue of the hyperviscosity matrix.
 
-    It is real and dominant (the matrix is numerically negative
-    semi-definite with much smaller imaginary parts), so ARPACK's
-    largest-magnitude mode finds it in a few matrix-vector products. Falls
-    back to the Gershgorin bound, about twice too large, if ARPACK stalls.
+    For the stencils used here it is real and dominant (the matrix is
+    numerically negative semi-definite with much smaller imaginary parts),
+    so ARPACK's largest-magnitude mode finds it in a few matrix-vector
+    products. That is checked rather than assumed: if ARPACK stalls, or
+    returns something that is not a negative real number, fall back to the
+    Gershgorin bound, which is safe and about twice too large.
     """
     try:
         lam = sla.eigs(
             hyper.astype(float), k=1, which="LM", return_eigenvectors=False, tol=1e-4
-        )
-        return float(abs(lam[0].real))
+        )[0]
+        if lam.real < 0 and abs(lam.imag) <= 1e-3 * abs(lam.real):
+            return float(abs(lam.real))
     except sla.ArpackNoConvergence:
-        return float(np.max(np.abs(hyper).sum(axis=1)))
+        pass
+    return float(np.max(np.abs(hyper).sum(axis=1)))
 
 
 def stable_dt(
@@ -80,7 +84,9 @@ def rk4(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Classical RK4 for ``s_t = operator @ s``; returns ``(times, states)``."""
     n_fields, n = state0.shape
-    n_snap = n_steps // store_every + 1
+    # One slot for t = 0, one per stored step, and one for the final step
+    # when the stride does not divide the step count (t_end must be kept).
+    n_snap = n_steps // store_every + 1 + (1 if n_steps % store_every else 0)
     states = np.empty((n_snap, n_fields, n))
     times = np.empty(n_snap)
     s = state0.ravel().copy()
@@ -92,7 +98,7 @@ def rk4(
         k3 = operator @ (s + 0.5 * dt * k2)
         k4 = operator @ (s + dt * k3)
         s = s + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-        if step % store_every == 0:
+        if step % store_every == 0 or step == n_steps:
             states[snap] = s.reshape(n_fields, n)
             times[snap] = step * dt
             snap += 1

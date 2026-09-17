@@ -61,6 +61,37 @@ def test_snapshot_bookkeeping() -> None:
     np.testing.assert_array_equal(snaps.field("u"), snaps.state[:, 0])
 
 
+def test_final_step_is_kept_when_the_stride_does_not_divide() -> None:
+    # 900 nodes, t_end = 0.3 gives 45 steps; 11 snapshots means a stride of
+    # 4, which does not divide 45. The last stored time must still be t_end.
+    nodes = make_node_set(FLAT, 900, repulsion_steps=5)
+    snaps = run(nodes, FLAT, t_end=0.3, n_snapshots=11)
+    n_steps = round(0.3 / snaps.dt)
+    assert n_steps % (n_steps // 11) != 0
+    assert snaps.t[-1] == pytest.approx(0.3)
+    assert np.allclose(np.diff(snaps.t[:-1]), (n_steps // 11) * snaps.dt)
+    assert snaps.t[-1] - snaps.t[-2] < (n_steps // 11) * snaps.dt
+
+
+def test_hyperviscosity_extreme_falls_back_to_gershgorin(monkeypatch) -> None:
+    import scipy.sparse.linalg as sla
+
+    nodes = make_node_set(FLAT, 400, repulsion_steps=5)
+    ops = build_operators(nodes, FLAT)
+    gersh = float(np.max(np.abs(ops.hyper).sum(axis=1)))
+    arpack = hyperviscosity_extreme(ops.hyper)
+    assert 0.3 * gersh < arpack < gersh
+
+    def stall(*args, **kwargs):
+        raise sla.ArpackNoConvergence("stalled", np.array([]), np.array([]))
+
+    monkeypatch.setattr(sla, "eigs", stall)
+    assert hyperviscosity_extreme(ops.hyper) == pytest.approx(gersh)
+    # A complex or positive dominant eigenvalue is rejected the same way.
+    monkeypatch.setattr(sla, "eigs", lambda *a, **k: np.array([1e9 + 1e9j]))
+    assert hyperviscosity_extreme(ops.hyper) == pytest.approx(gersh)
+
+
 def test_step_cap_keeps_rk4_amplification_bounded() -> None:
     # At 3x the MATLAB gamma the CFL step alone leaves the most damped modes
     # outside RK4's real-axis range; the hyperviscosity cap brings them back.
