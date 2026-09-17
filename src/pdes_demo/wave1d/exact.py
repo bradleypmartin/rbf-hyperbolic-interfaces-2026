@@ -99,16 +99,30 @@ def exact_solution(
     center: float = -0.5,
     sharpness: float = 600.0,
     tol: float = 1e-14,
+    tail_tol: float = 1e-8,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Exact (u, f) at time ``t`` for the right-going Gaussian pulse problem.
 
     The initial data are those of :func:`~pdes_demo.wave1d.domain.right_going_pulse`
-    with the same ``center`` and ``sharpness``; the pulse must start in the
-    background material.
+    with the same ``center`` and ``sharpness``. The ray sum assumes a clean
+    start: the pulse must sit in the background material with its tails
+    below ``tail_tol`` at both interfaces, otherwise the part of the tail
+    already across an interface has no ray to carry it and the reference
+    would be silently wrong there.
     """
     x = np.asarray(x, dtype=float)
     if medium.in_layer(np.array([center]))[0]:
         raise ValueError("pulse must start outside the layer")
+    # With identical materials the transmitted ray (T = 1, same speed) is the
+    # exact continuation of the pulse, so a tail across the interface is fine.
+    contrast = medium.background != medium.layer
+    for xi in (medium.layer_start, medium.layer_end) if contrast else ():
+        d = abs((center - xi + PERIOD / 2) % PERIOD - PERIOD / 2)
+        if np.exp(-sharpness * d**2) > tail_tol:
+            raise ValueError(
+                f"pulse tail is {np.exp(-sharpness * d**2):.1e} at the interface "
+                f"x = {xi}; the ray sum needs it below tail_tol = {tail_tol:g}"
+            )
     # Rays carry their phase as a travel time, so the pulse centre and width
     # must be expressed in those units through the speed of the material the
     # pulse starts in: G(x - c t) = exp(-s c^2 (x/c - t - center/c)^2).

@@ -128,3 +128,29 @@ def test_initial_pulse_near_the_seam_is_periodic() -> None:
     _, f_t = exact_solution(grid.x, 0.35, uniform, center=-0.9)
     _, f_shift = right_going_pulse(grid.x - 0.35, uniform, center=-0.9)
     np.testing.assert_allclose(f_t, f_shift, atol=1e-12)
+
+
+def test_right_region_start_near_the_seam_and_final_snapshot() -> None:
+    # A pulse starting right of the layer with its tail wrapping through
+    # x = 1 -> -1: the main ray's seam child carries that tail.
+    uniform = LayeredMedium(layer=Material(c=1.0, rho=1.0), layer_start=-0.6)
+    grid = periodic_grid(400)
+    u0, f0 = right_going_pulse(grid.x, uniform, center=0.9)
+    u, f = exact_solution(grid.x, 0.0, uniform, center=0.9)
+    assert f0[grid.x < -0.9].max() > 1e-3
+    np.testing.assert_allclose(f, f0, atol=1e-14)
+    np.testing.assert_allclose(u, u0, atol=1e-14)
+    _, f_t = exact_solution(grid.x, 0.35, uniform, center=0.9)
+    _, f_shift = right_going_pulse(grid.x - 0.35, uniform, center=0.9)
+    np.testing.assert_allclose(f_t, f_shift, atol=1e-12)
+
+
+def test_pulse_tail_across_an_interface_is_refused() -> None:
+    # Centre 0.05 outside the layer with a wide pulse: the tail inside the
+    # layer has no ray to carry it, so the reference refuses instead of
+    # returning zeros there.
+    with pytest.raises(ValueError, match="tail"):
+        exact_solution(np.zeros(3), 0.0, MEDIUM, center=-0.05, sharpness=50.0)
+    # Identical materials: no contrast, tails may cross freely.
+    uniform = LayeredMedium(layer=Material(c=1.0, rho=1.0))
+    exact_solution(np.zeros(3), 0.0, uniform, center=-0.05, sharpness=50.0)

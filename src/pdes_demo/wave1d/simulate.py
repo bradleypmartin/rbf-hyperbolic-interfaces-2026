@@ -46,7 +46,9 @@ def rk4_wave(
     def rhs(u: np.ndarray, f: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return (df @ f) * inv_rho, (du @ u) * rho_c2
 
-    n_snap = n_steps // store_every + 1
+    # One slot for t = 0, one per stored step, and one for the final step
+    # when the stride does not divide the step count.
+    n_snap = n_steps // store_every + 1 + (1 if n_steps % store_every else 0)
     us = np.empty((n_snap, u0.size))
     fs = np.empty((n_snap, f0.size))
     ts = np.empty(n_snap)
@@ -60,7 +62,7 @@ def rk4_wave(
         k4u, k4f = rhs(u + dt * k3u, f + dt * k3f)
         u = u + dt / 6 * (k1u + 2 * k2u + 2 * k3u + k4u)
         f = f + dt / 6 * (k1f + 2 * k2f + 2 * k3f + k4f)
-        if step % store_every == 0:
+        if step % store_every == 0 or step == n_steps:
             us[snap], fs[snap], ts[snap] = u, f, step * dt
             snap += 1
     return Snapshots(t=ts[:snap], u=us[:snap], f=fs[:snap], dt=dt)
