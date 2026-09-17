@@ -144,7 +144,8 @@ transmitted pulse wraps around the periodic domain.
 Brad's suggestion: ~100 points with a 2x layer is where the naive ringing is
 obvious). 100 nodes and a wider pulse, `--sharpness 150` (about 4 nodes
 across; the default 600 is only 2 nodes wide at this spacing and dispersion
-then swamps both panels), with the grid nodes marked. At t = 1 the naive
+then swamps both panels). Brad's call: plain curves, no node markers. At
+t = 1 the naive
 solution trails a sawtooth of 6% of the pulse height behind the reflected
 pulse and through the layer (relative error 10%); the interface-aware
 solution has 0.6% ringing and 3.3% error, i.e. it sits on the exact curve.
