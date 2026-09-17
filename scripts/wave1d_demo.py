@@ -8,6 +8,8 @@ shows the error against it.
 
     uv run python scripts/wave1d_demo.py                  # defaults, MP4 + PNG
     uv run python scripts/wave1d_demo.py --layer-width 0.01 --out outputs/thin.mp4
+    uv run python scripts/wave1d_demo.py --n 100 --sharpness 150 --markers \
+        --out outputs/wave1d_naive_vs_aware_coarse.mp4    # ringing visible to the eye
 """
 
 import argparse
@@ -46,6 +48,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--c2", type=float, default=2.0, help="wave speed in the layer")
     parser.add_argument("--rho2", type=float, default=1.0, help="density in the layer")
     parser.add_argument("--layer-width", type=float, default=0.5)
+    parser.add_argument(
+        "--sharpness",
+        type=float,
+        default=600.0,
+        help="pulse exp(-s (x - x0)^2); 600 is the dissertation pulse, 150 is wide "
+        "enough to resolve on 100 nodes",
+    )
+    parser.add_argument(
+        "--markers", action="store_true", help="mark the grid nodes on the curves"
+    )
     parser.add_argument("--t-end", type=float, default=1.25)
     parser.add_argument("--frames", type=int, default=300)
     parser.add_argument("--fps", type=int, default=30)
@@ -75,11 +87,21 @@ def main() -> None:
     )
     grid = periodic_grid(args.n)
     runs = {
-        mode: run(grid, medium, mode=mode, t_end=args.t_end, n_snapshots=args.frames)
+        mode: run(
+            grid,
+            medium,
+            mode=mode,
+            t_end=args.t_end,
+            n_snapshots=args.frames,
+            pulse_sharpness=args.sharpness,
+        )
         for mode in MODES
     }
     times = runs["aware"].t
-    exact = np.array([exact_solution(grid.x, t, medium)[1] for t in times])
+    exact = np.array(
+        [exact_solution(grid.x, t, medium, sharpness=args.sharpness)[1] for t in times]
+    )
+    mark = dict(marker="o", ms=3.5) if args.markers else {}
     errors = {mode: np.abs(runs[mode].f - exact) for mode in MODES}
     ylim = 1.15 * max(np.abs(exact).max(), 1.0)
     err_lim = 1.1 * max(errors["naive"].max(), 1e-3)
@@ -108,7 +130,7 @@ def main() -> None:
                 ax = axes[r, c]
                 shade_layer(ax, medium)
                 ax.plot(grid.x, exact[k], "--", color=INK_SECONDARY, lw=1.4)
-                ax.plot(grid.x, runs[mode].f[k], color=COLORS[mode])
+                ax.plot(grid.x, runs[mode].f[k], color=COLORS[mode], **mark)
                 ax.set_xlim(-1, 1)
                 ax.set_ylim(-ylim, ylim)
                 if r == 0:
@@ -144,7 +166,7 @@ def main() -> None:
             grid.x, exact[0], "--", color=INK_SECONDARY, lw=1.4, label="exact solution"
         )
         (line,) = top.plot(
-            grid.x, runs[mode].f[0], color=COLORS[mode], label=LABELS[mode]
+            grid.x, runs[mode].f[0], color=COLORS[mode], label=LABELS[mode], **mark
         )
         (err,) = bottom.plot(grid.x, errors[mode][0], color=COLORS[mode], lw=1.5)
         top.set_title(TITLES[mode])
