@@ -127,3 +127,17 @@ def test_energy_tracks_the_exact_state_on_the_same_nodes() -> None:
             exact_plane_wave(nodes, t, UNIFORM, sharpness=10.0), nodes, UNIFORM
         )
         assert abs(e_num / e_ref - 1) < 1e-2, (t, e_num, e_ref)
+
+
+def test_aligned_snapshots_share_times_across_resolutions() -> None:
+    # 400 and 900 nodes have different stable steps (about 30 and 45 steps to
+    # t = 0.3); aligned to 7 snapshots both store exactly j * 0.3 / 7.
+    times = []
+    for n in (400, 900):
+        nodes = make_node_set(FLAT, n, repulsion_steps=5)
+        snaps = run(nodes, FLAT, t_end=0.3, n_snapshots=7, align_snapshots=True)
+        assert len(snaps.t) == 8
+        assert round(0.3 / snaps.dt) % 7 == 0
+        times.append(snaps.t)
+    np.testing.assert_allclose(times[0], times[1], atol=1e-14)
+    np.testing.assert_allclose(times[0], np.arange(8) * 0.3 / 7, atol=1e-14)
