@@ -41,9 +41,32 @@ PDF page = printed page.
 | 165–166 | References | Citations |
 
 Companion: `openai/NavierStokesAndEuler` README (Lean 4.34.0-rc2, Mathlib,
-"Comparator" independent checking). Clay statement
+"Comparator" independent checking; `ComparatorChallenges/NavierStokes.lean`
+is the formal target statement, adapted from Google DeepMind's
+`formal-conjectures`). Clay statement
 (`clay-2000-fefferman-navier-stokes-problem-statement.pdf`, 6 pp.): the four
 alternatives (A)–(D) are on p. 2.
+
+## OpenAI, *Finite Time Blowup for the Euler Equation* (`openai-2026-finite-time-blowup-euler.pdf`, 57 pp.)
+
+| PDF pages | Section | Use for |
+| --- | --- | --- |
+| 1–3 | Abstract, §1 Theorem 1.1 (unforced Euler blowup from smooth compactly supported data), §1.1 historical context (Elgindi; Chen–Hou; Córdoba–Martínez-Zoroa) | The companion claim in one line |
+| 3–9 | §2 amplification mechanism and proof order | Only if asked |
+| 9–56 | Construction | Skip |
+
+## Alpöge & Buckmaster, *Blowup for the Euler equations with smooth forcing* (`alpoge-buckmaster-2026-euler-blowup-smooth-forcing.pdf`, 112 pp.)
+
+| PDF pages | Section | Use for |
+| --- | --- | --- |
+| 1–3 | Abstract, §1.1 Theorem 1.1 (forced, axisymmetric with swirl, supported in a torus; ‖∇Γ‖, ‖ω‖ → ∞), §1.2 mechanism, §1.3 related work | The parallel result, precisely; who they build on |
+| 3–112 | Construction | Skip; the authors call the write-up preliminary |
+
+## Buckmaster, statement of 2026-09-07 (`buckmaster-2026-statement.pdf`, 4 pp.)
+
+Read in full (4 pp.): results, tools, the Sep 3 email verbatim, the Sep 6
+calls, the two proposals, what he is and is not claiming. Quoted in
+`docs/navier-stokes-notes.md`.
 
 ## Martin & Fornberg preprints
 

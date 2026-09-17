@@ -47,7 +47,8 @@ uv run python scripts/wave2d_demo.py          # 2-D two-panel MP4 + snapshot PNG
 | `src/pdes_demo/` | Library: FD / RBF-FD stencil generation, interface treatment, time stepping, node sets |
 | `scripts/` | Runnable drivers for the demo |
 | `tests/` | pytest suite (convergence and analytic checks) |
-| `docs/` | `demo-outline.md` (plan + timeline), Navier–Stokes notes, derivations |
+| `docs/` | `demo-outline.md` (plan + timeline), Navier–Stokes notes, paper index |
+| `slides/` | Beamer deck (`talk.tex` → `talk.pdf`), figures, speaker script; `./slides/build.sh` |
 | `papers/` | Index of reference papers with links and checksums; PDFs are not committed |
 
 ## Reference papers
@@ -78,7 +79,8 @@ and are used as a read-only reference for the Python ports here.
 - [x] 1-D wave equation: Fornberg FD weights, interface-aware stencils,
       thin-layer "double-cross", RK4, exact reference solution, tests,
       convergence figure, two-panel video (2026-09-17)
-- [ ] Navier–Stokes notes and slides
+- [x] Navier–Stokes notes and slides: sourced notes in `docs/`, Beamer deck
+      and speaker script in `slides/` (2026-09-17)
 - [x] 2-D RBF-FD, naive: interface-fitted periodic node set, kNN stencils,
       Gaussian RBF-FD weights, hyperviscosity, sparse block operators, RK4,
       analytic plane-wave reference (2026-09-17)
