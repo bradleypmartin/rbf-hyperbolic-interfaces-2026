@@ -105,7 +105,9 @@ def periodic_grid(n: int) -> Grid1D:
 def gaussian(
     x: np.ndarray, center: float = -0.5, sharpness: float = 600.0
 ) -> np.ndarray:
-    return np.exp(-sharpness * (x - center) ** 2)
+    """Gaussian bump on the periodic interval (distance measured the short way)."""
+    d = (x - center + PERIOD / 2) % PERIOD - PERIOD / 2
+    return np.exp(-sharpness * d**2)
 
 
 def right_going_pulse(
