@@ -176,16 +176,22 @@ CFL 0.5 capped by the hyperviscosity spectrum.
   between 0.25x and 4x the MATLAB value; larger gamma only shrinks the time
   step.
 - Flat two-interface problem (dissertation §3.4.1, sigma = 23), t = 0.3,
-  naive stencils across the impedance jump, vs the ray-sum reference:
+  relative error in v vs the ray-sum reference. "Floor" is the same pulse
+  in a uniform medium, i.e. pure resolution error with no interface:
 
-  | nodes | naive, rel. error in v |
-  | --- | --- |
-  | 2500 | 1.1e-1 |
-  | 4900 | 6.9e-2 |
-  | 10000 | 3.1e-2 |
+  | nodes | naive | interface-aware | floor (no interface) |
+  | --- | --- | --- | --- |
+  | 2500 | 1.1e-1 | 9.9e-2 | 8.2e-2 |
+  | 4900 | 6.9e-2 | 3.4e-2 | 3.3e-2 |
+  | 10000 | 3.1e-2 | 9.6e-3 | 1.1e-2 |
+  | 19600 | 1.7e-2 | 2.7e-3 | 3.0e-3 |
 
-  Rates 1.5-2.2: the baseline the interface-aware stencils (#8) must beat,
-  and the "before" panel of the 2-D video.
+  Naive converges at 1.5-2.2 (the "FD4" behaviour of Fig. 3-5); the
+  interface-aware stencils (19 nodes, degree 3, coupled piecewise bases,
+  locally flat interface, MATLAB's 4h band) remove the interface error
+  entirely at these resolutions: the error equals the resolution floor,
+  which itself converges at 3.2-3.5 towards 4th order. At 19600 nodes the
+  aware solution is 6x more accurate than naive.
 
 ## Timeline (13 days from 2026-09-17)
 
