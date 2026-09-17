@@ -142,6 +142,18 @@ under each panel. Running longer does not widen the gap much (both errors
 grow; ratio stays ~5-10x), so the clip stops at t = 1.25, just before the
 transmitted pulse wraps around the periodic domain.
 
+**Coarse clip for the talk** (`outputs/wave1d_naive_vs_aware_coarse.mp4`,
+Brad's suggestion: ~100 points with a 2x layer is where the naive ringing is
+obvious). 100 nodes and a wider pulse, `--sharpness 150` (about 4 nodes
+across; the default 600 is only 2 nodes wide at this spacing and dispersion
+then swamps both panels). Brad's call: plain curves, no node markers. At
+t = 1 the naive
+solution trails a sawtooth of 6% of the pulse height behind the reflected
+pulse and through the layer (relative error 10%); the interface-aware
+solution has 0.6% ringing and 3.3% error, i.e. it sits on the exact curve.
+At 200 nodes with the default pulse the ringing is finer (5%) but still
+clear; at 100 nodes with the default pulse both panels are underresolved.
+
 ### 2-D problem (stretch)
 
 RBF-FD on a scattered, repulsion-relaxed node set in the doubly periodic unit

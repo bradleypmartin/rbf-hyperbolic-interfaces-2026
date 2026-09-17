@@ -32,6 +32,7 @@ Drivers in `scripts/` write figures and animations to `outputs/` (gitignored):
 ```sh
 uv run python scripts/wave1d_convergence.py   # error vs resolution (dissertation Fig. 2-8)
 uv run python scripts/wave1d_demo.py          # two-panel MP4 + snapshot PNG, naive vs aware
+uv run python scripts/wave1d_demo.py --n 100 --sharpness 150 --out outputs/wave1d_naive_vs_aware_coarse.mp4  # coarse grid, ringing visible
 uv run python scripts/wave2d_nodes.py         # interface-fitted node set (dissertation Fig. 3-3)
 uv run python scripts/wave2d_eigenvalues.py   # operator spectrum with/without hyperviscosity (Fig. 3-2)
 uv run python scripts/wave2d_hyperviscosity.py  # error and stability vs hyperviscosity amplitude
