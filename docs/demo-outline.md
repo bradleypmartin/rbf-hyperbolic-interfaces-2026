@@ -279,7 +279,7 @@ for the deck. It landed in two working days.
 | Date | Work |
 | --- | --- |
 | Sep 17 | Scaffold, papers, plan. 1-D port with the exact ray-sum reference (#4). 2-D in five PRs: node sets (#10), RBF-FD weights and sparse operators (#11), RK4 with analytic validation and the hyperviscosity study (#12), interface-aware stencils (#14), clips, convergence figure and one-sided resampler (#15). Coarse 1-D clip (#16). Sourced Navier–Stokes notes, Beamer deck, speaker script, `clips.html` (#17). GitHub Pages (#20). Four bugs found and fixed the same day: a ray-pruning sign error and two latent exact-solver bugs in 1-D, a driver crash in 2-D. |
-| Sep 19 | Deck culled to seven content slides per part, no backups (#21). Slide-by-slide tweak pass (#22). Spot changes: new title and thesis, aqua/violet 2-D maps, convergence factors corrected (#23). Video pass: clips re-rendered, 1-D clip without the exact curve or legends, 12/16 still reduced to three columns (#25). Docs pass (#19). |
+| Sep 19 | Deck culled to seven content slides per part, no backups (#21). Slide-by-slide tweak pass (#22). Spot changes: new title and thesis, aqua/violet 2-D maps, convergence factors corrected (#23). Video pass: clips re-rendered, 1-D clip without the exact curve or legends, 12/16 still reduced to three columns (#25). Docs pass (#19). Part 3 after the freeze (#27, not in the talk): smooth tanh edges, spectral reference, ODE-continued seed stencils, knee experiment, notes with verified related work and a 2-D design (#28–#34). |
 | Sep 20–28 | Watch Clay and OpenAI for updates; update the timeline slide if anything moves. |
 | Sep 29 | Rehearse with `slides/notes.md`; trim 8/16 then 14/16 if long; freeze; tag `talk-2026-09-30`. |
 | Sep 30 | Talk. |
@@ -350,3 +350,20 @@ for the deck. It landed in two working days.
   each method's error map, because the two solvers' waves cannot be told
   apart by eye at 10,000 nodes; the clips keep both waves. Clips stay at
   120 dpi and the 2-D ones square.
+- 2026-09-19: Part 3 (#27) is an exploration after the freeze and is not in
+  the talk, the deck or the clips. It lives in `docs/stiff-features.md`,
+  `wave1d/stiff.py`, `wave1d/spectral.py`, `LayeredMedium(edge_width=...)`
+  and `scripts/wave1d_stiff.py`; sub-issues #28–#34 land in one PR with one
+  commit each (nobody is merging in real time), not the second docs PR
+  announced on #27.
+- 2026-09-19: The seeds are the t = 0 profiles of solutions polynomial in
+  time (Brad's bullets with ∂ₜᵏu = C, C ≠ 0), which makes the dissertation's
+  jump construction the δ → 0 limit of the same chain; `mode="aware"`
+  covers both, algebra for a jump and an ODE march for a smooth edge.
+- 2026-09-19: References for smooth edges are pseudo-spectral (the ray sum
+  needs jumps). The knee experiment uses a wider pulse (sharpness 60,
+  centre −0.6) so the coarse grids resolve the pulse and only the edge is
+  under test; with the dissertation pulse the interior dispersion error
+  hides the edge effect below n = 400.
+- 2026-09-19: Part 3 figures are committed under `docs/figures/` (525 KB);
+  `outputs/` stays gitignored, including the cached spectral references.

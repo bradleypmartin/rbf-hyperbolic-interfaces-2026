@@ -8,7 +8,14 @@ Modules mirror the split we will reuse in 2-D:
 - ``exact``: closed-form reference solution (ray sum) for verification
 """
 
-from .domain import Grid1D, LayeredMedium, Material, periodic_grid, right_going_pulse
+from .domain import (
+    Grid1D,
+    LayeredMedium,
+    Material,
+    gaussian,
+    periodic_grid,
+    right_going_pulse,
+)
 from .exact import exact_solution
 from .operators import build_operators
 from .simulate import Snapshots, run
@@ -20,6 +27,7 @@ __all__ = [
     "Snapshots",
     "build_operators",
     "exact_solution",
+    "gaussian",
     "periodic_grid",
     "right_going_pulse",
     "run",

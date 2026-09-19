@@ -9,6 +9,9 @@ Two flavours with identical sparsity:
   piecewise polynomials that satisfy the PDE's interface conditions
   (dissertation §2.1; ``FD4wave1DAC.m``). A stencil that straddles *both*
   edges of a thin layer chains the construction across both interfaces.
+  For a medium with smooth edges (``edge_width > 0``) the same mode uses
+  the ODE-continued seeds of :mod:`.stiff` in every stencil whose nodes see
+  a varying material (issue #27).
 
 The construction, following the dissertation:
 
@@ -38,6 +41,7 @@ import scipy.sparse as sp
 
 from ..fd_weights import fornberg_weights
 from .domain import PERIOD, Grid1D, Interface, LayeredMedium, Material
+from .stiff import stiff_weights
 
 Mode = Literal["naive", "aware"]
 
@@ -66,12 +70,19 @@ def build_operators(
     for i in range(n):
         idx, xs = _stencil(grid, i, half)
         xe = grid.x[i]
-        crossed = _crossed_interfaces(xs, medium) if mode == "aware" else []
-
-        if crossed:
-            w_u, w_f = interface_weights(xs, xe, crossed, order)
-        else:
+        if mode == "naive":
             w_u = w_f = fornberg_weights(xe, xs, 1)[1]
+        elif medium.is_smooth:
+            if medium.varies_over(xs):
+                w_u, w_f = stiff_weights(xs, xe, medium, order)
+            else:
+                w_u = w_f = fornberg_weights(xe, xs, 1)[1]
+        else:
+            crossed = _crossed_interfaces(xs, medium)
+            if crossed:
+                w_u, w_f = interface_weights(xs, xe, crossed, order)
+            else:
+                w_u = w_f = fornberg_weights(xe, xs, 1)[1]
 
         sl = slice(i * p, (i + 1) * p)
         cols[sl] = idx
@@ -96,6 +107,24 @@ def _stencil(grid: Grid1D, i: int, half: int) -> tuple[np.ndarray, np.ndarray]:
 def _crossed_interfaces(xs: np.ndarray, medium: LayeredMedium) -> list[Interface]:
     """Interfaces with a stencil node strictly left and a node at-or-right."""
     return [ifc for ifc in medium.interfaces if xs[0] < ifc.x <= xs[-1]]
+
+
+def aware_rows(grid: Grid1D, medium: LayeredMedium, order: int = 4) -> np.ndarray:
+    """Boolean mask of the rows ``mode="aware"`` rebuilds for this medium.
+
+    Jump edges: stencils crossing an interface. Smooth edges: stencils whose
+    nodes see different materials, which reaches about ``19 * edge_width``
+    from each edge centre before the tanh tails round away.
+    """
+    half = order // 2
+    rows = np.zeros(grid.n, dtype=bool)
+    for i in range(grid.n):
+        _, xs = _stencil(grid, i, half)
+        if medium.is_smooth:
+            rows[i] = medium.varies_over(xs)
+        else:
+            rows[i] = bool(_crossed_interfaces(xs, medium))
+    return rows
 
 
 def stencil_crossings(

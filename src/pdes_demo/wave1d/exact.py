@@ -115,6 +115,11 @@ def exact_solution(
         raise ValueError("pulse must start outside the layer")
     # With identical materials the transmitted ray (T = 1, same speed) is the
     # exact continuation of the pulse, so a tail across the interface is fine.
+    if medium.is_smooth:
+        raise ValueError(
+            "the ray sum needs jump interfaces; this medium has smooth edges "
+            f"(edge_width = {medium.edge_width:g}), use the spectral reference"
+        )
     contrast = medium.background != medium.layer
     for xi in (medium.layer_start, medium.layer_end) if contrast else ():
         d = abs((center - xi + PERIOD / 2) % PERIOD - PERIOD / 2)

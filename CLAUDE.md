@@ -19,6 +19,15 @@ rehearsal, a freeze, and the `talk-2026-09-30` tag (issues #18, #19).
    RBF-FD on scattered nodes with curved interfaces, each verified against a
    reference solution. All of it landed on 2026-09-17.
 
+**Part 3 (not in the talk; #27, sub-issues #28–#34).** Started 2026-09-19
+after the freeze: Brad's never-published idea that a stencil crossing a
+material edge too steep for the grid can be built from ODE-continued
+"seeds" (the t = 0 profiles of time-polynomial solutions) instead of
+monomials, on the same equispaced grid. Built and confirmed in 1-D: naive
+FD4 has a knee at h = δ, the seed stencils are fourth order at every
+resolution, and the dissertation's jump construction is the δ → 0 limit.
+2-D is a design note. Everything is in `docs/stiff-features.md`.
+
 Audience: bright tech workers with no assumed PDE background. **No live
 coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
 `slides/videos/` played from `slides/clips.html`, and the speaker script
@@ -37,10 +46,13 @@ src/pdes_demo/   library code
   fd_weights.py    Fornberg FD weights (shared)
   plotting.py      matplotlib style; blue = interface-aware, orange = naive;
                    aqua / violet single-hue maps for 2-D fields / errors
-  wave1d/          domain.py (periodic grid, piecewise-constant materials,
-                   pulse) / operators.py (naive vs interface-aware
-                   differentiation matrices, thin-layer double-cross) /
-                   simulate.py (RK4) / exact.py (ray-sum reference solution)
+  wave1d/          domain.py (periodic grid, piecewise-constant materials
+                   with optional tanh edges, pulse) / operators.py (naive vs
+                   interface-aware differentiation matrices, thin-layer
+                   double-cross; smooth edges dispatch to stiff.py) /
+                   simulate.py (RK4) / exact.py (ray-sum reference solution) /
+                   spectral.py (Fourier pseudo-spectral reference for smooth
+                   edges) / stiff.py (ODE-continued seed stencils, Part 3)
   wave2d/          domain.py (materials, sine interfaces, interface-straddling
                    node sets by repulsion) / neighbors.py (periodic kNN via
                    cKDTree boxsize) / rbf.py (Gaussian RBF-FD weights with
@@ -52,8 +64,9 @@ src/pdes_demo/   library code
                    to pixel grids and other node sets)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 106 tests; every numerical routine has one
-docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md
+tests/           pytest, 131 tests; every numerical routine has one
+docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
+                 stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
                  clip cues), clips.html (keyboard clip player), figures/ and
                  videos/ (committed; build.sh refreshes them from outputs/),
@@ -71,6 +84,8 @@ uv sync                                       # .venv, Python 3.13
 uv run pytest                                 # tests
 uv run ruff check . && uv run ruff format .
 uv run python scripts/<driver>.py             # figures / clips into outputs/
+uv run python scripts/wave1d_stiff.py         # Part 3 figures, ~50 s (references
+                                              # cached in outputs/)
 ./slides/build.sh                             # copy figures and clips from outputs/,
                                               # crop, tectonic → slides/talk.pdf
 uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the notes
@@ -98,6 +113,9 @@ Clip renders are listed in `slides/README.md`. Both demo drivers take
   scare quote.
 - Clips: iterate in `outputs/`; copy into `slides/videos/` and commit only
   when the content changed (ffmpeg output is not byte-identical run to run).
+- Part 3 figures referenced from `docs/stiff-features.md` are committed
+  under `docs/figures/` so the notes read on GitHub; nothing of Part 3
+  touches the deck or the clips.
 - Deck and clip passes go one item at a time, one commit per item, so the PR
   history reads item by item.
 
