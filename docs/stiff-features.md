@@ -171,3 +171,98 @@ still differ from Fornberg's at first order in h/δ (17% at δ = 8h for the
 default contrast), because the seeds are exact for a different
 five-dimensional space; both stencils are fourth-order on solutions there
 and the experiment finds them indistinguishable end to end.
+
+## 2. Results (#32, `scripts/wave1d_stiff.py`, 2026-09-19)
+
+Setup: the default layer `[0, 0.5)` with c: 1 → 2, ρ: 1 → 1, edges of
+width δ; a right-going Gaussian stress pulse with sharpness 60 (about 7
+nodes across at n = 100, so the pulse itself is resolved on every grid and
+the edge is the only thing under test) started at x = −0.6 (far enough
+that the ray sum's tail check passes); FD4 in space, RK4 at CFL 0.4, t = 1.
+Errors are relative l2 errors in stress f at t = 1 against the exact ray
+sum for δ = 0 and against a pseudo-spectral reference (1024 to 8192 nodes,
+dt = 5·10⁻⁵, accurate to about 10⁻¹⁰) for δ > 0. "Seeds" is
+`mode="aware"`, which for δ = 0 is the dissertation's interface-aware
+stencil and for δ > 0 the ODE-continued seeds; "naive" is FD4 with the
+coefficients sampled at the nodes. Runtime 50 s for everything, 30 s with
+the cached references.
+
+| δ | scheme | n = 100 | 200 | 400 | 800 | 1600 | rates |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 (jump) | naive | 7.1e-2 | 3.2e-2 | 1.6e-2 | 7.9e-3 | 4.0e-3 | 1.2, 1.0, 1.0, 1.0 |
+| 0 (jump) | interface-aware | 3.9e-3 | 2.5e-4 | 1.6e-5 | 9.9e-7 | 6.2e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.0025 | naive | 7.2e-2 | 2.9e-2 | 6.3e-3 | 3.0e-5 | 7.4e-6 | 1.3, 2.2, **7.7**, 2.0 |
+| 0.0025 | seeds | 3.9e-3 | 2.5e-4 | 1.6e-5 | 9.9e-7 | 6.2e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.01 | naive | 3.0e-2 | 5.6e-4 | 3.5e-5 | 1.1e-6 | 6.5e-8 | 5.7, 4.0, 5.0, 4.0 |
+| 0.01 | seeds | 3.9e-3 | 2.5e-4 | 1.6e-5 | 9.7e-7 | 6.1e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.04 | naive | 3.5e-3 | 2.2e-4 | 1.4e-5 | 8.8e-7 | 5.5e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.04 | seeds | 3.5e-3 | 2.2e-4 | 1.4e-5 | 8.8e-7 | 5.5e-8 | 4.0, 4.0, 4.0, 4.0 |
+
+h/δ runs from 8 to 0.5 for δ = 0.0025, from 2 to 0.125 for δ = 0.01, and
+from 0.5 down for δ = 0.04.
+
+![Error vs resolution for four edge widths](figures/wave1d_stiff_convergence.png)
+
+**Verdict on the hypothesis of #27: confirmed on both counts.**
+
+- *Standard FD4 looks low-order through an unresolved edge and recovers
+  fourth order once the grid resolves it.* At δ = 0.0025 the naive error
+  falls at rates 1.3 and 2.2 while h > δ, drops by a factor 200 between
+  n = 400 and 800 (h = 2δ to h = δ, the knee), and is fourth-order-ish
+  after. At δ = 0.01 the knee sits between n = 100 and 200, again at h ≈ δ.
+  The pre-knee rates are not as cleanly first order as for the jump (1.0)
+  because the nodes sample the tanh at grid-dependent positions, so the
+  effective jump the naive stencil sees moves with n.
+- *Seed stencils keep fourth order on the same equispaced grid at every
+  resolution, with a constant independent of δ.* The seed errors at
+  δ = 0.0025 and 0.01 agree with the jump case's interface-aware errors to
+  three digits at every n (3.9e-3 down to 6.2e-8). At h = 8δ the seeds are
+  18× more accurate than naive, at h = 2δ 400×. At δ = 0.04, where every
+  grid resolves the edge, seeds and naive coincide to three digits although
+  their weights differ (section 1.5): both are fourth-order on solutions.
+
+Local truncation error tells the same story without the time stepping. On
+the reference solution's profile at t = 1 (dissertation pulse, sharpness
+600), the maximum error in u_x over the rebuilt rows, relative to
+max |u_x|, at δ = 0.0025 for n = 100, 200, 400, 800, 1600:
+
+| stencil | h = 8δ | 4δ | 2δ | δ | δ/2 |
+| --- | --- | --- | --- | --- | --- |
+| naive | 1.5e-2 | 2.8e-3 | 3.9e-3 | 1.9e-3 | 2.2e-4 |
+| seeds | 9.9e-3 | 1.2e-3 | 9.1e-5 | 5.8e-6 | 3.6e-7 |
+
+Seeds: ratios 8.5, 13, 16, 16, i.e. fourth order from h = 8δ on. The same
+run at δ = 0.01 gives seed errors 2.2e-2, 1.8e-3, 8.0e-5, 4.5e-6, 2.3e-7:
+the constant is the same. (`test_seed_stencils_are_fourth_order_on_the_true_solution`
+keeps a small version of this as a regression test.)
+
+![Snapshot at t = 1 on 100 nodes through edges of width h/8](figures/wave1d_stiff_snapshot.png)
+
+The snapshot is the coarse-grid picture: 100 nodes, δ = 0.0025 = h/8, so
+both layer edges fall between nodes. Naive FD4 trails a grid-scale
+sawtooth of 4% of the pulse height everywhere (the highest FD4 modes have
+negative group velocity, so the noise born at the edges outruns the
+pulses); the seed stencils sit on the reference with a maximum error of
+0.3%, which is the interior FD4 dispersion error of the pulse.
+
+![Seeds for one stencil across an edge](figures/wave1d_stiff_seeds.png)
+
+The seeds themselves, for the u field, on a stencil whose evaluation point
+is h/2 left of an edge: the jump seeds (which are the dissertation's
+translated Taylor basis: slope ratio K_left/K_right = 1/4 for φ₁, a
+parabola of curvature ratio c_left²/c_right² = 1/4 for φ₂) and the δ = h/4
+seeds are indistinguishable, the δ = 2h seeds bend over the whole stencil,
+and all of them leave the monomials at the edge.
+
+**Caveats.** One ODE march per stencil that sees the edge, about 5 to 15 ms
+each, so the operator costs seconds rather than milliseconds to build;
+fine for a study, not tuned. The aware region reaches 19δ + 2h from each
+edge (where the tanh tails round to the far-field value), so at δ = 0.04
+every row is rebuilt; a relative tolerance in `varies_over` would trim
+that. The seeds converge to the jump construction at first order in δ, so
+δ below about 10⁻⁵ h is better served by `interface_weights` directly. The
+spectrum of the semi-discrete operator has max real part 8·10⁻⁸ at
+δ = 0.005 (n = 400) and about 10⁻¹³ otherwise; RK4 at CFL 0.4 is stable
+in every run here. Nothing was tried for sharper contrasts, layers thinner
+than 19δ, or higher orders than FD4; the construction does not change for
+any of them.
