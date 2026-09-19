@@ -168,14 +168,11 @@ def main() -> None:
         top, bottom = axes[0, c], axes[1, c]
         shade_layer(top, medium)
         shade_layer(bottom, medium)
-        (line,) = top.plot(
-            grid.x, runs[mode].f[0], color=COLORS[mode], label=LABELS[mode]
-        )
+        (line,) = top.plot(grid.x, runs[mode].f[0], color=COLORS[mode])
         (err,) = bottom.plot(grid.x, errors[mode][0], color=COLORS[mode], lw=1.5)
         top.set_title(TITLES[mode])
         top.set_xlim(-1, 1)
         top.set_ylim(-ylim, ylim)
-        top.legend(loc="upper left", fontsize=10)
         bottom.set_ylim(0, err_lim)
         bottom.set_xlabel("position x")
         lines[mode] = (line, err)
