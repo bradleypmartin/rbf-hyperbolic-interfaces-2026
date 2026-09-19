@@ -66,6 +66,8 @@ uv run python scripts/wave2d_eigenvalues.py   # operator spectrum with/without h
 uv run python scripts/wave2d_hyperviscosity.py  # error and stability vs hyperviscosity amplitude
 uv run python scripts/wave2d_convergence.py   # 2-D error vs resolution, flat and curved interfaces (Fig. 3-5 / 3-8)
 uv run python scripts/wave2d_demo.py          # clip 2: 2-D two-panel MP4 + snapshot PNG; --amplitude 0.02 for clip 3 (curved)
+uv run python scripts/wave1d_stiff.py         # Part 3: 1-D knee plot, snapshot and seeds through a stiff smooth edge
+uv run python scripts/wave2d_stiff.py         # Part 3: 2-D naive RBF-FD baseline through smooth edges (--sharpness 15 --center 0.875 for the wider pulse)
 ```
 
 Both demo drivers take `--png-only` to refresh a still without re-rendering a
