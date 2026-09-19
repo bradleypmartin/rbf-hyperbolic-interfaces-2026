@@ -26,7 +26,7 @@ the 2-D initial state, with f recovered from ``f_t = lam v_y`` exactly.
 
 import numpy as np
 
-from ..wave1d.domain import LayeredMedium, Material, gaussian, periodic_grid
+from ..wave1d.domain import Grid1D, LayeredMedium, Material, gaussian, periodic_grid
 from ..wave1d.exact import exact_solution as exact_1d
 from ..wave1d.spectral import interpolate, reference_size, run_spectral
 from .domain import FIELDS, LayeredMedium2D, NodeSet, require_background_start
@@ -131,6 +131,90 @@ def exact_plane_wave(
     return state
 
 
+def spectral_plane_wave_1d(
+    medium: LayeredMedium2D,
+    t: float,
+    center: float = 0.75,
+    sharpness: float = 23.0,
+    *,
+    n_ref: int | None = None,
+    dt: float | None = None,
+    cfl: float = 0.25,
+) -> tuple[Grid1D, np.ndarray, np.ndarray]:
+    """The 1-D image of the smooth-edge problem at time ``t``: ``(grid, u, f)``.
+
+    The 1-D solver's own pulse scales velocity by the *local* impedance,
+    while :func:`plane_p_wave` uses the background's everywhere, so the 2-D
+    initial state is mapped explicitly (``u_1D = -v / Z_p``,
+    ``f_1D = h / Z_p``): the reference solves the same initial-value problem
+    as the 2-D runs whatever the overlap between the pulse's tail and the
+    edge's. Drivers cache this triple and map it onto node sets with
+    :func:`plane_wave_from_1d`.
+
+    Resolution: ``reference_size(2 * edge_width)`` 1-D nodes unless ``n_ref``
+    is given (2048 at delta = 0.005); ``dt`` and ``cfl`` go to
+    :func:`~pdes_demo.wave1d.spectral.run_spectral`. The default CFL gives
+    dt = 5e-5 at 2048 nodes, where doubling the grid or halving the step
+    changes the result by under 3e-10 at t = 1 for the default pulse; pass
+    ``dt`` to pin the step when comparing grid sizes. Cost is the 1-D run:
+    about 4 s at 2048 nodes to t = 1, 14 s at 8192 nodes to t = 0.3.
+    """
+    if not medium.is_smooth:
+        raise ValueError("a jump has the exact ray sum; use exact_plane_wave")
+    # The mapping below is plane_p_wave's background-material pulse; unlike
+    # the ray sum there is no tail check because the reference solves whatever
+    # initial state it is given, and that state is mapped exactly.
+    require_background_start(medium, center)
+    mapped = _MappedMedium1D(medium)
+    n = reference_size(2 * medium.edge_width) if n_ref is None else n_ref
+    grid = periodic_grid(n)
+    z = medium.background.p_impedance
+    # plane_p_wave on the 1-D grid: v0 = gaussian, h0 = Z_p v0, so u_1D = -v0 / Z_p
+    # and f_1D = h0 / Z_p = v0.
+    v0 = gaussian(grid.x, 1 - 2 * center, sharpness**2 / 4)
+    _, snaps = run_spectral(
+        mapped, n, t_end=t, cfl=cfl, dt=dt, n_snapshots=1, initial=(-v0 / z, v0)
+    )
+    return grid, snaps.u[-1], snaps.f[-1]
+
+
+def plane_wave_from_1d(
+    nodes: NodeSet | np.ndarray,
+    medium: LayeredMedium2D,
+    grid: Grid1D,
+    u1: np.ndarray,
+    f1: np.ndarray,
+    center: float = 0.75,
+    sharpness: float = 23.0,
+) -> np.ndarray:
+    """State ``(5, n)`` on the nodes from a 1-D snapshot of
+    :func:`spectral_plane_wave_1d` (trigonometric interpolation to ``x = 1 - 2y``).
+
+    f follows from ``f_t = lam v_y`` and ``h_t = (lam + 2 mu) v_y`` sharing
+    ``v_y``: ``f = f_0 + lam / (lam + 2 mu) (h - h_0)`` pointwise in y,
+    exact for any overlap. The jump case's shortcut ``f = lam / (lam + 2 mu) h``
+    is off by ``|h_0| |ratio - ratio_bg|``, frozen in time: nothing for the
+    default materials (lam = mu on both sides, so the ratio is 1/3
+    everywhere), and for a band with a different ratio it grows with the
+    overlap of the tanh tails (about 19 delta long) and the pulse's: 2e-14
+    at delta = 0.01, 1e-9 at 0.02 and 7e-6 at 0.04 for the default pulse
+    against the edge at y = 0.5 (``tests/test_wave2d_smooth_edges.py``).
+    """
+    xy = _points(nodes)
+    x = 1 - 2 * xy[:, 1]
+    z = medium.background.p_impedance
+    h = z * interpolate(f1, grid, x)
+    h0 = z * gaussian(x, 1 - 2 * center, sharpness**2 / 4)
+    lam = medium.lam_at(xy[:, 0], xy[:, 1])
+    mu = medium.mu_at(xy[:, 0], xy[:, 1])
+    bg = medium.background
+    state = np.zeros((len(FIELDS), xy.shape[0]))
+    state[1] = -z * interpolate(u1, grid, x)
+    state[4] = h
+    state[2] = bg.lam / (bg.lam + 2 * bg.mu) * h0 + lam / (lam + 2 * mu) * (h - h0)
+    return state
+
+
 def spectral_plane_wave(
     nodes: NodeSet | np.ndarray,
     t: float,
@@ -143,59 +227,10 @@ def spectral_plane_wave(
     cfl: float = 0.25,
 ) -> np.ndarray:
     """State ``(5, n)`` at time ``t`` for the pulse of :func:`plane_p_wave`
-    through smooth flat edges, from the 1-D pseudo-spectral solver.
-
-    The 1-D solver's own pulse scales velocity by the *local* impedance,
-    while :func:`plane_p_wave` uses the background's everywhere, so the 2-D
-    initial state is mapped explicitly (``u_1D = -v / Z_p``,
-    ``f_1D = h / Z_p``): the reference solves the same initial-value problem
-    as the 2-D runs whatever the overlap between the pulse's tail and the
-    edge's.
-
-    f follows from ``f_t = lam v_y`` and ``h_t = (lam + 2 mu) v_y`` sharing
-    ``v_y``: ``f = f_0 + lam / (lam + 2 mu) (h - h_0)`` pointwise in y,
-    exact for any overlap. The jump case's shortcut ``f = lam / (lam + 2 mu) h``
-    is off by ``|h_0| |ratio - ratio_bg|``, frozen in time: nothing for the
-    default materials (lam = mu on both sides, so the ratio is 1/3
-    everywhere), and for a band with a different ratio it grows with the
-    overlap of the tanh tails (about 19 delta long) and the pulse's: 2e-14
-    at delta = 0.01, 1e-9 at 0.02 and 7e-6 at 0.04 for the default pulse
-    against the edge at y = 0.5 (``tests/test_wave2d_smooth_edges.py``).
-
-    Resolution: ``reference_size(2 * edge_width)`` 1-D nodes unless ``n_ref``
-    is given (2048 at delta = 0.005); ``dt`` and ``cfl`` go to
-    :func:`~pdes_demo.wave1d.spectral.run_spectral`. The default CFL gives
-    dt = 5e-5 at 2048 nodes, where doubling the grid or halving the step
-    changes the result by under 3e-10 at t = 1 for this pulse; pass ``dt``
-    to pin the step when comparing grid sizes. Cost is the 1-D run: about
-    4 s at 2048 nodes to t = 1, 14 s at 8192 nodes to t = 0.3.
+    through smooth flat edges: :func:`spectral_plane_wave_1d` mapped onto the
+    nodes by :func:`plane_wave_from_1d`. See both for the details.
     """
-    xy = _points(nodes)
-    if not medium.is_smooth:
-        raise ValueError("a jump has the exact ray sum; use exact_plane_wave")
-    # The mapping below is plane_p_wave's background-material pulse; unlike
-    # the ray sum there is no tail check because the reference solves whatever
-    # initial state it is given, and that state is mapped exactly.
-    require_background_start(medium, center)
-    mapped = _MappedMedium1D(medium)
-    n = reference_size(2 * medium.edge_width) if n_ref is None else n_ref
-    grid = periodic_grid(n)
-    x_c, s_x = 1 - 2 * center, sharpness**2 / 4
-    z = medium.background.p_impedance
-    # plane_p_wave on the 1-D grid: v0 = gaussian, h0 = Z_p v0, so u_1D = -v0 / Z_p
-    # and f_1D = h0 / Z_p = v0.
-    v0 = gaussian(grid.x, x_c, s_x)
-    _, snaps = run_spectral(
-        mapped, n, t_end=t, cfl=cfl, dt=dt, n_snapshots=1, initial=(-v0 / z, v0)
+    grid, u1, f1 = spectral_plane_wave_1d(
+        medium, t, center, sharpness, n_ref=n_ref, dt=dt, cfl=cfl
     )
-    x = 1 - 2 * xy[:, 1]
-    h = z * interpolate(snaps.f[-1], grid, x)
-    h0 = z * gaussian(x, x_c, s_x)
-    lam = medium.lam_at(xy[:, 0], xy[:, 1])
-    mu = medium.mu_at(xy[:, 0], xy[:, 1])
-    bg = medium.background
-    state = np.zeros((len(FIELDS), xy.shape[0]))
-    state[1] = -z * interpolate(snaps.u[-1], grid, x)
-    state[4] = h
-    state[2] = bg.lam / (bg.lam + 2 * bg.mu) * h0 + lam / (lam + 2 * mu) * (h - h0)
-    return state
+    return plane_wave_from_1d(nodes, medium, grid, u1, f1, center, sharpness)

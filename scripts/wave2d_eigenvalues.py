@@ -7,8 +7,12 @@ them into the left half-plane, inside the RK4 stability region for the
 chosen time step. Dense eigenvalue solves, so keep n small (900 nodes is
 4500 eigenvalues and takes a few seconds; 2500 nodes takes minutes).
 
+With ``--edge-width delta`` the interfaces are smooth tanh edges (Part 3,
+#37): flat, naive stencils, coefficients sampled at the stencil centres.
+
     uv run python scripts/wave2d_eigenvalues.py
     uv run python scripts/wave2d_eigenvalues.py --n 2500 --gamma-scale 2
+    uv run python scripts/wave2d_eigenvalues.py --edge-width 0.004
 """
 
 import argparse
@@ -38,17 +42,29 @@ def rk4_boundary(n_pts: int = 800) -> np.ndarray:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--n", type=int, default=900, help="nodes (perfect square)")
-    parser.add_argument("--amplitude", type=float, default=0.02)
+    parser.add_argument(
+        "--amplitude",
+        type=float,
+        default=None,
+        help="interface amplitude (default 0.02, or 0 with --edge-width)",
+    )
     parser.add_argument("--cfl", type=float, default=0.5)
     parser.add_argument("--gamma-scale", type=float, default=1.0)
     parser.add_argument(
-        "--out", type=Path, default=Path("outputs/wave2d_eigenvalues.png")
+        "--edge-width", type=float, default=0.0, help="tanh edge width (flat only)"
     )
+    parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args()
+    if args.amplitude is None:
+        args.amplitude = 0.0 if args.edge_width else 0.02
+    if args.out is None:
+        suffix = f"_w{args.edge_width:g}" if args.edge_width else ""
+        args.out = Path(f"outputs/wave2d_eigenvalues{suffix}.png")
 
     medium = LayeredMedium2D(
         lower=SineInterface(0.25, args.amplitude),
         upper=SineInterface(0.5, args.amplitude),
+        edge_width=args.edge_width,
     )
     nodes = make_node_set(medium, args.n)
     ops = build_operators(nodes, medium)
@@ -98,8 +114,9 @@ def main() -> None:
         fontsize=10,
         color=INK_SECONDARY,
     )
+    edge = f", edge width {medium.edge_width:g}" if medium.is_smooth else ""
     fig.suptitle(
-        f"{5 * nodes.n} eigenvalues of the elastic operator on {nodes.n} nodes"
+        f"{5 * nodes.n} eigenvalues of the elastic operator on {nodes.n} nodes{edge}"
         f"  |  $\\gamma$ = {gamma:.2e}, $\\Delta t$ = {dt:.4f}",
         fontsize=12,
     )
