@@ -1,37 +1,51 @@
 # 20260930-zd-ai-pdes-demo
 
-Material for a 30-minute demo on **2026-09-30** about what frontier AI models
-can currently do in research mathematics, in one narrow slice of it: partial
-differential equations.
-
-Two halves:
+Material for a 30-minute talk on **2026-09-30** to Ziff Davis coworkers,
+*AI and Applied Math circa September 2026: excitement, ethics, and individual
+exploration*. What frontier AI currently does in research mathematics, seen at
+two scales in one narrow slice of it: partial differential equations.
 
 1. **Navier–Stokes, the state of play.** OpenAI announced on 2026-09-08 a
    166-page manuscript, *Finite Time Blowup for Navier–Stokes*, plus Lean 4
    certificates, claiming alternatives (C) and (D) of the Clay Millennium
    problem: smooth, compactly supported forcing under which no global smooth
-   finite-energy solution exists. What was claimed, how it was produced, how it
-   is being checked, and the questions it raises. Notes in `docs/`.
-2. **Working with Claude on my own research.** A live/recorded exposition of
-   Claude Code and me re-deriving and re-implementing in Python the
-   interface-aware wave solvers from my 2016 CU Boulder applied-math
-   dissertation (radial basis function-generated finite differences, RBF-FD).
-   1-D wave equation with a thin heterogeneous layer first; 2-D RBF-FD on a
-   scattered node set with curved interfaces if time allows.
+   finite-energy solution exists. What was claimed, how it was produced, the
+   parallel Alpöge–Buckmaster result and the credit dispute, how the claim is
+   being checked, and the questions it raises. Every statement on the slides
+   traces to [`docs/navier-stokes-notes.md`](docs/navier-stokes-notes.md),
+   which cites a PDF in `papers/` or a URL.
+2. **Working with Claude on my own research.** Claude Code and I re-derived
+   and re-implemented in Python the interface-aware wave solvers from my 2016
+   CU Boulder applied-math dissertation: the 1-D wave equation through a
+   heterogeneous layer with interface-aware finite differences, and the 2-D
+   elastic wave equation on a scattered node set with curved interfaces using
+   radial basis function-generated finite differences (RBF-FD). Both are
+   verified against reference solutions: standard stencils lose accuracy at a
+   material boundary, the interface-aware ones do not. All of it was built on
+   2026-09-17.
 
 ## Talk materials
 
 Hosted from `main` by GitHub Pages: [landing page](https://bradleypmartin.github.io/20260930-zd-ai-pdes-demo/),
 [slides (PDF)](https://bradleypmartin.github.io/20260930-zd-ai-pdes-demo/slides/talk.pdf),
 [the three clips](https://bradleypmartin.github.io/20260930-zd-ai-pdes-demo/slides/clips.html).
-Sources: `slides/` (see its README for the build and the clip player).
+Sources in `slides/` (see its README for the build, the quotation checker, and
+the clip player).
+
+To play the clips in the talk: open `slides/clips.html` in Chrome, press `F`
+for full screen, then `1`, `2` or `3` to play a clip from the start (`space`
+pauses, `R` restarts). `slides/notes.md` is the speaker script and says when
+to switch to which clip.
 
 ## Quickstart
 
 ```sh
-uv sync                        # Python 3.13 venv with numpy / scipy / matplotlib
-uv run pytest                  # tests
-./papers/fetch_papers.sh       # download the public reference PDFs (gitignored)
+uv sync                                       # Python 3.13 venv with numpy / scipy / matplotlib
+uv run pytest                                 # 106 tests: convergence orders and analytic comparisons
+./papers/fetch_papers.sh                      # public reference PDFs (gitignored), checksum-checked
+./slides/build.sh                             # rebuild slides/talk.pdf with tectonic
+uv run python scripts/check_slide_quotes.py   # every quotation on a slide is in the notes
+open slides/clips.html                        # the clip player (keys 1, 2, 3; F for full screen)
 ```
 
 Drivers in `scripts/` write figures and animations to `outputs/` (gitignored):
@@ -39,24 +53,28 @@ Drivers in `scripts/` write figures and animations to `outputs/` (gitignored):
 ```sh
 uv run python scripts/wave1d_convergence.py   # error vs resolution (dissertation Fig. 2-8)
 uv run python scripts/wave1d_demo.py          # two-panel MP4 + snapshot PNG, naive vs aware
-uv run python scripts/wave1d_demo.py --n 100 --sharpness 150 --out outputs/wave1d_naive_vs_aware_coarse.mp4  # coarse grid, ringing visible
+uv run python scripts/wave1d_demo.py --n 100 --sharpness 150 --out outputs/wave1d_naive_vs_aware_coarse.mp4  # clip 1: coarse grid, ringing visible
 uv run python scripts/wave2d_nodes.py         # interface-fitted node set (dissertation Fig. 3-3)
 uv run python scripts/wave2d_eigenvalues.py   # operator spectrum with/without hyperviscosity (Fig. 3-2)
 uv run python scripts/wave2d_hyperviscosity.py  # error and stability vs hyperviscosity amplitude
 uv run python scripts/wave2d_convergence.py   # 2-D error vs resolution, flat and curved interfaces (Fig. 3-5 / 3-8)
-uv run python scripts/wave2d_demo.py          # 2-D two-panel MP4 + snapshot PNG; --amplitude 0.02 for curved interfaces
+uv run python scripts/wave2d_demo.py          # clip 2: 2-D two-panel MP4 + snapshot PNG; --amplitude 0.02 for clip 3 (curved)
 ```
+
+Both demo drivers take `--png-only` to refresh a still without re-rendering a
+clip.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
-| `src/pdes_demo/` | Library: FD / RBF-FD stencil generation, interface treatment, time stepping, node sets |
-| `scripts/` | Runnable drivers for the demo |
+| `src/pdes_demo/` | Library. `wave1d/`: FD stencils across interfaces, RK4, exact ray-sum solution. `wave2d/`: node sets, periodic kNN, Gaussian RBF-FD weights, interface-aware stencils, hyperviscosity, sparse elastic operators, RK4, analytic plane-wave reference, one-sided resampling. Shared Fornberg weights and plotting palette. |
+| `scripts/` | Drivers for the figures and clips; `check_slide_quotes.py` |
 | `tests/` | pytest suite (convergence and analytic checks) |
-| `docs/` | `demo-outline.md` (plan + timeline), Navier–Stokes notes, paper index |
-| `slides/` | Beamer deck (`talk.tex` → `talk.pdf`), figures, speaker script; `./slides/build.sh` |
-| `papers/` | Index of reference papers with links and checksums; PDFs are not committed |
+| `docs/` | `demo-outline.md` (results tables, decisions log, what happened when), `navier-stokes-notes.md` (sourced notes for Part 1), `paper-index.md` (page ranges per PDF) |
+| `slides/` | `talk.tex` → `talk.pdf`, `notes.md` speaker script, `figures/`, `videos/` (the three clips), `clips.html` clip player, `build.sh` |
+| `papers/` | Index of reference papers with links and checksums, fetch script; PDFs are not committed |
+| `index.html` | GitHub Pages landing page |
 
 ## Reference papers
 
@@ -66,6 +84,13 @@ See [`papers/README.md`](papers/README.md) for the full table. Headline links:
   [PDF](https://cdn.openai.com/pdf/32d9f210-8b73-45e0-91bc-82a30aef8a9a/navier-stokes.pdf) ·
   [announcement](https://openai.com/index/navier-stokes-solution/) ·
   [Lean certificates](https://github.com/openai/NavierStokesAndEuler)
+- OpenAI, companion *Finite Time Blowup for the Euler Equation* (2026):
+  [PDF](https://cdn.openai.com/pdf/315b36cd-ec98-4023-8342-93345194ece1/euler.pdf)
+- L. Alpöge, T. Buckmaster, *Blowup for the Euler equations with smooth
+  forcing* (2026, preprint): [PDF](https://cims.nyu.edu/~tristanb/euler.pdf) ·
+  [Lean](https://github.com/tristanbuckmaster/fluid_lean)
+- T. Buckmaster, [statement of 2026-09-07](https://cims.nyu.edu/~tristanb/statement.pdf)
+  on the results, the tools used, and the contacts with OpenAI
 - Clay Mathematics Institute, [official problem statement](https://www.claymath.org/wp-content/uploads/2022/06/navierstokes.pdf) (Fefferman)
 - B. Martin, *Application of RBF-FD to Wave and Heat Transport Problems in
   Domains with Interfaces*, PhD dissertation, CU Boulder, 2016
@@ -78,7 +103,8 @@ See [`papers/README.md`](papers/README.md) for the full table. Headline links:
 
 The original MATLAB implementations live in a separate repo,
 [`bradleypmartin/MathGraduateResearchAndCourseWork`](https://github.com/bradleypmartin/MathGraduateResearchAndCourseWork),
-and are used as a read-only reference for the Python ports here.
+and were used as a read-only reference for the Python ports here. `CLAUDE.md`
+lists what was ported and what was not.
 
 ## Status
 
@@ -97,7 +123,12 @@ and are used as a read-only reference for the Python ports here.
 - [x] 2-D curved-interface runs, convergence figure, two-panel videos with
       error maps (flat: vs the exact solution; curved: vs a 4x finer
       interface-aware run) (2026-09-17)
-- [ ] Rehearsal
+- [x] Deck culled to seven content slides per part, slide-by-slide passes,
+      new title and thesis (2026-09-19)
+- [x] Clip pass: re-rendered with the final palette, 1-D clip simplified,
+      2-D still reduced to the reference wave and two error maps (2026-09-19)
+- [x] Docs pass (2026-09-19)
+- [ ] Rehearsal on Sep 29, then freeze and tag `talk-2026-09-30`
 
 ## License
 
