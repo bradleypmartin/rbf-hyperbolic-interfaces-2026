@@ -5,6 +5,10 @@ pages with `pdftotext -f <first> -l <last> -layout <pdf> -` instead of
 re-reading whole documents. Page numbers below are **PDF page numbers**
 (what `pdftotext -f/-l` takes). All PDFs live in `papers/`.
 
+Checked 2026-09-19: every public PDF was downloaded afresh and its sha256
+matches the one recorded in `papers/README.md`, and the page counts below
+match the local files, so no upstream revision has moved these ranges.
+
 ## Dissertation (`martin-dissertation-2016-rbf-fd-interfaces.pdf`, 145 pp.)
 
 Printed page = PDF page − 9 (Chapter 1 begins on printed p. 1 = PDF p. 10).

@@ -23,6 +23,7 @@ Elem. 79, 38–48, 2017.
 
 The OpenAI manuscript in particular may be revised. `fetch_papers.sh` warns
 (does not fail) on a checksum mismatch so we notice a new version.
+Re-checked against fresh downloads on 2026-09-19: all unchanged.
 
 ```
 0e779481c4da40bd28d1e642e1d8ca57447d129610df28dfa5a11e9af8ae228f  openai-2026-finite-time-blowup-navier-stokes.pdf
