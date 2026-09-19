@@ -24,6 +24,13 @@ two scales in one narrow slice of it: partial differential equations.
    material boundary, the interface-aware ones do not. All of it was built on
    2026-09-17.
 
+After the freeze, and not part of the talk: **Part 3**, an idea from my
+research that never got written up. A stencil crossing a material edge too
+steep for the grid to resolve is built from "seeds" continued through the
+edge by ODEs instead of monomials, on the same equispaced grid. Built and
+confirmed in 1-D on 2026-09-19, with a design note for 2-D:
+[`docs/stiff-features.md`](docs/stiff-features.md) (issue #27).
+
 ## Talk materials
 
 Hosted from `main` by GitHub Pages: [landing page](https://bradleypmartin.github.io/20260930-zd-ai-pdes-demo/),
@@ -68,10 +75,10 @@ clip.
 
 | Path | Contents |
 | --- | --- |
-| `src/pdes_demo/` | Library. `wave1d/`: FD stencils across interfaces, RK4, exact ray-sum solution. `wave2d/`: node sets, periodic kNN, Gaussian RBF-FD weights, interface-aware stencils, hyperviscosity, sparse elastic operators, RK4, analytic plane-wave reference, one-sided resampling. Shared Fornberg weights and plotting palette. |
+| `src/pdes_demo/` | Library. `wave1d/`: FD stencils across interfaces, RK4, exact ray-sum solution; for Part 3, smooth tanh edges, a Fourier pseudo-spectral reference and ODE-continued seed stencils. `wave2d/`: node sets, periodic kNN, Gaussian RBF-FD weights, interface-aware stencils, hyperviscosity, sparse elastic operators, RK4, analytic plane-wave reference, one-sided resampling. Shared Fornberg weights and plotting palette. |
 | `scripts/` | Drivers for the figures and clips; `check_slide_quotes.py` |
 | `tests/` | pytest suite (convergence and analytic checks) |
-| `docs/` | `demo-outline.md` (results tables, decisions log, what happened when), `navier-stokes-notes.md` (sourced notes for Part 1), `paper-index.md` (page ranges per PDF) |
+| `docs/` | `demo-outline.md` (results tables, decisions log, what happened when), `navier-stokes-notes.md` (sourced notes for Part 1), `paper-index.md` (page ranges per PDF), `stiff-features.md` and `figures/` (Part 3) |
 | `slides/` | `talk.tex` → `talk.pdf`, `notes.md` speaker script, `figures/`, `videos/` (the three clips), `clips.html` clip player, `build.sh` |
 | `papers/` | Index of reference papers with links and checksums, fetch script; PDFs are not committed |
 | `index.html` | GitHub Pages landing page |
@@ -128,6 +135,9 @@ lists what was ported and what was not.
 - [x] Clip pass: re-rendered with the final palette, 1-D clip simplified,
       2-D still reduced to the reference wave and two error maps (2026-09-19)
 - [x] Docs pass (2026-09-19)
+- [x] Part 3, not in the talk: smooth-edged layer, spectral reference,
+      ODE-continued seed stencils, knee experiment, notes with verified
+      related work and a 2-D design note (2026-09-19)
 - [ ] Rehearsal on Sep 29, then freeze and tag `talk-2026-09-30`
 
 ## License
