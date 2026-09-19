@@ -2,9 +2,9 @@
 
 A right-going Gaussian stress pulse hits a layer with a different wave speed
 and density. Left: standard 4th-order finite differences straight across
-the interfaces. Right: the dissertation's interface-aware stencils. The
-exact solution is dashed underneath both, and a strip below each panel
-shows the error against it.
+the interfaces. Right: the dissertation's interface-aware stencils. A strip
+below each panel shows the error against the exact solution, which is
+computed but not drawn: the error strips carry the comparison.
 
     uv run python scripts/wave1d_demo.py                  # defaults, MP4 + PNG
     uv run python scripts/wave1d_demo.py --layer-width 0.01 --out outputs/thin.mp4
@@ -133,11 +133,6 @@ def main() -> None:
             for c, mode in enumerate(MODES):
                 ax = axes[r, c]
                 shade_layer(ax, medium)
-                # The exact solution goes under the interface-aware curve only:
-                # the point is that the blue sits on it. Under the naive curve
-                # it is clutter at slide size.
-                if mode == "aware":
-                    ax.plot(grid.x, exact[k], "--", color=INK_SECONDARY, lw=1.4)
                 ax.plot(grid.x, runs[mode].f[k], color=COLORS[mode])
                 ax.set_xlim(-1, 1)
                 ax.set_ylim(-ylim, ylim)
@@ -148,10 +143,6 @@ def main() -> None:
                     # size on the slide; this lands near 7pt there.
                     ax.set_ylabel(f"t = {times[k]:.1f}", fontsize=28)
         for c, mode in enumerate(MODES):
-            if mode == "aware":
-                axes[0, c].plot(
-                    [], [], "--", color=INK_SECONDARY, label="exact solution"
-                )
             axes[0, c].plot([], [], color=COLORS[mode], label=LABELS[mode])
             axes[0, c].legend(loc="upper left", fontsize=10)
             axes[-1, c].set_xlabel("position x")
@@ -177,9 +168,6 @@ def main() -> None:
         top, bottom = axes[0, c], axes[1, c]
         shade_layer(top, medium)
         shade_layer(bottom, medium)
-        (ref,) = top.plot(
-            grid.x, exact[0], "--", color=INK_SECONDARY, lw=1.4, label="exact solution"
-        )
         (line,) = top.plot(
             grid.x, runs[mode].f[0], color=COLORS[mode], label=LABELS[mode]
         )
@@ -190,7 +178,7 @@ def main() -> None:
         top.legend(loc="upper left", fontsize=10)
         bottom.set_ylim(0, err_lim)
         bottom.set_xlabel("position x")
-        lines[mode] = (line, ref, err)
+        lines[mode] = (line, err)
     axes[0, 0].set_ylabel("stress f")
     axes[1, 0].set_ylabel("error vs exact")
     axes[0, 1].tick_params(labelleft=False)
@@ -205,11 +193,10 @@ def main() -> None:
     def update(k: int) -> list:
         artists = []
         for mode in MODES:
-            line, ref, err = lines[mode]
+            line, err = lines[mode]
             line.set_ydata(runs[mode].f[k])
-            ref.set_ydata(exact[k])
             err.set_ydata(errors[mode][k])
-            artists += [line, ref, err]
+            artists += [line, err]
         clock.set_text(f"t = {times[k]:.2f}")
         return artists + [clock]
 
