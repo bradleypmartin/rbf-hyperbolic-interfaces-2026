@@ -55,6 +55,16 @@ def test_zero_edge_width_is_the_jump_medium_bit_for_bit() -> None:
     )
 
 
+def test_material_at_agrees_with_the_three_accessors() -> None:
+    rng = np.random.default_rng(3)
+    x, y = rng.random(200), rng.random(200) * 1.5 - 0.25  # beyond [0, 1) too
+    for medium in (FLAT, LayeredMedium2D(edge_width=0.01)):
+        lam, mu, rho = medium.material_at(x, y)
+        np.testing.assert_array_equal(lam, medium.lam_at(x, y))
+        np.testing.assert_array_equal(mu, medium.mu_at(x, y))
+        np.testing.assert_array_equal(rho, medium.rho_at(x, y))
+
+
 def test_profile_is_periodic_symmetric_flat_and_bounded() -> None:
     medium = LayeredMedium2D(edge_width=0.03)
     x = np.linspace(0, 1, 7)[:, None]

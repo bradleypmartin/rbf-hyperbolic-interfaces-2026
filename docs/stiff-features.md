@@ -641,13 +641,19 @@ interface, relative to the largest basis value):
 | in the background (y' = −h/2) | velocity | 9.9e-3 | 9.9e-4 | 9.9e-5 |
 | | stress | 1.6e-2 | 1.6e-3 | 1.6e-4 |
 
-**Residual.** Independently of the first-order form,
-`test_marched_seeds_satisfy_the_operator_on_a_fine_grid` marches to 401
-points of Y ∈ [−1, 1] through a δ = 0.01 edge, differentiates a_j and b_j
-in Y with 8th-order finite differences, assembles the xʲ coefficients of
-ρ L (u, v) from the second-order operator and compares with ρ Σ C S: the
-relative residual is 3 × 10⁻¹² (8 × 10⁻¹⁰ at 201 points, 8 × 10⁻¹² at
-801, where roundoff in the second derivative takes over).
+**Residual.** `test_seeds_satisfy_the_2d_operator_applied_by_finite_differences`
+uses none of the module's coefficient bookkeeping: it evaluates every seed
+as a 2-D function on a 25 × 401 tensor grid through a δ = 0.01 edge,
+applies the second-order elastic operator of `domain.py`'s docstring with
+8th-order finite differences in both x and y (exact in x, where the seeds
+are polynomials of degree ≤ 4), and compares with ρ Σ C S, the chain
+matrix having been checked against its closed form separately. The
+relative residual is 2 × 10⁻¹². An earlier version of this test rebuilt
+the xʲ coefficient formulas the way `rhs` does and so could not see a
+derivation error shared by the two; the adversarial review of PR #46
+showed that by injecting one. The present test drops from 2 × 10⁻¹² to
+0.23 when the (j+2)(j+1) factor is wrong and to 0.06 when the λ (j+1) b'
+term is dropped.
 
 **Conditioning.** On the same real stencil, the 2-norm condition numbers
 of the velocity block (38 × 20) and the stress block (57 × 27):

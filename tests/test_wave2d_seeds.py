@@ -15,7 +15,6 @@ from pdes_demo.wave2d.interface import evaluate_basis, interface_basis
 from pdes_demo.wave2d.rbf import monomial_exponents
 from pdes_demo.wave2d.seeds import (
     SeedChain,
-    _shift,
     basis_columns,
     chain_matrix,
     normal_profile,
@@ -193,40 +192,49 @@ def test_rigid_motions_have_no_stress_and_the_shear_pair_shares_one(nodes) -> No
     assert u_const == 0 and v_const == M1 and v_x == M1 + 1
 
 
-def test_marched_seeds_satisfy_the_operator_on_a_fine_grid() -> None:
-    # Independent of the first-order form: differentiate the marched a_j, b_j
-    # in Y with 8th-order finite differences, assemble the x^j coefficients
-    # of rho L (u, v) from the second-order operator, and compare with the
-    # chain's right-hand side rho sum_e' C[e', e] S_e'.
+def test_seeds_satisfy_the_2d_operator_applied_by_finite_differences() -> None:
+    # Independent of every formula in the module except the chain matrix
+    # (checked against its closed form above): evaluate each seed as a 2-D
+    # function on a tensor grid through a delta = 0.01 edge, apply the
+    # second-order elastic operator of domain.py's docstring with 8th-order
+    # finite differences in both x and y (exact in x, where the seeds are
+    # polynomials of degree <= 4), and compare with rho sum_e' C[e', e] S_e'.
     medium = LayeredMedium2D(edge_width=0.01)
     chain = SeedChain(normal_profile(medium, medium.lower, 0.3), 0.02, 0.06, 3)
-    ny = 401
-    ys = np.linspace(-1.0, 1.0, ny)
-    hy = ys[1] - ys[0]
-    state = chain.march(ys)
-    a, b = state[:, 0], state[:, 1]
+    nx, ny = 25, 401
+    xg = np.linspace(-0.6, 0.6, nx)
+    yg = np.linspace(-1.0, 1.0, ny)
+    xx, yy = np.meshgrid(xg, yg, indexing="ij")
+    fields = chain.evaluate(xx.ravel(), yy.ravel())
+    u, v = (c.reshape(nx, ny, chain.n_seeds) for c in fields[:2])
     lam, mu, rho = (
-        v[:, None, None] for v in chain.profile.material(chain.y_e + chain.scale * ys)
+        v_[None, :, None] for v_ in chain.profile.material(chain.y_e + chain.scale * yg)
     )
     k = lam + 2 * mu
-    w = fornberg_weights(0.0, np.arange(-4, 5) * hy, 1)[1]
 
-    def d_dy(arr: np.ndarray) -> np.ndarray:
+    def fd(arr: np.ndarray, axis: int) -> np.ndarray:
+        h = (xg if axis == 0 else yg)[1] - (xg if axis == 0 else yg)[0]
+        w = fornberg_weights(0.0, np.arange(-4, 5) * h, 1)[1]
+        n = arr.shape[axis]
         out = np.zeros_like(arr)
+        core = [slice(None)] * arr.ndim
+        core[axis] = slice(4, n - 4)
         for i, wi in enumerate(w):
-            out[4 : ny - 4] += wi * arr[i : ny - 8 + i]
+            src = [slice(None)] * arr.ndim
+            src[axis] = slice(i, n - 8 + i)
+            out[tuple(core)] += wi * arr[tuple(src)]
         return out
 
-    j1 = chain.j + 1
-    a_y, b_y = d_dy(a), d_dy(b)
-    tau = mu * (a_y + j1 * _shift(b, 1))
-    sigma = lam * j1 * _shift(a, 1) + k * b_y
-    lhs_u = d_dy(tau) + k * (j1 + 1) * j1 * _shift(a, 2) + lam * j1 * _shift(b_y, 1)
-    lhs_v = d_dy(sigma) + j1 * _shift(tau, 1)
-    c = chain.chain_t.T
-    rhs_u = rho * np.einsum("fe,nfl->nel", c, a)
-    rhs_v = rho * np.einsum("fe,nfl->nel", c, b)
-    interior = slice(8, ny - 8)
+    u_x, u_y, v_x, v_y = fd(u, 0), fd(u, 1), fd(v, 0), fd(v, 1)
+    sxx = k * u_x + lam * v_y
+    sxy = mu * (u_y + v_x)
+    syy = lam * u_x + k * v_y
+    lhs_u = fd(sxx, 0) + fd(sxy, 1)
+    lhs_v = fd(sxy, 0) + fd(syy, 1)
+    c = chain.chain_t.T  # C[e', e]
+    rhs_u = rho * (u @ c)
+    rhs_v = rho * (v @ c)
+    interior = (slice(8, nx - 8), slice(8, ny - 8))
     err = max(
         np.abs(lhs_u - rhs_u)[interior].max(), np.abs(lhs_v - rhs_v)[interior].max()
     )
@@ -235,7 +243,8 @@ def test_marched_seeds_satisfy_the_operator_on_a_fine_grid() -> None:
     assert err / scale < 1e-9
     # The seeds of degree <= 1 are in ker L: nothing drives them.
     low = [i for i, (p, q) in enumerate(EXPS1) if p + q <= 1]
-    assert np.abs(rhs_u[:, low + [M1 + i for i in low]]).max() == 0
+    assert np.abs(rhs_u[:, :, low + [M1 + i for i in low]]).max() == 0
+    assert np.abs(lhs_u[interior][:, :, low]).max() / scale < 1e-9
 
 
 def test_jets_at_the_anchor_are_the_monomial_jets_and_the_chain_constants(
