@@ -78,7 +78,7 @@ src/pdes_demo/   library code
                    coordinate, Part 3)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 153 tests; every numerical routine has one
+tests/           pytest, 154 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
