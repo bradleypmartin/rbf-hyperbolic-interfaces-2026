@@ -15,7 +15,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pdes_demo.plotting import AWARE, INK_MUTED, INK_SECONDARY, NAIVE, use_demo_style
+from pdes_demo.plotting import (
+    AWARE,
+    INK_MUTED,
+    INK_SECONDARY,
+    NAIVE,
+    SURFACE,
+    use_demo_style,
+)
 from pdes_demo.wave2d import (
     LayeredMedium2D,
     SineInterface,
@@ -83,7 +90,15 @@ def main() -> None:
     zoom.scatter([], [], s=60, color=AWARE, label="fixed rows straddling the interface")
     zoom.scatter([], [], s=60, color=INK_MUTED, label="repulsion-relaxed nodes")
     zoom.plot([], [], "--", color=INK_SECONDARY, label="material interface")
-    zoom.legend(loc="upper right", fontsize=14)
+    # A near-opaque box so the legend reads over the node cloud.
+    zoom.legend(
+        loc="upper right",
+        fontsize=14,
+        frameon=True,
+        framealpha=0.8,
+        facecolor=SURFACE,
+        edgecolor=INK_MUTED,
+    )
     # Mark one node's 30-nearest stencil to show it draws on both sides.
     i = int(np.argmin(np.abs(nodes.x - 0.5) + np.abs(nodes.y - medium.upper.y0)))
     idx, _ = periodic_knn(nodes.xy, 30, query=nodes.xy[[i]])
