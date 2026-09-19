@@ -90,7 +90,7 @@ the equations, the stability figure, and the numbers tables live in the repo.
 8. What "machine-checked" does and does not mean (Lean vs human checks).
 9. Reactions, and questions to argue about (four quotes, three prompts).
 10–16. Part 2 (section; my corner + problem in one picture; 1-D ringing +
-   clip; 2-D nodes; 2-D snapshot + clips; 1-D and 2-D convergence on one
+   clip; 2-D nodes; 2-D snapshot (curved case) + clips; 1-D and 2-D convergence on one
    slide, left panels cropped by `build.sh`; the collaboration with number
    tiles; comparison table).
 17. For the curious (links; on screen during questions).
