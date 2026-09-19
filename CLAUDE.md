@@ -31,8 +31,12 @@ smooth flat edges to `LayeredMedium2D` and a normal-incidence reference
 from the 1-D spectral solver; #37 measured the naive RBF-FD baseline
 (`scripts/wave2d_stiff.py`): the resolution floor hides most of the edge
 error in v; the spurious u (exactly 0 in the true solution) separates
-unresolved from resolved edges 10× more sharply. No 2-D seeds yet.
-Notes and results are in `docs/stiff-features.md` §5.
+unresolved from resolved edges 10× more sharply; #38 built the elastic seeds
+(`wave2d/seeds.py`): all 30 seeds of one stencil march as one 600-state
+ODE system in the normal coordinate, anchored at the evaluation node, with
+constant-material, jump-limit, residual and conditioning checks. No
+seed-augmented operator yet (#39). Derivation in `docs/stiff-features.md`
+§4, results in §5.
 
 Audience: bright tech workers with no assumed PDE background. **No live
 coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
@@ -69,10 +73,12 @@ src/pdes_demo/   library code
                    operator) / simulate.py (RK4) / exact.py (flat-interface
                    plane-wave references: ray sum for a jump, 1-D spectral
                    solver for smooth edges) / resample.py (one-sided
-                   interpolation to pixel grids and other node sets)
+                   interpolation to pixel grids and other node sets) /
+                   seeds.py (elastic seed bases marched in the normal
+                   coordinate, Part 3)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 143 tests; every numerical routine has one
+tests/           pytest, 153 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with

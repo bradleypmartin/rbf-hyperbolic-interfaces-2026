@@ -18,8 +18,10 @@ weights), `spectral.py` (the reference solution), `domain.py`
 `tests/test_wave1d_stiff.py`. The 2-D proof of concept (#36–#42, flat
 first) is under way: `LayeredMedium2D(edge_width=...)` and the
 normal-incidence reference `wave2d/exact.py: spectral_plane_wave` from #36,
-tested in `tests/test_wave2d_smooth_edges.py`; results go into section 5
-as they land.
+tested in `tests/test_wave2d_smooth_edges.py`; the elastic seeds of a
+straight edge, `wave2d/seeds.py` from #38, derived in section 4.2 and
+tested in `tests/test_wave2d_seeds.py`; results go into section 5 as they
+land.
 
 ## 1. Formulation (#28)
 
@@ -415,11 +417,14 @@ observation that this is one construction from the jump (algebra) to the
 resolved edge (Fornberg) with the ODE march in between. That is a
 statement about a few hours of searching, not a claim of novelty.
 
-## 4. Two dimensions: what the seeds become (#34)
+## 4. Two dimensions: the seeds (#34, #38)
 
-A design note, answering the three questions in #27; no 2-D code was
-written. The 2-D acoustic operator L = (1/ρ) ∇·(K ∇) is the first target;
-the elastic system of `wave2d` adds bookkeeping, not ideas.
+### 4.1 Design (#34)
+
+A design note answering the three questions in #27, written before any 2-D
+code; §4.2 is what #38 then built. The 2-D acoustic operator
+L = (1/ρ) ∇·(K ∇) is the first target; the elastic system of `wave2d` adds
+bookkeeping, not ideas.
 
 **The chain survives, the choice of seeds does not come for free.** The
 recursion L φ = (lower seeds) and the nested spaces {1} ⊂ ker L ⊂
@@ -461,7 +466,7 @@ data, which is the multiscale-FEM / oversampling construction (Hou–Wu) and
 the honest "PDE per stencil"; (c) compute the harmonic coordinates F once
 globally (Owhadi–Zhang), use polynomials in F as the degree-one seeds and
 the chain for the rest. For an edge whose curvature radius is many h,
-(a) should be enough; (b) is the robust fallback.
+(a) should be enough; (b) is the robust fallback. This is #42.
 
 **Characteristics away from the interface?** No. Away from the feature
 the material is constant, the seeds are the monomials, and nothing
@@ -492,16 +497,208 @@ matrix operator of linear elasticity acting on (u, v); the straight-feature
 reduction still holds because the isotropic operator keeps its form under
 the rotation into the feature's frame.
 
-**Estimate.** A straight-edge prototype on `wave2d`: rotate into the
-feature frame (exists), march the seed chains in n for the (d+1)(d+2)/2
-monomials with the elastic 2 × 2 operator (new, a few hundred lines
-generalising `stiff.py`), swap them into the augmentation of the
-interface-aware weights (small), and validate against a reference. The
-reference is the hard part: the flat-edge case separates into a 1-D
-problem per tangential wavenumber, so a 1-D spectral solve per Fourier
-mode of the initial pulse gives a reference of the same quality as
-section 2's. One to two days. A curved feature by route (b) is a
-week-scale project. Neither is scheduled; follow-up issue if wanted.
+### 4.2 The elastic seeds of a straight feature (#38, `wave2d/seeds.py`)
+
+**Frame and operator.** As in `wave2d/interface.py`: origin at the
+closest edge-centre point, x' tangential, y' normal, and the rotated
+fields (u', v', f', g', h') obey eq. 32 unchanged; primes are dropped
+below. The material depends on y' only, exactly for a flat edge and
+locally for a curved one. Eliminating the stresses from eq. 32 with
+λ(y), μ(y), ρ(y) and K = λ + 2μ:
+
+    ρ u_tt = ∂ₓ[K u_x + λ v_y] + ∂ᵧ[μ (u_y + v_x)]
+    ρ v_tt = ∂ₓ[μ (u_y + v_x)] + ∂ᵧ[λ u_x + K v_y].
+
+Call the right-hand side, divided by ρ, L(u, v).
+
+**Ansatz.** u = Σ_j a_j(y) xʲ, v = Σ_j b_j(y) xʲ, degree ≤ q in x. The
+brackets are the stress rates of eq. 32, each a polynomial in x with
+coefficient functions of y:
+
+    K u_x + λ v_y   = Σ_j [K (j+1) a_{j+1} + λ b_j']  xʲ   =: Σ_j F_j xʲ
+    μ (u_y + v_x)   = Σ_j [μ (a_j' + (j+1) b_{j+1})]  xʲ   =: Σ_j τ_j xʲ
+    λ u_x + K v_y   = Σ_j [λ (j+1) a_{j+1} + K b_j']  xʲ   =: Σ_j σ_j xʲ,
+
+and ∂ₓ shifts the index while ∂ᵧ differentiates the coefficient, so the
+xʲ coefficient of ρ L is
+
+    ρ (L)₁,j = (j+1) F_{j+1} + τ_j' = (j+1)(j+2) K a_{j+2} + (j+1) λ b_{j+1}' + τ_j'
+    ρ (L)₂,j = (j+1) τ_{j+1} + σ_j'.
+
+Level j is driven by levels j+1 and j+2 only: the system is triangular
+from the top x-degree down, and each level is a 2-component second-order
+ODE in y for (a_j, b_j). The two tractions τ_j, σ_j are what stays
+continuous across a jump (g and h in eq. 32), so they are the flux
+variables of the first-order form, the 2-D version of ψ = K φ' in §1.2:
+
+    a_j' = τ_j / μ − (j+1) b_{j+1}
+    b_j' = (σ_j − λ (j+1) a_{j+1}) / K
+    τ_j' = ρ R₁,j − K (j+2)(j+1) a_{j+2} − λ (j+1) b_{j+1}'
+    σ_j' = ρ R₂,j − (j+1) τ_{j+1},
+
+with b_{j+1}' substituted from the second line at level j+1, so λ, μ, ρ
+are only ever evaluated, never differentiated. (R₁, R₂) is the chain's
+right-hand side, next.
+
+**The chain.** With constant coefficients L maps a monomial pair to
+lower-degree monomial pairs:
+
+    L (xᵃ yᵇ, 0) = (1/ρ) [ K a(a−1) x^{a−2} yᵇ + μ b(b−1) xᵃ y^{b−2},  (λ+μ) a b x^{a−1} y^{b−1} ]
+    L (0, xᵃ yᵇ) = (1/ρ) [ (λ+μ) a b x^{a−1} y^{b−1},  μ a(a−1) x^{a−2} yᵇ + K b(b−1) xᵃ y^{b−2} ],
+
+i.e. a matrix C over the 2m monomial pairs e (m monomials to degree q,
+u-block then v-block), C = (D²)[uv, uv] with D the block operator of
+eq. 35 as `pde_operator` builds it, degree-lowering by two and so strictly
+triangular in degree. The seed S_e of monomial pair e is the solution of
+
+    L S_e = Σ_e' C[e', e] S_e',      C frozen at the anchor y_e,
+
+with the *seeds* of the lower monomials on the right, exactly
+L φ_k = k(k−1) c_e² φ_{k−2} of §1.2 read in 2-D; in the ansatz,
+R₁,j = Σ_e' C[e', e] a_j^{(e')} and R₂,j = Σ_e' C[e', e] b_j^{(e')}. All
+2m seeds march as one linear system, and the triangularity in degree is
+what makes it consistent: the right-hand side of a seed only ever needs
+seeds two degrees down. Initial data at y_e are the monomial's jet: for
+(xᵃ yᵇ, 0), a_a(y_e) = [b = 0] and a_a'(y_e) = [b = 1], everything else
+zero (and the mirror for (0, xᵃ yᵇ)); τ and σ at y_e follow from the jet
+and the anchor material. With constant coefficients the right-hand side
+is L of the monomial itself (induction on degree) and the linear ODE with
+that data has one solution, the monomial: the seeds *are* the monomials,
+to 2.5 × 10⁻¹⁴ in `test_constant_material_seeds_are_the_monomial_basis`.
+
+**The system for p = 3, written out.** The stress seeds need velocity
+seeds to degree q = p + 1 = 4 (as `interface_basis` expands to degree
+p + 1), so there are 15 monomials per component, 30 seeds, x-degrees
+j = 0..4, and each seed carries five levels of (a_j, b_j, τ_j, σ_j): a
+600-state system. Level by level (K = λ + 2μ, everything a function of
+y, R the chain terms):
+
+    j = 4:  a₄' = τ₄/μ            b₄' = σ₄/K              τ₄' = ρR₁,₄                       σ₄' = ρR₂,₄
+    j = 3:  a₃' = τ₃/μ − 4 b₄     b₃' = (σ₃ − 4λ a₄)/K    τ₃' = ρR₁,₃ − 4λ b₄'              σ₃' = ρR₂,₃ − 4 τ₄
+    j = 2:  a₂' = τ₂/μ − 3 b₃     b₂' = (σ₂ − 3λ a₃)/K    τ₂' = ρR₁,₂ − 12K a₄ − 3λ b₃'     σ₂' = ρR₂,₂ − 3 τ₃
+    j = 1:  a₁' = τ₁/μ − 2 b₂     b₁' = (σ₁ − 2λ a₂)/K    τ₁' = ρR₁,₁ − 6K a₃ − 2λ b₂'      σ₁' = ρR₂,₁ − 2 τ₂
+    j = 0:  a₀' = τ₀/μ − b₁       b₀' = (σ₀ − λ a₁)/K     τ₀' = ρR₁,₀ − 2K a₂ − λ b₁'       σ₀' = ρR₂,₀ − τ₁
+
+For the seed of (xᵃ yᵇ, 0) only levels j ≤ a are ever non-zero (nothing
+above is driven), so the seed's x-degree is that of its monomial, and the
+y-structure is where the medium enters. Two seeds in closed form, through
+any edge: (y, 0) becomes (∫ μ_e/μ dy, 0) and (0, x) becomes
+(∫ (μ_e/μ − 1) dy, x), both with the constant shear stress g = μ_e and
+no other stress. That is the 2-D twin of φ₁ = K_e ∫ dξ/K: the traction is
+what stays smooth, not the slope.
+
+**Stress seeds and rigid motions.** As `interface_basis` step 3: the
+stress seed of a velocity seed is (f, g, h) = (Σ F_j xʲ, Σ τ_j xʲ,
+Σ σ_j xʲ), read off the marched state and the flux variables (F_j uses
+b_j' from the b-equation), so nothing is differentiated numerically. The
+constants in u and v have no stress, and the shear pair (y, 0) and (0, x)
+share theirs (g = μ_e, above), through any edge and not just for constant
+coefficients; the same three columns are dropped as in the polynomial
+case, and `test_rigid_motions_have_no_stress_and_the_shear_pair_shares_one`
+checks it through a δ = 0.01 edge. That leaves 27 stress seeds for
+p = 3, from the 30 velocity seeds, and the 20 velocity seeds of degree
+≤ 3 for the velocity block: the same counts as the dissertation's.
+
+**Anchor and scaling: which won.** The 1-D lesson (§1.2, §2) was that
+anchoring at the evaluation point keeps the interpolation block
+conditioned. The seeds are therefore anchored at the *evaluation node* in
+both coordinates and scaled by r_max, the distance to the farthest
+stencil node, so S ≈ Xᵃ Yᵇ in (X, Y) = (x − x_e, y − y_e)/r_max; the
+material is sampled at y_e + r_max Y. The polynomial basis of
+`interface.py` keeps its origin at the interface point (and the same
+r_max). The two conventions are reconciled, not unified: moving the
+origin is a change of basis within the same span (`shift_matrix` gives
+it, and the tests use it to compare the two bases column by column), so
+`interface_weights` is untouched and the jump path stays bit for bit.
+What is not a change of basis is where the *normal* coordinate is
+anchored, because that is where the jet is imposed and the coefficients
+are frozen; there the seeds follow the 1-D lesson. A side benefit: at the
+anchor the velocity seeds have the monomials' first derivatives (only X
+and Y have one), and the stress seeds' derivatives (f_X, g_X, g_Y, h_Y)
+come from the state and the ODE right-hand side at Y = 0; `seed_basis`
+returns both jets, in stencil units, so the consumer multiplies by
+1/r_max once, as `interface_weights` does with its `sc`. The identity
+(f_X + g_Y)/ρ_e = C[const, e] (the rate of a stress seed at the anchor is
+the chain's constant term) is checked in
+`test_jets_at_the_anchor_are_the_monomial_jets_and_the_chain_constants`.
+
+**Jump limit.** As δ → 0 the state (a, b, τ, σ) passes through the edge
+unchanged, which is velocity and traction continuity, and on the far side
+the chain holds with the anchor's frozen coefficients, which is what the
+continuity matrices encode: matching D^k on both sides at every order
+says L_other P_other is the translation of L_std (monomial). So the seeds
+should tend to the translated basis of `interface_basis` with the
+standard side at the anchor, re-expanded about the anchor. They do, at
+first order in δ, for velocity and stress and with the anchor on either
+side (`test_jump_limit_recovers_the_interface_basis_at_first_order`;
+n = 400 node set, h = 0.05, 19-node stencil on the row nearest the lower
+interface, relative to the largest basis value):
+
+| anchor | block | δ = 10⁻³ | 10⁻⁴ | 10⁻⁵ |
+|---|---|---|---|---|
+| in the band (y' = +h/2) | velocity | 2.3e-2 | 2.4e-3 | 2.4e-4 |
+| | stress | 1.25e-2 | 1.24e-3 | 1.24e-4 |
+| in the background (y' = −h/2) | velocity | 9.9e-3 | 9.9e-4 | 9.9e-5 |
+| | stress | 1.6e-2 | 1.6e-3 | 1.6e-4 |
+
+**Residual.** Independently of the first-order form,
+`test_marched_seeds_satisfy_the_operator_on_a_fine_grid` marches to 401
+points of Y ∈ [−1, 1] through a δ = 0.01 edge, differentiates a_j and b_j
+in Y with 8th-order finite differences, assembles the xʲ coefficients of
+ρ L (u, v) from the second-order operator and compares with ρ Σ C S: the
+relative residual is 3 × 10⁻¹² (8 × 10⁻¹⁰ at 201 points, 8 × 10⁻¹² at
+801, where roundoff in the second derivative takes over).
+
+**Conditioning.** On the same real stencil, the 2-norm condition numbers
+of the velocity block (38 × 20) and the stress block (57 × 27):
+
+| basis | velocity | stress |
+|---|---|---|
+| polynomial jump basis, re-expanded about the anchor | 34 | 30 |
+| polynomial jump basis as `interface_weights` evaluates it (interface origin) | 32 | 51 |
+| seeds, δ = h | 17 | 24 |
+| seeds, δ = h/2.5 | 24 | 27 |
+| seeds, δ = h/5 | 29 | 29 |
+| seeds, δ = h/8 | 31 | 29 |
+| seeds, δ = h/20 | 33 | 30 |
+| seeds, δ = h/5000 | 34 | 30 |
+
+The seed blocks are as well conditioned as the polynomial block at every
+width and tend to it as δ → 0, the extended-Chebyshev-system behaviour of
+§1.4 carried over (`test_seed_blocks_are_conditioned_like_the_polynomial_block`).
+
+**Numerics and runtime.** One `SeedChain` per stencil: the 600-state
+linear system, DOP853 at rtol 10⁻¹³, one march per side from Y = 0
+outward, restarted at every node's Y (so node values are integrated, not
+interpolated) and at the edge centres and their ±10δ flanks, as in 1-D.
+The flanks matter: a single solve without them differs from the segmented
+march by 4 × 10⁻¹⁰ at δ = 10⁻⁴, where the adaptive step has to discover
+the edge. 22 to 40 ms per 19-node stencil for δ from h down to h/5000
+(the ODE right-hand side is five array operations and one 30 × 30
+product; `LayeredMedium2D.material_at` evaluates the blend weight once for
+all three parameters). For the n = 900 to 19600 node sets of §5, the
+stencils that see an edge number a few hundred to a few thousand, so an
+operator costs seconds to a minute. The flat case has a translation
+symmetry in x' (every stencil in one fixed row shares y_e and the
+material profile, so one march with dense output could serve a whole
+row); that is an optimisation for later, not now.
+
+**What #39 gets.** `seed_basis(local, profile, degree)` takes the frame
+`operators._local_frames` already builds (node 0 the evaluation node,
+origin at the foot point) and a `NormalProfile` from
+`normal_profile(medium, interface, x0)`, and returns the velocity seeds
+`uv` (2, n, 20) and stress seeds `fgh` (3, n, 27) at the nodes plus both
+jets at the anchor: the exact shapes `interface_weights` consumes through
+`eval_side` and `deriv_e`, so the seed-augmented weights are the same
+coupled saddle-point solve with the polynomial block swapped. One open
+point for #39: the polynomial branch also imposes Δ³ p = 0 on its
+augmentation (exact for degree ≤ 3). The seeds' sixth derivatives at the
+anchor are not zero in a varying medium (they carry the material's
+derivatives through the ODE), but hyperviscosity is a stabiliser, not
+part of the discretised operator, and the natural choice is to let it
+annihilate the seed space as it annihilates the polynomial one, i.e.
+impose zero. Whether that is right is an eigenvalue question and belongs
+with the spectrum study of #39.
 
 ## 5. Two dimensions: results (#36–)
 
