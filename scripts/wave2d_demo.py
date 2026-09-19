@@ -4,7 +4,10 @@ A plane pressure pulse travels down through a band of stiffer, denser
 material (dissertation §3.4.1). Top row: |v|, the vertical particle
 velocity, from the two solvers. Bottom row: their errors on one colour
 scale, against the exact solution (flat interfaces) or a fine
-interface-aware run (curved interfaces). Everything is computed on
+interface-aware run (curved interfaces). The snapshot grid for the slides
+shows the reference wave once, then the two error maps: at this
+resolution the two solvers' waves are indistinguishable by eye, so the
+second wave column only added clutter. Everything is computed on
 scattered nodes and resampled to a pixel grid for display with one-sided
 stencils (``wave2d/resample.py``), so the interpolation never crosses an
 interface.
@@ -170,7 +173,10 @@ def main() -> None:
         f"{time.perf_counter() - t0:.1f}s"
     )
     v_ref, ref_label = reference_v(nodes, medium, times, args)
-    error_title = "error vs exact solution" if medium.is_flat else "error vs reference"
+    if medium.is_flat:
+        error_title, ref_short = "error vs exact solution", "exact solution"
+    else:
+        error_title, ref_short = "error vs reference", "reference run"
     v = {mode: runs[mode].field("v") for mode in MODES}
     diff = {mode: v[mode] - v_ref for mode in MODES}
     rel = {
@@ -209,17 +215,20 @@ def main() -> None:
     if args.snapshots:
         n_rows = len(args.snapshots)
         fig, axes = plt.subplots(
-            n_rows, 4, figsize=(13, 3.2 * n_rows + 1.2), constrained_layout=True
+            n_rows, 3, figsize=(10, 3.2 * n_rows + 1.2), constrained_layout=True
         )
         axes = np.atleast_2d(axes)
         for r, t_snap in enumerate(args.snapshots):
             k = int(np.argmin(np.abs(times - t_snap)))
+            ax_v = axes[r, 0]
+            im_v = ax_v.imshow(image(v_ref[k]), **field_kw)
+            style_map(ax_v, medium)
+            if r == 0:
+                ax_v.set_title(f"The wave ({ref_short})\n|v|", fontsize=11)
             for c, mode in enumerate(MODES):
-                ax_v, ax_e = axes[r, c], axes[r, 2 + c]
-                im_v = ax_v.imshow(image(v[mode][k]), **field_kw)
+                ax_e = axes[r, 1 + c]
                 im_e = ax_e.imshow(image(diff[mode][k]), **error_kw)
-                for ax in (ax_v, ax_e):
-                    style_map(ax, medium)
+                style_map(ax_e, medium)
                 ax_e.text(
                     0.03,
                     0.97,
@@ -228,28 +237,27 @@ def main() -> None:
                     **text_kw,
                 )
                 if r == 0:
-                    ax_v.set_title(f"{TITLES[mode]}\n|v|", fontsize=11)
                     ax_e.set_title(f"{TITLES[mode]}\n{error_title}", fontsize=11)
             axes[r, 0].set_ylabel(f"t = {times[k]:.2f}\ny")
         for ax in axes[-1]:
             ax.set_xlabel("x")
         fig.colorbar(
             im_v,
-            ax=axes[:, :2].ravel().tolist(),
+            ax=axes[:, 0].tolist(),
             location="bottom",
-            shrink=0.5,
+            shrink=0.8,
             pad=0.02,
             label="|v|, vertical particle velocity",
         )
         fig.colorbar(
             im_e,
-            ax=axes[:, 2:].ravel().tolist(),
+            ax=axes[:, 1:].ravel().tolist(),
             location="bottom",
             shrink=0.5,
             pad=0.02,
-            label=f"|error in v| vs {ref_label}, same scale in both columns",
+            label=f"|error in v| vs {ref_label}, one colour scale",
         )
-        fig.suptitle(caption, fontsize=11)
+        fig.suptitle(caption.replace("  |  ", "\n"), fontsize=11)
         png = args.out.with_suffix(".png")
         fig.savefig(png, dpi=160)
         plt.close(fig)
