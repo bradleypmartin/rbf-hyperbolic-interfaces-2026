@@ -49,18 +49,26 @@ def main() -> None:
 
     use_demo_style()
     fig, (full, zoom) = plt.subplots(
-        1, 2, figsize=(12, 5.6), width_ratios=[1, 1.15], constrained_layout=True
+        1, 2, figsize=(12, 5.2), width_ratios=[1, 1.15], constrained_layout=True
     )
     xs = np.linspace(0, 1, 400)
-    for ax in (full, zoom):
+    # The zoom panel gets markers three times the area of the full panel's:
+    # the figure lands at about a third of its size on the slide.
+    for ax, scale in ((full, 1), (zoom, 3)):
         ax.grid(False)
         ax.set_aspect("equal")
         for ifc in medium.interfaces:
             ax.plot(xs, ifc.height(xs), "--", color=INK_SECONDARY, lw=1.2, zorder=3)
         ax.scatter(
-            nodes.x[~nodes.fixed], nodes.y[~nodes.fixed], s=4, color=INK_MUTED, lw=0
+            nodes.x[~nodes.fixed],
+            nodes.y[~nodes.fixed],
+            s=4 * scale,
+            color=INK_MUTED,
+            lw=0,
         )
-        ax.scatter(nodes.x[nodes.fixed], nodes.y[nodes.fixed], s=6, color=AWARE, lw=0)
+        ax.scatter(
+            nodes.x[nodes.fixed], nodes.y[nodes.fixed], s=6 * scale, color=AWARE, lw=0
+        )
     full.set_xlim(0, 1)
     full.set_ylim(0, 1)
     full.set_title(f"{nodes.n} nodes on the periodic unit square")
@@ -72,25 +80,20 @@ def main() -> None:
     zoom.set_ylim(medium.upper.y0 - w * 0.8, medium.upper.y0 + w * 0.8)
     zoom.set_title("Zoom on the upper interface")
     zoom.set_xlabel("x")
-    zoom.scatter([], [], s=20, color=AWARE, label="fixed rows straddling the interface")
-    zoom.scatter([], [], s=20, color=INK_MUTED, label="repulsion-relaxed nodes")
+    zoom.scatter([], [], s=60, color=AWARE, label="fixed rows straddling the interface")
+    zoom.scatter([], [], s=60, color=INK_MUTED, label="repulsion-relaxed nodes")
     zoom.plot([], [], "--", color=INK_SECONDARY, label="material interface")
-    zoom.legend(loc="upper right", fontsize=9)
+    zoom.legend(loc="upper right", fontsize=14)
     # Mark one node's 30-nearest stencil to show it draws on both sides.
     i = int(np.argmin(np.abs(nodes.x - 0.5) + np.abs(nodes.y - medium.upper.y0)))
     idx, _ = periodic_knn(nodes.xy, 30, query=nodes.xy[[i]])
     zoom.scatter(
         nodes.x[idx[0]],
         nodes.y[idx[0]],
-        s=42,
+        s=70,
         facecolors="none",
         edgecolors=NAIVE,
-        lw=0.9,
-    )
-    fig.suptitle(
-        "Node layout: hex rows straddle each interface orthogonally; "
-        "one 30-node stencil circled",
-        fontsize=12,
+        lw=1.2,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.out, dpi=160)
