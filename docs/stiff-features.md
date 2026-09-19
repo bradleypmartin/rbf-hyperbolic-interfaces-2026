@@ -266,3 +266,235 @@ spectrum of the semi-discrete operator has max real part 8·10⁻⁸ at
 in every run here. Nothing was tried for sharper contrasts, layers thinner
 than 19δ, or higher orders than FD4; the construction does not change for
 any of them.
+
+## 3. Related work (#33)
+
+Brad's question: the construction came from intuition about these
+problems around 2013; are similar approaches known? An afternoon's scan on
+2026-09-19, every entry checked against a page that was actually opened
+(publisher or repository page where reachable; SIAM, IEEE, AMS and
+Springer block automated fetching, so for those the Crossref record of the
+DOI was read instead, which is publisher-deposited metadata). Not a survey.
+
+**Same mechanism for steady problems: basis functions from local
+solutions of the operator.**
+
+- A. N. Tikhonov and A. A. Samarskii, "Homogeneous difference schemes",
+  Zh. Vychisl. Mat. Mat. Fiz. 1:1 (1961) 5–63; USSR Comput. Math. Math.
+  Phys. 1:1 (1962) 5–67, [doi:10.1016/0041-5553(62)90005-8](https://doi.org/10.1016/0041-5553(62)90005-8),
+  [mathnet.ru/eng/zvmmf7977](http://www.mathnet.ru/eng/zvmmf7977).
+  Difference schemes for Sturm–Liouville operators with smooth and
+  discontinuous coefficients. Their conservative scheme's cell coefficient
+  is the harmonic mean h / ∫ dx/k over the cell, which is the two-point
+  version of φ₁ (constant flux). Textbook form: Samarskii, *The Theory of
+  Difference Schemes*, Marcel Dekker 2001.
+- The "exact three-point schemes" line descending from it, e.g.
+  [Adv. Cont. Discrete Models 2020](https://link.springer.com/article/10.1186/s13662-020-02957-7):
+  stencils exact on the local solutions of a second-order ODE. Elliptic
+  boundary-value problems, not waves.
+- I. Babuška and J. E. Osborn, "Generalized finite element methods: their
+  performance and their relation to mixed methods", SIAM J. Numer. Anal.
+  20 (1983) 510–536, [doi:10.1137/0720034](https://doi.org/10.1137/0720034);
+  I. Babuška, G. Caloz and J. E. Osborn, "Special finite element methods
+  for a class of second order elliptic problems with rough coefficients",
+  SIAM J. Numer. Anal. 31 (1994) 945–981,
+  [doi:10.1137/0731051](https://doi.org/10.1137/0731051). Finite elements
+  whose shape functions solve (a u')' = 0 locally: the FEM version of φ₁.
+- T. Y. Hou and X.-H. Wu, "A multiscale finite element method for
+  elliptic problems in composite materials and porous media", J. Comput.
+  Phys. 134 (1997) 169–189,
+  [doi:10.1006/jcph.1997.5682](https://doi.org/10.1006/jcph.1997.5682).
+  Basis functions from local cell problems of the operator, in 2-D.
+- H. Owhadi and L. Zhang, "Metric-based upscaling", Comm. Pure Appl. Math.
+  60 (2007) 675–723, [arXiv:math/0505223](https://arxiv.org/abs/math/0505223):
+  solutions of divergence-form elliptic equations are C^{1,α} as functions
+  of the *harmonic coordinates* F, ∇·(a ∇F) = 0 with F ≈ x, which is the
+  2-D x-like seed. Their follow-up, "Numerical homogenization of the
+  acoustic wave equations with a continuum of scales", Comput. Methods
+  Appl. Mech. Engrg. 198 (2008) 397–406,
+  [Caltech repository](https://authors.library.caltech.edu/records/y53sh-pjq83),
+  uses precomputed harmonic coordinates for the wave equation without
+  scale separation. The closest 2-D relative of this construction.
+
+**Fitted operators for singularly perturbed problems.** D. N. de G. Allen
+and R. V. Southwell, Q. J. Mech. Appl. Math. 8 (1955) 129–145,
+[doi:10.1093/qjmam/8.2.129](https://doi.org/10.1093/qjmam/8.2.129);
+A. M. Il'in, Math. Notes 6 (1969) 596–602,
+[mathnet.ru/eng/mzm6928](http://www.mathnet.ru/eng/mzm6928); D. L.
+Scharfetter and H. K. Gummel, IEEE Trans. Electron Devices 16 (1969)
+64–77, [doi:10.1109/T-ED.1969.16566](https://doi.org/10.1109/T-ED.1969.16566).
+Stencil coefficients from the local exponential solutions of
+convection–diffusion, so that the scheme is uniformly accurate in the
+small parameter. Surveyed as "operator-fitted methods" in H.-G. Roos,
+M. Stynes and L. Tobiska, *Robust Numerical Methods for Singularly
+Perturbed Differential Equations*, 2nd ed., Springer 2008, §3.5.1
+([PDF at Charles University](https://www.karlin.mff.cuni.cz/~knobloch/FILES/Roos-Stynes-Tobiska.pdf)).
+Same mechanism, different regime: steady boundary layers, not a
+propagating wave through an internal layer.
+
+**Trefftz and quasi-Trefftz methods: basis functions that are (nearly)
+local solutions of the time-dependent equation.**
+
+- F. Kretzschmar, A. Moiola, I. Perugia and S. M. Schnepp, "A priori
+  error analysis of space–time Trefftz discontinuous Galerkin methods for
+  wave problems", IMA J. Numer. Anal. 36 (2016) 1599–1635,
+  [doi:10.1093/imanum/drv064](https://doi.org/10.1093/imanum/drv064);
+  L. Banjai, E. H. Georgoulis and O. Lijoka, "A Trefftz polynomial
+  space-time discontinuous Galerkin method for the second order wave
+  equation", SIAM J. Numer. Anal. 55 (2017) 63–86,
+  [doi:10.1137/16M1065744](https://doi.org/10.1137/16M1065744): space-time
+  polynomial solutions of the constant-coefficient wave equation as DG
+  basis. The seeds of section 1.2 are the t = 0 traces of such solutions.
+- L.-M. Imbert-Gérard, A. Moiola and P. Stocker, "A space–time
+  quasi-Trefftz DG method for the wave equation with piecewise-smooth
+  coefficients", Math. Comp. 92 (2023) 1211–1249,
+  [arXiv:2011.04617](https://arxiv.org/abs/2011.04617), and "Polynomial
+  quasi-Trefftz DG for PDEs with smooth coefficients: elliptic problems",
+  [arXiv:2408.00392](https://arxiv.org/abs/2408.00392). Polynomial basis
+  functions that satisfy the variable-coefficient wave equation to Taylor
+  order at a point, with an algorithm to build them. The closest published
+  relative of "seeds from time-polynomial solutions", and exactly the
+  Taylor route of section 1.5: it needs the coefficients resolved by the
+  polynomial degree, which a sub-grid edge is not.
+
+**Chebyshev systems, the well-posedness side.** G. Pólya, "On the
+mean-value theorem corresponding to a given linear homogeneous
+differential equation", Trans. Amer. Math. Soc. 24 (1922) 312–324,
+[doi:10.1090/S0002-9947-1922-1501228-5](https://doi.org/10.1090/S0002-9947-1922-1501228-5)
+(the factorisation / disconjugacy result; the AMS PDF could not be
+fetched, so its open-access status is unverified); S. Karlin and W. J.
+Studden, *Tchebycheff Systems: With Applications in Analysis and
+Statistics*, Interscience 1966 ([archive.org record](https://archive.org/details/tchebycheffsyste0000karl));
+W. A. Coppel, *Disconjugacy*, Lecture Notes in Math. 220, Springer 1971,
+[doi:10.1007/BFb0058618](https://doi.org/10.1007/BFb0058618); R. A. Zalik,
+"Another look at Chebyshev systems",
+[webhome.auburn.edu/~zalikri/fv/t.pdf](http://webhome.auburn.edu/~zalikri/fv/t.pdf),
+which states the ECT structure theorem used in section 1.4 with the page
+references into Karlin & Studden. G. Mühlbach, "A recurrence formula for
+generalized divided differences and some applications", J. Approx. Theory
+9 (1973) 165–172, [doi:10.1016/0021-9045(73)90104-4](https://doi.org/10.1016/0021-9045(73)90104-4):
+a Neville–Aitken recurrence for Chebyshev systems, i.e. the analogue of
+Fornberg's algorithm for the seeds, should one ever want to avoid the
+dense solve. M. H. Schultz and R. S. Varga, "L-splines", Numer. Math. 10
+(1967) 345–369, [doi:10.1007/BF02162033](https://doi.org/10.1007/BF02162033):
+splines whose pieces lie in ker L.
+
+**The jump case, for contrast.** R. J. LeVeque and Z. Li, "The immersed
+interface method for elliptic equations with discontinuous coefficients
+and singular sources", SIAM J. Numer. Anal. 31 (1994) 1019–1044,
+[doi:10.1137/0731054](https://doi.org/10.1137/0731054) (erratum 32 (1995)
+1704): jump conditions folded into modified stencils. B. Martin,
+B. Fornberg and A. St-Cyr, "Seismic modeling with
+radial-basis-function-generated finite differences", Geophysics 80 (2015)
+T137–T146, [doi:10.1190/geo2014-0492.1](https://doi.org/10.1190/geo2014-0492.1);
+B. Martin and B. Fornberg, "Seismic modeling with radial basis
+function-generated finite differences (RBF-FD): a simplified treatment of
+interfaces", J. Comput. Phys. 335 (2017) 828–845,
+[doi:10.1016/j.jcp.2017.01.065](https://doi.org/10.1016/j.jcp.2017.01.065):
+the dissertation's construction, which section 1.3 shows to be the δ → 0
+limit of the seeds. The practical competitor in seismic FD codes is
+equivalent-medium parametrisation (averaging the coefficients over the
+cell rather than changing the basis), e.g. Geophys. J. Int. 239 (2024)
+675, [academic.oup.com/gji/article/239/1/675/7733912](https://academic.oup.com/gji/article/239/1/675/7733912).
+
+**What Brad's intuition coincides with, and what looks unwritten.** The
+x-like seed, constant flux through the feature, is the harmonic mean of
+Tikhonov–Samarskii, the special elements of Babuška–Osborn and the
+harmonic coordinates of Owhadi–Zhang; basis functions from local
+solutions are the fitted operators of the 1950s–60s; basis functions that
+are time-polynomial solutions are the polynomial Trefftz spaces of the
+2010s. Not found in this form: an ordinary equispaced finite-difference
+stencil for the time-domain wave equation whose basis is the t = 0 profile
+of time-polynomial solutions *integrated through a sub-grid smooth
+feature*, with everything else in the scheme left standard, and the
+observation that this is one construction from the jump (algebra) to the
+resolved edge (Fornberg) with the ODE march in between. That is a
+statement about a few hours of searching, not a claim of novelty.
+
+## 4. Two dimensions: what the seeds become (#34)
+
+A design note, answering the three questions in #27; no 2-D code was
+written. The 2-D acoustic operator L = (1/ρ) ∇·(K ∇) is the first target;
+the elastic system of `wave2d` adds bookkeeping, not ideas.
+
+**The chain survives, the choice of seeds does not come for free.** The
+recursion L φ = (lower seeds) and the nested spaces {1} ⊂ ker L ⊂
+{L f = const} ⊂ ker L² ⊂ … are dimension-free. What changes is that ker L
+is infinite-dimensional in 2-D, so "polynomial-like of degree ≤ d", a
+space of dimension (d+1)(d+2)/2 that reduces to the polynomials P_d for
+constant coefficients, needs a rule for which L-harmonic functions play
+the role of 1, x, y, x² − y², xy, …: the 2d + 1 harmonic polynomials of
+degree ≤ d each need an L-harmonic continuation through the feature that
+looks like them away from it. Given those, the chain generates the rest
+(x² + y², for instance, is the φ with L φ = 4 c_e², anchored like φ₂).
+
+**Straight feature: ODEs in the normal coordinate only.** If the material
+depends on the normal coordinate n alone (locally true for any smooth
+feature, exactly true for a flat edge), write the seed for the monomial
+nᵃ sᵇ (s tangential) as φ = Σ_j g_j(n) sʲ, a polynomial in s. Then
+
+    L (g(n) sʲ) = sʲ L_n g + j (j−1) (K/ρ) g s^{j−2},   L_n = (1/ρ) ∂ₙ K ∂ₙ,
+
+so the coefficient functions solve a triangular chain of 1-D ODEs in n:
+the top coefficient g_b satisfies the 1-D seed equation, g_{b−2} picks up
+the source j(j−1)(K/ρ) g_b, and so on down. Every seed of a straight
+feature is a short list of 1-D marches of exactly the kind `stiff.py` does,
+with more right-hand sides. So the answer to "PDEs for each dimension of
+each stencil's support" is no: for a straight feature, ODEs in one
+coordinate.
+
+**Curved feature: a local problem per stencil, three ways.** In the
+feature's own coordinates (n, s) the operator picks up curvature terms
+(κ ∂ₙ and the metric factors of the tangential derivative), and the
+s-polynomial ansatz no longer closes. Three routes, in increasing
+faithfulness and cost: (a) treat the curvature perturbatively, κh ≪ 1 for
+a stencil, and add an O(κ) correction to the straight-feature seeds from
+one more ODE chain (the same spirit as the "curvature terms are a possible
+refinement" note in `wave2d/interface.py`, JCP 2017 Fig. 10); (b) solve a
+small boundary-value problem L φ = (lower seed) on a patch around the
+stencil on a fine local grid, with the harmonic polynomial as boundary
+data, which is the multiscale-FEM / oversampling construction (Hou–Wu) and
+the honest "PDE per stencil"; (c) compute the harmonic coordinates F once
+globally (Owhadi–Zhang), use polynomials in F as the degree-one seeds and
+the chain for the rest. For an edge whose curvature radius is many h,
+(a) should be enough; (b) is the robust fallback.
+
+**Characteristics away from the interface?** No. Away from the feature
+the material is constant, the seeds are the monomials, and nothing
+changes; the seeds only differ from monomials on stencils whose nodes see
+a varying material, and what "starts" them is the anchor at the
+evaluation point, not characteristics. Characteristics would enter only if
+one built seeds for the first-order system directly; here each field's
+second-order operator defines its seeds, as in 1-D, and the odd seeds
+carry the other field's information (f_ttt = C for the u-field's φ₃) the
+way `continuity_matrices` routes odd time derivatives through the other
+field.
+
+**The elastic system and the "not full rank" subspace.** The existing
+interface-aware 2-D stencils (`wave2d/interface.py`, dissertation §3.3)
+work in a local tangent/normal frame, replace the polynomial augmentation
+of the RBF-FD saddle-point system by piecewise polynomials translated
+across the interface with the elastic continuity conditions, generate the
+stress basis from the velocity basis through the PDE operator, truncate to
+degree p, and solve coupled systems across fields (27 basis functions for
+p = 3). The seeds slot into exactly that place: the piecewise-polynomial
+values at the stencil nodes become ODE-marched values, the same coupled
+saddle-point solve follows, and the Gaussian RBF part stays as it is. The
+nested-kernel chain answers the subspace question: "degree ≤ d" means
+{f : Lᵐ f ∈ seeds of degree ≤ d − 2m}, and the stress seeds follow from the
+velocity seeds by applying the constitutive rows of the operator, as
+`interface_basis` already does with polynomials. L is then the 2 × 2
+matrix operator of linear elasticity acting on (u, v); the straight-feature
+reduction still holds because the isotropic operator keeps its form under
+the rotation into the feature's frame.
+
+**Estimate.** A straight-edge prototype on `wave2d`: rotate into the
+feature frame (exists), march the seed chains in n for the (d+1)(d+2)/2
+monomials with the elastic 2 × 2 operator (new, a few hundred lines
+generalising `stiff.py`), swap them into the augmentation of the
+interface-aware weights (small), and validate against a reference. The
+reference is the hard part: the flat-edge case separates into a 1-D
+problem per tangential wavenumber, so a 1-D spectral solve per Fourier
+mode of the initial pulse gives a reference of the same quality as
+section 2's. One to two days. A curved feature by route (b) is a
+week-scale project. Neither is scheduled; follow-up issue if wanted.
