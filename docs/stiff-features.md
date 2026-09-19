@@ -15,7 +15,11 @@ is the dissertation's interface construction with the jump replaced by the
 edge profile. Code: `src/pdes_demo/wave1d/stiff.py` (the seeds and the
 weights), `spectral.py` (the reference solution), `domain.py`
 (`LayeredMedium(edge_width=...)`), `scripts/wave1d_stiff.py` (the figures),
-`tests/test_wave1d_stiff.py`.
+`tests/test_wave1d_stiff.py`. The 2-D proof of concept (#36–#42, flat
+first) is under way: `LayeredMedium2D(edge_width=...)` and the
+normal-incidence reference `wave2d/exact.py: spectral_plane_wave` from #36,
+tested in `tests/test_wave2d_smooth_edges.py`; results go into section 5
+as they land.
 
 ## 1. Formulation (#28)
 
