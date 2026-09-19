@@ -99,6 +99,14 @@ class LayeredMedium2D:
             raise ValueError("interfaces must be ordered and inside (0, 1)")
         if self.edge_width < 0:
             raise ValueError("edge_width must be non-negative (0 = jump)")
+        # Two tanh steps a distance g apart reach only tanh(g / (2 d)) of the
+        # contrast between them: 99.6% at d = g / 8 (delta = 0.03 for the
+        # default band), 96% at d = g / 4, where the band stops being one.
+        if 4 * self.edge_width > gap - amp:
+            raise ValueError(
+                f"edge_width {self.edge_width:g} is too wide for a band of "
+                f"width {gap - amp:g}: the two edges would merge (need 4 d <= width)"
+            )
         if self.edge_width > 0 and not self.is_flat:
             raise NotImplementedError(
                 "a smooth edge on a curved interface needs the signed normal "
@@ -140,7 +148,9 @@ class LayeredMedium2D:
         in y so the result is smooth and periodic to rounding: the first
         omitted image has both edges more than ``n_images`` from any point
         of [0, 1), where the tails are below ``2 exp(-2 n_images / d)``,
-        which ``n_images > 19 d`` keeps under 1e-16.
+        which ``n_images > 19 d`` keeps under 1e-16. Inside the band the
+        weight peaks at ``tanh(gap / (2 d))``, not 1, unless ``gap >> d``
+        (99.6% of the contrast at d = 0.03 for the default band).
         """
         x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
         if not self.is_smooth:
@@ -178,6 +188,8 @@ class LayeredMedium2D:
         so a stencil is "aware" of an edge out to that distance plus its own
         radius; for a jump it is the same test as straddling an interface.
         """
+        if np.size(x) == 0 or np.size(y) == 0:
+            return False
         spread = 0.0
         for attr in ("lam", "mu", "rho"):
             values = self._blend(x, y, attr)
@@ -361,6 +373,16 @@ def nearest_spacing(nodes: NodeSet) -> np.ndarray:
 FIELDS = ("u", "v", "f", "g", "h")
 
 
+def require_background_start(medium: LayeredMedium2D, center: float) -> None:
+    """Raise unless a plane pulse centred at ``y = center`` starts in the
+    background for every x (between the edge centres is the band, jump or
+    smooth); the initial data and both references assume it."""
+    lowest = medium.lower.y0 - abs(medium.lower.amplitude)
+    highest = medium.upper.y0 + abs(medium.upper.amplitude)
+    if lowest <= center % 1.0 < highest:
+        raise ValueError("pulse must start in the background material for all x")
+
+
 def plane_p_wave(
     nodes: NodeSet,
     medium: LayeredMedium2D,
@@ -375,10 +397,7 @@ def plane_p_wave(
     that is ``h = sqrt(3) v`` and ``f = v / sqrt(3)``.
     """
     mat = medium.background
-    lowest = medium.lower.y0 - abs(medium.lower.amplitude)
-    highest = medium.upper.y0 + abs(medium.upper.amplitude)
-    if lowest <= center % 1.0 < highest:
-        raise ValueError("pulse must start in the background material for all x")
+    require_background_start(medium, center)
     v = np.exp(-(sharpness**2) * minimal_image(nodes.y - center) ** 2)
     state = np.zeros((len(FIELDS), nodes.n))
     state[1] = v

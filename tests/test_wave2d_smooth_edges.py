@@ -38,16 +38,20 @@ def _rel(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def test_zero_edge_width_is_the_jump_medium_bit_for_bit() -> None:
+    # The pre-#36 lookup was np.where(in_layer, layer, background); the
+    # blend must reproduce it exactly, not just to a tolerance.
     nodes = make_node_set(FLAT, 900, repulsion_steps=10)
-    smooth0 = LayeredMedium2D(edge_width=0.0)
-    assert not smooth0.is_smooth and not FLAT.is_smooth
-    for attr in ("lam_at", "mu_at", "rho_at"):
-        a = getattr(FLAT, attr)(nodes.x, nodes.y)
-        b = getattr(smooth0, attr)(nodes.x, nodes.y)
-        assert np.array_equal(a, b)
+    medium = LayeredMedium2D(layer=ODD_RATIO, edge_width=0.0)
+    assert not medium.is_smooth
+    inside = medium.in_layer(nodes.x, nodes.y)
+    for attr in ("lam", "mu", "rho"):
+        expected = np.where(
+            inside, getattr(ODD_RATIO, attr), getattr(medium.background, attr)
+        )
+        got = getattr(medium, attr + "_at")(nodes.x, nodes.y)
+        assert np.array_equal(got, expected)
     np.testing.assert_array_equal(
-        smooth0.layer_fraction(nodes.x, nodes.y),
-        FLAT.in_layer(nodes.x, nodes.y).astype(float),
+        medium.layer_fraction(nodes.x, nodes.y), inside.astype(float)
     )
 
 
@@ -118,6 +122,7 @@ def test_varies_over_is_straddling_for_a_jump_and_reaches_19_widths_smooth() -> 
     assert smooth.varies_over(two, np.array([0.5 - 0.18, 0.5 - 0.17]))
     assert not smooth.varies_over(two, np.array([0.5 + 0.30, 0.5 + 0.29]))
     assert not smooth.varies_over(np.zeros(3), np.array([0.8, 0.85, 0.9]))
+    assert not smooth.varies_over(np.zeros(0), np.zeros(0))
     # A tolerance hides the tails.
     assert not smooth.varies_over(two, np.array([0.5 - 0.18, 0.5 - 0.17]), rtol=1e-6)
 
@@ -125,6 +130,17 @@ def test_varies_over_is_straddling_for_a_jump_and_reaches_19_widths_smooth() -> 
 def test_rejections_and_guards() -> None:
     with pytest.raises(ValueError):
         LayeredMedium2D(edge_width=-0.1)
+    # Edges wider than a quarter of the band would merge; 0.0625 is the limit
+    # for the default band, and the curved band's narrowest width counts.
+    with pytest.raises(ValueError, match="merge"):
+        LayeredMedium2D(edge_width=0.07)
+    LayeredMedium2D(edge_width=0.0625)
+    with pytest.raises(ValueError, match="merge"):
+        LayeredMedium2D(
+            lower=SineInterface(0.25, 0.02),
+            upper=SineInterface(0.5, 0.02),
+            edge_width=0.06,
+        )
     with pytest.raises(NotImplementedError, match="#42"):
         LayeredMedium2D(
             lower=SineInterface(0.25, 0.02),
@@ -140,6 +156,15 @@ def test_rejections_and_guards() -> None:
         exact_plane_wave(nodes, 0.1, smooth)
     with pytest.raises(ValueError, match="exact_plane_wave"):
         spectral_plane_wave(nodes, 0.1, FLAT)
+    # A pulse centred in the band is not the background plane wave the
+    # mapping assumes; refuse like plane_p_wave and the ray sum do.
+    # (The band is [lower, upper) as in plane_p_wave: the lower edge centre is
+    # in, the upper one is out.)
+    with pytest.raises(ValueError, match="background"):
+        spectral_plane_wave(nodes, 0.1, smooth, center=0.35)
+    with pytest.raises(ValueError, match="background"):
+        spectral_plane_wave(nodes, 0.1, smooth, center=0.25)
+    spectral_plane_wave(nodes, 0.0, smooth, center=0.2)
 
 
 # --- the reference ---------------------------------------------------------------

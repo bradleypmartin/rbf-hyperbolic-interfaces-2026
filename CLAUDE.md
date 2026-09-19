@@ -69,7 +69,7 @@ src/pdes_demo/   library code
                    interpolation to pixel grids and other node sets)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 131 tests; every numerical routine has one
+tests/           pytest, 143 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with

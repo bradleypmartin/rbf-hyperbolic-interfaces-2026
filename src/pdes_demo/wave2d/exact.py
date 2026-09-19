@@ -29,7 +29,7 @@ import numpy as np
 from ..wave1d.domain import LayeredMedium, Material, gaussian, periodic_grid
 from ..wave1d.exact import exact_solution as exact_1d
 from ..wave1d.spectral import interpolate, reference_size, run_spectral
-from .domain import FIELDS, LayeredMedium2D, NodeSet
+from .domain import FIELDS, LayeredMedium2D, NodeSet, require_background_start
 
 
 def _points(nodes: NodeSet | np.ndarray) -> np.ndarray:
@@ -173,6 +173,10 @@ def spectral_plane_wave(
     xy = _points(nodes)
     if not medium.is_smooth:
         raise ValueError("a jump has the exact ray sum; use exact_plane_wave")
+    # The mapping below is plane_p_wave's background-material pulse; unlike
+    # the ray sum there is no tail check because the reference solves whatever
+    # initial state it is given, and that state is mapped exactly.
+    require_background_start(medium, center)
     mapped = _MappedMedium1D(medium)
     n = reference_size(2 * medium.edge_width) if n_ref is None else n_ref
     grid = periodic_grid(n)
