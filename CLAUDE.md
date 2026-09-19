@@ -2,81 +2,124 @@
 
 ## What this is
 
-Material for a 30-minute talk on **2026-09-30** to Ziff Davis coworkers about
-frontier-AI capability in research mathematics. Two halves:
+Material for Brad's 30-minute talk to Ziff Davis coworkers on **2026-09-30**,
+*AI and Applied Math circa September 2026: excitement, ethics, and individual
+exploration*. Thesis: one pattern at every scale, agents' power paired with a
+human's intuition in a field. Everything is built; what remains is the Sep 29
+rehearsal, a freeze, and the `talk-2026-09-30` tag (issues #18, #19).
 
-1. **Navier–Stokes (talk, ~15 min).** OpenAI's 2026-09-08 claim of finite-time
+1. **Navier–Stokes (~15 min).** OpenAI's 2026-09-08 claim of finite-time
    blowup for 3-D Navier–Stokes (166-page manuscript + Lean 4 certificates),
-   the surrounding context and controversy, and the ethics/verification
-   questions. Notes live in `docs/`.
-2. **Exposition (~15 min).** Brad + Claude re-derive and re-implement in
+   the parallel Alpöge–Buckmaster result and the credit dispute, and what
+   "machine-checked" does and does not mean. Sourced notes in
+   `docs/navier-stokes-notes.md`.
+2. **Working with Claude (~15 min).** Brad and Claude re-derived and ported to
    Python the interface-aware wave solvers from Brad's 2016 CU Boulder
-   dissertation. 1-D first; 2-D elastic RBF-FD if 1-D and the 2-D prep land.
+   dissertation: 1-D finite differences through a layer, and 2-D elastic
+   RBF-FD on scattered nodes with curved interfaces, each verified against a
+   reference solution. All of it landed on 2026-09-17.
 
 Audience: bright tech workers with no assumed PDE background. **No live
-coding.** Deliverables are prepared ahead: two two-panel videos (naive FD vs
-interface-aware, same resolution; 1-D and 2-D) in `outputs/`, and a short
-slide deck PDF in `slides/` covering both halves.
+coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
+`slides/videos/` played from `slides/clips.html`, and the speaker script
+`slides/notes.md`. GitHub Pages serves `main` at
+<https://bradleypmartin.github.io/20260930-zd-ai-pdes-demo/>.
 
-Plan and timeline: `docs/demo-outline.md`. Papers: `papers/README.md`.
-**Before reading a PDF, check `docs/paper-index.md`** for the page ranges that
-matter and read only those (`pdftotext -f A -l B -layout <pdf> -`).
+Results tables, decisions log, and what happened when: `docs/demo-outline.md`.
+Papers: `papers/README.md`. **Before reading a PDF, check
+`docs/paper-index.md`** for the page ranges that matter and read only those
+(`pdftotext -f A -l B -layout <pdf> -`).
 
 ## Repo layout
 
 ```
 src/pdes_demo/   library code
   fd_weights.py    Fornberg FD weights (shared)
-  plotting.py      matplotlib style + validated two-series palette
-  wave1d/          domain.py (grid, materials, pulse) / operators.py (naive vs
-                   interface-aware differentiation matrices) / simulate.py (RK4)
-                   / exact.py (ray-sum reference solution)
-  wave2d/          (planned) same split: domain, operators, simulate, + node
-                   sets, periodic kNN, RBF-FD weights, hyperviscosity
-scripts/         runnable drivers that produce figures/animations in outputs/
-tests/           pytest; every new numerical routine gets a test
-docs/            demo outline, Navier–Stokes notes, derivations
-slides/          slide deck source + PDF
-papers/          reference PDFs (gitignored) + fetch script + index
+  plotting.py      matplotlib style; blue = interface-aware, orange = naive;
+                   aqua / violet single-hue maps for 2-D fields / errors
+  wave1d/          domain.py (periodic grid, piecewise-constant materials,
+                   pulse) / operators.py (naive vs interface-aware
+                   differentiation matrices, thin-layer double-cross) /
+                   simulate.py (RK4) / exact.py (ray-sum reference solution)
+  wave2d/          domain.py (materials, sine interfaces, interface-straddling
+                   node sets by repulsion) / neighbors.py (periodic kNN via
+                   cKDTree boxsize) / rbf.py (Gaussian RBF-FD weights with
+                   polynomial augmentation, batched) / interface.py
+                   (interface-aware stencils, dissertation §3.3) /
+                   operators.py (sparse dx, dy, hyperviscosity, 5-field block
+                   operator) / simulate.py (RK4) / exact.py (flat-interface
+                   plane-wave reference) / resample.py (one-sided interpolation
+                   to pixel grids and other node sets)
+scripts/         drivers that write figures and clips to outputs/;
+                 check_slide_quotes.py
+tests/           pytest, 106 tests; every numerical routine has one
+docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md
+slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
+                 clip cues), clips.html (keyboard clip player), figures/ and
+                 videos/ (committed; build.sh refreshes them from outputs/),
+                 build.sh, README.md
+papers/          reference PDFs (gitignored), fetch_papers.sh, README.md with
+                 sources and checksums
 outputs/         generated artifacts (gitignored)
+index.html       GitHub Pages landing page (.nojekyll at the root)
 ```
 
 ## Commands
 
 ```
-uv sync                         # create .venv, install everything (Python 3.13)
-uv run pytest                   # tests
+uv sync                                       # .venv, Python 3.13
+uv run pytest                                 # tests
 uv run ruff check . && uv run ruff format .
-uv run python scripts/<driver>.py
-./papers/fetch_papers.sh        # download public papers
+uv run python scripts/<driver>.py             # figures / clips into outputs/
+./slides/build.sh                             # copy figures and clips from outputs/,
+                                              # crop, tectonic → slides/talk.pdf
+uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the notes
+./papers/fetch_papers.sh                      # public papers, checksum-checked
 ```
+
+Clip renders are listed in `slides/README.md`. Both demo drivers take
+`--png-only` to refresh a still without touching a committed clip.
 
 ## Conventions
 
-- Python 3.13, `uv`, src layout. Deps: numpy, scipy, matplotlib. Add others
-  only with a reason (check what's already used first).
+- Python 3.13, `uv`, src layout. Deps: numpy, scipy, matplotlib (Pillow comes
+  with matplotlib). Add others only with a reason; check what's used first.
 - `ruff format`, line length 88. Comments explain *why*, not what.
-- Tests for all new numerical logic: convergence-order checks and
+- Tests for all numerical logic: convergence-order checks and
   analytic-solution comparisons, not just "it runs".
-- Conventional Commits. Branch names `<issue>-<short-description>`.
-- Keep default driver parameters fast enough to run live in the demo
-  (seconds, not minutes). Expose bigger runs behind CLI flags.
+- Conventional Commits. Branch names `<issue>-<short-description>`. One PR per
+  issue or pass; Brad reviews and merges.
+- Default driver parameters run in seconds; bigger runs sit behind flags.
+- Slides: Brad refers to a slide by its footer number (n/16). The title and
+  the two section frames are unnumbered, so PDF page = n + 3. After any deck
+  edit: `./slides/build.sh`, render the changed pages with `pdftoppm` and look
+  at them, run the quote checker, commit `talk.tex` and `talk.pdf` together.
+  `\q{}` marks a sourced quotation (checked against the notes), `\sq{}` a
+  scare quote.
+- Clips: iterate in `outputs/`; copy into `slides/videos/` and commit only
+  when the content changed (ffmpeg output is not byte-identical run to run).
+- Deck and clip passes go one item at a time, one commit per item, so the PR
+  history reads item by item.
 
 ## Hard constraints
 
 - **This repo is PUBLIC (MIT).** Never commit PDFs, credentials, or anything
   from FullContact / Ziff Davis systems. Demo content is Brad's own academic
   work plus public papers; nothing employer-proprietary goes here.
-- `papers/*.pdf` and `outputs/` are gitignored on purpose. Don't un-ignore.
+- `papers/*.pdf` and `outputs/` are gitignored on purpose; don't un-ignore.
+  `slides/figures/`, `slides/videos/` and `slides/talk.pdf` are committed on
+  purpose so the talk is self-contained from a fresh clone, and `talk.pdf` is
+  committed on every deck change.
 - Don't fabricate details about the OpenAI paper or its reception. Everything
-  stated in `docs/` must trace to a source we've read (PDF in `papers/` or a
-  URL cited inline).
+  stated in `docs/` and on the slides must trace to a source we've read (PDF
+  in `papers/` or a URL cited inline).
 
 ## Reference implementation (MATLAB, read-only)
 
 `~/MathGraduateResearchAndCourseWork/` (separate personal repo, not vendored
-here) holds Brad's original MATLAB. Port with understanding: reproduce the
-*method*, restructure the code. Key files:
+here) holds Brad's original MATLAB. The port reproduces the *method* and
+restructures the code; module docstrings name the MATLAB functions and the
+dissertation equations they follow.
 
 - `waveEq1DMatlab/FD4wave1DAC.m` + `runDriver1DWE.m`: 1-D two-way wave
   equation in first-order form on periodic [-1, 1), equispaced 4th-order FD,
@@ -84,21 +127,33 @@ here) holds Brad's original MATLAB. Port with understanding: reproduce the
   interface are rebuilt from piecewise polynomials that satisfy the PDE's
   continuity conditions (Taylor terms "translated" across the interface via
   the operator); stencils that cross *both* sides of a thin layer get a
-  second translation ("double-cross"). `doubleNaiveFlag` disables that for
-  comparison. `weights.m` is Fornberg's FD-weight algorithm.
-- `waveEq2DMatlab/`: 2-D elastic wave equation (u, v, s1, s2, s3) on a
-  doubly-periodic unit square with two curved interfaces. Node set from a
-  repulsion process (`mos2dsqperiodic7`), periodic kNN via tiling +
-  `knnsearch`, RBF-FD weights (IMQ/GA + polynomial augmentation, per-stencil
-  dense solves), hyperviscosity, sparse block operators, RK4. Hybrid: plain
-  FD away from interfaces. `EWE2DRbfPrep.m` (3k lines) contains most local
-  functions; `runScript170107HO.m` still references pre-rename function
-  names.
+  second translation ("double-cross"). `weights.m` is Fornberg's algorithm.
+  Ported in `wave1d/`, for piecewise-constant materials only (the exact
+  ray-sum reference needs that); the dissertation's smoothly varying
+  background speed is not ported.
+- `waveEq2DMatlab/` (`EWE2DRbfPrep.m`, 3k lines of local functions;
+  `runScript170107HO.m` still uses pre-rename names): 2-D elastic wave
+  equation (u, v, f, g, h) on a doubly periodic unit square with two curved
+  interfaces. Node set from a repulsion process, periodic kNN via tiling +
+  `knnsearch`, Gaussian RBF-FD weights with polynomial augmentation, Δ³
+  hyperviscosity, sparse block operators, RK4. Ported in `wave2d/` with these
+  exceptions:
+  - **Triple stencils** (`tripleVec`: one stencil that sees both interfaces of
+    a thin band) are not ported; `operators.py` raises `NotImplementedError`
+    if a band is thinner than a stencil. The demo band is 0.25 wide.
+  - **Variable Lamé parameters in the band** (λ = μ = 4 + sin 2πx sin 2πy,
+    JCP 2017 test case 1) are not ported; the band is a constant material.
+  - **FD/RBF hybrid** away from interfaces is not ported; the port is RBF-FD
+    everywhere ("all RBF"), a runtime optimisation we never needed.
+  - Point sources and the mini-Marmousi model (dissertation §3.4.3) are out
+    of scope.
 
-MATLAB → Python mapping we'll need: `knnsearch` → `scipy.spatial.cKDTree`;
-`A\b` → `scipy.linalg.solve`/`lstsq`; `null()` → `scipy.linalg.null_space`;
-`sparse(i,j,v)` → `scipy.sparse.csr_array`; `polyval/polyder` →
-`numpy.polynomial`.
+MATLAB → Python mapping as used: `knnsearch` on a tiled node set →
+`scipy.spatial.cKDTree` with `boxsize` (no tiling); per-stencil `A\b` →
+batched `numpy.linalg.solve`; `sparse(i,j,v)` → `scipy.sparse.csr_array`;
+`polyval`/`polyder` tables → monomial exponent tables
+(`wave2d/rbf.py: monomial_exponents`). No null-space computations: the port
+follows the JCP 2017 square-matrix construction.
 
 ## Working style (from Brad's global preferences)
 
