@@ -384,3 +384,15 @@ for the deck. It landed in two working days.
   spurious u (exactly zero in the true solution) is the primary measure of
   edge error for the rest of the chain; the eigenvalue driver takes
   `--edge-width` and defaults to flat interfaces with it.
+- 2026-09-19: The 2-D seeds (#38, `wave2d/seeds.py`) are anchored at the
+  evaluation node in both coordinates and scaled by r_max, the 1-D lesson
+  for the normal coordinate; the polynomial basis of `interface.py` keeps
+  its interface origin and is untouched, since moving the origin is a
+  change of basis within the same span (`shift_matrix`), so the jump path
+  stays bit for bit. All 30 seeds of a stencil march as one linear ODE
+  system, restarted at every node and at the edge flanks (a single solve
+  without the flanks is off by 4e-10 at δ = 1e-4). The stress seeds drop
+  the same three rigid-motion columns as the polynomial basis because the
+  shear pair shares its stress through any edge, not just for constant
+  coefficients. Hyperviscosity rows for seed stencils (impose Δ³ = 0 on
+  the seed space, or not) are an eigenvalue question deferred to #39.
