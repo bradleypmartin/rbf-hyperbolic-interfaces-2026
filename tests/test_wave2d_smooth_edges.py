@@ -1,4 +1,5 @@
-"""Smooth flat edges in 2-D and the normal-incidence spectral reference (#36)."""
+"""Smooth flat edges in 2-D, the normal-incidence spectral reference (#36) and
+the seed-aware operator (#39)."""
 
 import numpy as np
 import pytest
@@ -12,6 +13,7 @@ from pdes_demo.wave2d import (
     build_operators,
     exact_plane_wave,
     make_node_set,
+    minimal_image,
     periodic_knn,
     plane_p_wave,
     run,
@@ -159,8 +161,6 @@ def test_rejections_and_guards() -> None:
         )
     nodes = make_node_set(FLAT, 400, repulsion_steps=5)
     smooth = LayeredMedium2D(edge_width=0.01)
-    with pytest.raises(NotImplementedError, match="#39"):
-        build_operators(nodes, smooth, mode="aware")
     build_operators(nodes, smooth, mode="naive")
     with pytest.raises(ValueError, match="spectral_plane_wave"):
         exact_plane_wave(nodes, 0.1, smooth)
@@ -297,3 +297,78 @@ def test_matches_a_resolved_naive_2d_run_to_its_resolution_floor() -> None:
     np.testing.assert_allclose(ref[2], ref[4] / 3, atol=1e-13)
     jump_err = _rel(naive[1], exact_plane_wave(nodes, t, FLAT)[1])
     assert jump_err > 3 * _rel(naive[1], ref[1]), jump_err
+
+
+# --- the seed-aware operator (#39) -----------------------------------------------
+
+
+def test_seed_rows_are_the_stencils_that_see_the_edge_and_nothing_else_moves() -> None:
+    nodes = make_node_set(FLAT, 900, repulsion_steps=10)
+    smooth = LayeredMedium2D(edge_width=nodes.h / 8)
+    naive = build_operators(nodes, smooth, mode="naive")
+    aware = build_operators(nodes, smooth, mode="aware")
+    idx, _ = periodic_knn(nodes.xy, 19)
+    sees = np.array(
+        [smooth.varies_over(nodes.x[idx[i]], nodes.y[idx[i]]) for i in range(nodes.n)]
+    )
+    np.testing.assert_array_equal(aware.interface_nodes, np.flatnonzero(sees))
+    assert 0 < sees.sum() < nodes.n
+    # 19 * delta + the stencil radius from an edge centre, and no further.
+    dist = smooth.distance_to_interfaces(nodes.x, nodes.y)
+    assert dist[sees].max() < 19 * smooth.edge_width + 3 * nodes.h
+    assert dist[~sees].min() > 19 * smooth.edge_width - 3 * nodes.h
+    for a, b in (
+        (aware.elastic, naive.elastic),
+        (aware.hyper_block, naive.hyper_block),
+    ):
+        changed = np.unique(abs(a - b).nonzero()[0] % nodes.n)
+        assert set(changed) <= set(aware.interface_nodes)
+        untouched = np.setdiff1d(np.arange(nodes.n), aware.interface_nodes)
+        rows = np.concatenate([f * nodes.n + untouched for f in range(5)])
+        assert abs(a[rows] - b[rows]).max() == 0.0
+    # Seed rows are coupled: u_t draws on h data through the stress seeds.
+    i = aware.interface_nodes[0]
+    row = aware.elastic[[i], :].toarray().ravel()
+    assert np.abs(row[4 * nodes.n : 5 * nodes.n]).max() > 0
+    # Elastic rows on the 19-node interface stencil (3 stress fields), the
+    # Delta^3 rows on the naive 30-node footprint (2 velocity fields).
+    assert set(np.diff(aware.elastic.indptr)[aware.interface_nodes]) == {3 * 19}
+    assert set(np.diff(aware.hyper_block.indptr)[aware.interface_nodes]) == {2 * 30}
+    small = build_operators(nodes, smooth, mode="aware", seed_hyper_stencil=19)
+    assert set(np.diff(small.hyper_block.indptr)[small.interface_nodes]) == {2 * 19}
+    assert abs(small.elastic - aware.elastic).max() == 0.0
+    # The 30-node Delta^3 rows carry the naive rows' damping; the 19-node
+    # ones about half of it (the reason for the footprint, notes section 5.3).
+    naive_norm = abs(naive.hyper_block).sum(axis=1)[aware.interface_nodes]
+    big_norm = abs(aware.hyper_block).sum(axis=1)[aware.interface_nodes]
+    small_norm = abs(small.hyper_block).sum(axis=1)[small.interface_nodes]
+    assert 0.5 < np.median(big_norm / naive_norm) < 2.0
+    assert np.median(small_norm / naive_norm) < 0.75
+    # A tolerance trims the tails; the surviving rows all see the edge.
+    trimmed = build_operators(nodes, smooth, mode="aware", seed_rtol=1e-3)
+    assert 0 < trimmed.interface_nodes.size < aware.interface_nodes.size
+    assert set(trimmed.interface_nodes) <= set(aware.interface_nodes)
+
+
+def test_seed_aware_operator_is_exact_on_a_resolved_plane_wave() -> None:
+    # Through a resolved edge (delta = 1.9 h) the rates of the plane pulse are
+    # pointwise: h_t = (lam + 2 mu) v_y and v_t = h_y / rho with the local
+    # material, u_t = g_t = 0. Both operators must reproduce them to the
+    # resolution error, and the seed rows must not excite u.
+    nodes = make_node_set(FLAT, 900, repulsion_steps=10)
+    smooth = LayeredMedium2D(edge_width=0.0625)
+    state = plane_p_wave(nodes, smooth, center=0.75, sharpness=8.0)
+    lam, mu, rho = smooth.material_at(nodes.x, nodes.y)
+    dy = minimal_image(nodes.y - 0.75)
+    v_y = -2 * 64 * dy * np.exp(-64 * dy**2)
+    exact_h_t = (lam + 2 * mu) * v_y
+    exact_v_t = np.sqrt(3) * v_y / rho
+    scale = np.abs(exact_h_t).max()
+    for mode in ("naive", "aware"):
+        ops = build_operators(nodes, smooth, mode=mode, seed_rtol=1e-3)
+        rate = (ops.elastic @ state.ravel()).reshape(5, -1)
+        np.testing.assert_allclose(rate[4], exact_h_t, atol=1e-2 * scale)
+        np.testing.assert_allclose(rate[1], exact_v_t, atol=1e-2 * scale)
+        assert np.abs(rate[0]).max() < 1e-2 * scale
+        assert np.abs(rate[3]).max() < 1e-2 * scale
+    assert ops.interface_nodes.size > nodes.n // 3
