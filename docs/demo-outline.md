@@ -4,9 +4,10 @@ Audience: Ziff Davis coworkers from several parts of the org. Bright tech
 workers; assume no background in numerical PDEs or PDEs at all. This is a
 high-level share-out about mathematical simulation and what a domain expert
 experiences collaborating with current AI. **No live coding**: everything is
-prepared in advance (two videos + a short slide deck PDF). Thesis of the talk:
-"AI in research mathematics" currently means two very different things, and it
-is worth seeing both.
+prepared in advance (three clips + a 19-page slide deck PDF). Thesis of the
+talk (revised 2026-09-19, deck title *AI and Applied Math circa September
+2026*): one pattern at every scale, agents' power paired with a human's
+intuition in a field, seen twice:
 
 1. Autonomous, frontier-scale proof generation (OpenAI / Navier–Stokes).
 2. Collaborative, verifiable, human-in-the-loop computational work (Claude
@@ -51,8 +52,10 @@ is worth seeing both.
 ### Reported in press
 
 Verified against CNBC, Fortune, and The Week on 2026-09-17; see
-`docs/navier-stokes-notes.md` for the attributed details and what remains
-unread (Nature, New Scientist, Axios, the Alpöge–Buckmaster paper).
+`docs/navier-stokes-notes.md` for the attributed details. The Alpöge–Buckmaster
+preprint and Buckmaster's statement were read the same day; what remains
+unread is paywalled press (Nature's controversy section, New Scientist, the
+Economist, NYT, WSJ).
 
 ### Discussion prompts
 
@@ -105,20 +108,22 @@ Speaker script with timings: `slides/notes.md`.
 the code is nine years old. With Claude Code I re-derived the method, ported
 it to Python, and verified it against analytic results in an afternoon."
 
-### Deliverables
+### Deliverables (as built)
 
-- `outputs/wave1d_naive_vs_aware.mp4`: two panels, same discretization.
-  Left: naive FD straight across the interfaces. Right: interface-aware FD.
-  The naive panel should visibly ring / get the reflection wrong.
-- `outputs/wave2d_naive_vs_aware.mp4`: same idea for 2-D elastic waves on a
-  scattered node set (naive RBF-FD vs interface-aware), with error maps under
-  the two |v| panels. `outputs/wave2d_naive_vs_aware_curved.mp4` is the
-  curved-interface variant (`--amplitude 0.02`).
-- `slides/`: brief deck as PDF covering both halves. Tooling: `tectonic` is
-  installed (Beamer works offline); Marp via `npx` is the alternative (Google Chrome
-  is installed, so PDF export works).
+- `slides/talk.pdf`: 19-page Beamer deck built with tectonic; `slides/notes.md`
+  speaker script with clip cues; `slides/clips.html` keyboard clip player.
+- Clip 1, `slides/videos/wave1d_naive_vs_aware_coarse.mp4` (10 s): 1-D, 100
+  nodes, standard vs interface-aware FD, an error strip under each panel; no
+  exact curve drawn, no legends (video pass, 2026-09-19).
+- Clip 2, `slides/videos/wave2d_naive_vs_aware.mp4` (8 s): 2-D, flat
+  interfaces, 10,000 nodes, |v| from both solvers and error maps against the
+  exact solution.
+- Clip 3, `slides/videos/wave2d_naive_vs_aware_curved.mp4` (8 s): the curved
+  case (`--amplitude 0.02`), error maps against a 40,000-node interface-aware
+  run. Cued on 12/16, whose still shows the reference wave once and then both
+  error maps.
 
-### 1-D problem (must-have)
+### 1-D problem
 
 Two-way wave equation on periodic [-1, 1) in first-order form (u = particle
 velocity, f = stress): ρ u_t = f_x, f_t = ρ c² u_x. Gaussian pulse starts at
@@ -170,7 +175,7 @@ solution has 0.6% ringing and 3.3% error, i.e. it sits on the exact curve.
 At 200 nodes with the default pulse the ringing is finer (5%) but still
 clear; at 100 nodes with the default pulse both panels are underresolved.
 
-### 2-D problem (stretch)
+### 2-D problem
 
 RBF-FD on a scattered, repulsion-relaxed node set in the doubly periodic unit
 square, with curved interfaces. Pieces: node generation, periodic kNN by
@@ -266,19 +271,18 @@ CFL 0.5 capped by the hyperviscosity spectrum.
   there (11% vs 10%), so the panels would look alike; at 10000 the naive
   error is 3x the aware one for the whole clip and the error maps show it.
 
-## Timeline (13 days from 2026-09-17)
+## What happened
 
-| Dates | Work |
+The original plan budgeted Sep 18–26 for the 1-D and 2-D work and Sep 27–28
+for the deck. It landed in two working days.
+
+| Date | Work |
 | --- | --- |
-| Sep 17 | Environment, papers, plan (done) |
-| Sep 18–19 | 1-D: Fornberg weights, interface stencils, double-cross, RK4, tests |
-| Sep 20–22 | 1-D two-panel video; read NS manuscript §1–3, Clay statement, press |
-| Sep 23–26 | 2-D RBF-FD prep (node set, periodic kNN, weights, sparse ops, hyperviscosity), elastic time stepping |
-| Sep 17 (actual) | 1-D, 2-D, Navier–Stokes reading, and the first full deck all landed on day one |
-| Sep 18–26 | Slack: read the still-unread sources (Nature controversy section, Economist, NYT); follow Clay and OpenAI for updates; polish wording |
-| Sep 27–28 | Final deck pass; regenerate clips; check every quote against `docs/navier-stokes-notes.md` |
-| Sep 29 | Rehearsal with `slides/notes.md`; freeze the repo |
-| Sep 30 | Demo |
+| Sep 17 | Scaffold, papers, plan. 1-D port with the exact ray-sum reference (#4). 2-D in five PRs: node sets (#10), RBF-FD weights and sparse operators (#11), RK4 with analytic validation and the hyperviscosity study (#12), interface-aware stencils (#14), clips, convergence figure and one-sided resampler (#15). Coarse 1-D clip (#16). Sourced Navier–Stokes notes, Beamer deck, speaker script, `clips.html` (#17). GitHub Pages (#20). Four bugs found and fixed the same day: a ray-pruning sign error and two latent exact-solver bugs in 1-D, a driver crash in 2-D. |
+| Sep 19 | Deck culled to seven content slides per part, no backups (#21). Slide-by-slide tweak pass (#22). Spot changes: new title and thesis, aqua/violet 2-D maps, convergence factors corrected (#23). Video pass: clips re-rendered, 1-D clip without the exact curve or legends, 12/16 still reduced to three columns (#25). Docs pass (#19). |
+| Sep 20–28 | Watch Clay and OpenAI for updates; update the timeline slide if anything moves. |
+| Sep 29 | Rehearse with `slides/notes.md`; trim 8/16 then 14/16 if long; freeze; tag `talk-2026-09-30`. |
+| Sep 30 | Talk. |
 
 ## Decisions log
 
@@ -330,3 +334,19 @@ CFL 0.5 capped by the hyperviscosity spectrum.
   one TikZ picture of a stencil straddling a corner, results as "halve the
   error" vs "divide by 16". Beginner links (3Blue1Brown, Khan Academy,
   Wikipedia) on the last slide.
+- 2026-09-19: Deck budget is title, framing, two section frames, seven
+  content frames per part, links; no backup slides (detail lives in the repo).
+  Slides are referred to by footer number (n/16); PDF page = n + 3.
+- 2026-09-19: Deck retitled *AI and Applied Math circa September 2026:
+  excitement, ethics, and individual exploration*; thesis flipped to one
+  pattern at every scale. The assistant is named (Claude Fable 5.1). The
+  landing page and the clip player take their titles from the deck.
+- 2026-09-19: 2-D colour maps are aqua (field) and violet (error), derived
+  from the same OKLCH lightness ladder, so blue and orange mean "which
+  method" everywhere in the deck. Supersedes the blue/orange maps above.
+  Timeline slide: OpenAI orange, Alpöge–Buckmaster blue, Clay grey.
+- 2026-09-19: Clip 1 draws no exact curve and no legends; the error strips
+  carry the comparison. The 12/16 still shows the reference wave once, then
+  each method's error map, because the two solvers' waves cannot be told
+  apart by eye at 10,000 nodes; the clips keep both waves. Clips stay at
+  120 dpi and the 2-D ones square.
