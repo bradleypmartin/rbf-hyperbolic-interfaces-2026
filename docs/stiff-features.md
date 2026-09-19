@@ -502,3 +502,126 @@ problem per tangential wavenumber, so a 1-D spectral solve per Fourier
 mode of the initial pulse gives a reference of the same quality as
 section 2's. One to two days. A curved feature by route (b) is a
 week-scale project. Neither is scheduled; follow-up issue if wanted.
+
+## 5. Two dimensions: results (#36–)
+
+The 2-D chain runs flat first (Brad, 2026-09-19): the principles and the
+RBF-FD stability question get settled on the flat two-interface problem of
+Part 2, which has an independent reference, before curvature enters (#42).
+
+### 5.1 Smooth flat edges and the normal-incidence reference (#36, PR #43)
+
+`LayeredMedium2D(edge_width=δ)` smooths both interfaces of the band
+`[0.25, 0.5)` into tanh transitions of scale δ in the vertical offset,
+summed over periodic images in y; λ, μ and ρ are blended linearly in the
+tanh weight, so K = λ + 2μ is linear in it and c_p is not. That differs
+from the 1-D `LayeredMedium`, which blends c and ρ; the two conventions
+meet only in the jump limit, and it is why the reference below maps the
+2-D profiles pointwise instead of building a 1-D layer of width 2δ. Two
+edges a gap g apart only reach tanh(g / 2δ) of the contrast between them
+(99.6% at δ = 0.03 for this band), so the class refuses 4δ > g.
+
+The reference, `wave2d/exact.py: spectral_plane_wave`, is the 1-D
+pseudo-spectral solver of section 2 on the image of the problem under
+x = 1 − 2y (c′ = 2c_p, ρ′ = ρ/2, impedances unchanged), fed the exact
+image of the 2-D initial state (u₁D = −v/Z_p, f₁D = h/Z_p with the
+background Z_p), with f recovered exactly from f_t = λ v_y as
+f = f₀ + λ/(λ+2μ) (h − h₀). Checks (`tests/test_wave2d_smooth_edges.py`):
+the reference tends to the ray sum at first order in δ (max |Δv| = 0.167,
+0.090, 0.046, 0.023, 0.012 for δ = 0.016 down to 0.001 at t = 0.3);
+doubling the 1-D grid or halving the time step at δ = 0.005 changes v, f,
+h by under 3·10⁻¹⁰ at t = 1; and a naive 2-D run at 10,000 nodes through a
+δ = 0.02 = 2h edge agrees with it to 7.9·10⁻³ in v at t = 0.3, below the
+run's own resolution floor of 1.07·10⁻², while differing from the jump
+solution by 0.33. The shortcut f = λ/(λ+2μ) h of the jump case is off by
+|h₀| |ratio − ratio_bg|, frozen in time: nothing for the default contrast
+(λ = μ on both sides), and 2·10⁻¹⁴, 10⁻⁹, 7·10⁻⁶ at δ = 0.01, 0.02, 0.04
+for a band with a different ratio.
+
+### 5.2 Naive baseline: is there a knee in 2-D? (#37, `scripts/wave2d_stiff.py`)
+
+Setup: the flat band with the default contrast, plain RBF-FD everywhere
+(30-node stencils, degree-4 augmentation, Δ³ hyperviscosity at the MATLAB
+γ), material coefficients sampled at the stencil centres, RK4 at CFL 0.5,
+t = 1, the node sets of Part 2 (seed 0). Fixed δ per panel, as in 1-D, so
+a knee would appear as n crosses h = δ: δ = 0 (ray-sum reference),
+0.0025 (h/δ from 8 to 2.9, never resolved), 0.01 (h/δ from 2 to 0.71) and
+0.04 (h/δ ≤ 0.5, resolved everywhere). Errors are relative l2 errors at
+t = 1 against the ray sum or the cached 1-D spectral snapshots (4096 nodes
+for δ = 0.0025, 1024 otherwise, dt = 5·10⁻⁵). "Floor" is the same pulse on
+the same nodes in a uniform medium. Two pulses: the dissertation's
+(sharpness 23, centre 0.75) and a wider one (sharpness 15, centre 0.875,
+tails 2·10⁻¹⁴ at the edges), for the reason section 2 gave in 1-D.
+Runtime 2 min 10 s per pulse, 19 s of it the references (cached after).
+
+Dissertation pulse, error in v:
+
+| δ | n = 2500 | 4900 | 10000 | 19600 | rates |
+| --- | --- | --- | --- | --- | --- |
+| 0 (jump) | 2.4e-1 | 1.4e-1 | 6.9e-2 | 3.5e-2 | 1.5, 2.1, 2.0 |
+| 0.0025 | 2.0e-1 | 1.1e-1 | 5.2e-2 | 2.2e-2 | 1.8, 2.0, 2.5 |
+| 0.01 | 1.5e-1 | 8.4e-2 | 3.0e-2 | 8.6e-3 | 1.8, 2.9, 3.7 |
+| 0.04 | 1.9e-1 | 8.7e-2 | 3.0e-2 | 8.8e-3 | 2.3, 3.0, 3.6 |
+| floor | 1.9e-1 | 9.2e-2 | 3.3e-2 | 1.0e-2 | 2.0, 3.0, 3.4 |
+
+Wider pulse, error in v and the largest spurious |u| (the exact u is 0):
+
+| δ | n = 2500 | 4900 | 10000 | 19600 | rates | max \|u\| at 2500 … 19600 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 (jump) | 1.3e-1 | 7.2e-2 | 3.6e-2 | 2.2e-2 | 1.7, 2.0, 1.5 | 9.6e-3, 1.1e-2, 5.7e-3, 5.7e-3 |
+| 0.0025 | 8.9e-2 | 4.8e-2 | 2.7e-2 | 1.3e-2 | 1.9, 1.6, 2.2 | 9.5e-3, 1.1e-2, 4.7e-3, 3.4e-3 |
+| 0.01 | 6.2e-2 | 2.2e-2 | 5.7e-3 | 1.4e-3 | 3.1, 3.7, 4.2 | 2.7e-3, 1.5e-3, 7.6e-4, 8.5e-5 |
+| 0.04 | 5.2e-2 | 1.9e-2 | 5.1e-3 | 1.4e-3 | 2.9, 3.7, 3.9 | 1.2e-3, 4.8e-4, 1.0e-4, 2.4e-5 |
+| floor | 5.2e-2 | 1.8e-2 | 4.8e-3 | 1.3e-3 | 3.0, 3.8, 3.8 | 8.9e-4, 4.5e-4, 1.2e-4, 3.0e-5 |
+
+![Naive RBF-FD through smooth edges: error in v and spurious u vs resolution](figures/wave2d_stiff_naive_s15.png)
+
+**What the table says.**
+
+- *The resolution floor is the first thing to see.* With the dissertation
+  pulse, only the jump and the never-resolved δ = 0.0025 edge stand out
+  from the floor (3.5× and 2.2× at 19,600 nodes); δ = 0.01 sits at the
+  floor even at h = 2δ, where the 1-D naive scheme was 400× worse than the
+  seeds. The 2-D floor is 10⁻² at our finest node set, against 10⁻⁷ in the
+  1-D study, and the pulse can only be widened so far (its tails must
+  clear both edges for the ray sum). The wider pulse lowers the floor by
+  8× at 19,600 nodes and is the configuration to read.
+- *A never-resolved edge behaves like the jump.* At δ = 0.0025 the naive
+  error is second order and 10× the floor at 19,600 nodes, at 0.6–0.75 of
+  the jump's level: the straddling rows at h/2 see tanh(h/2δ) of the
+  contrast, 0.9993 at 2500 nodes and 0.89 at 19,600.
+- *A resolved edge costs nothing.* At δ = 0.04 (h ≤ δ/2) the naive error is
+  the floor to within 6% at every n, with the floor's rates.
+- *The knee is there but small in v.* At δ = 0.01 the naive error exceeds
+  the floor by 19%, 17%, 18% and 8% from h = 2δ to h = 0.71δ; taking the
+  excess in quadrature, the edge's own contribution falls 3.3e-2, 1.1e-2,
+  3.0e-3, 5.2e-4, faster than second order and accelerating, which is the
+  knee shape of section 2 seen through a high floor.
+- *The spurious u separates the cases far more sharply than v.* The
+  naive stencils excite u where a field varies sharply in y, because d/dx
+  on scattered nodes does not annihilate such a field exactly; u carries
+  none of the pulse's own dispersion error, and the uniform-medium run
+  gives its floor (8.9e-4 down to 3.0e-5). Against that floor the jump is
+  11×, 24×, 48×, 190× from 2500 to 19,600 nodes and δ = 0.0025 is 11×,
+  24×, 39×, 113×: an unresolved edge's error decays like the jump's,
+  slower than the floor, so the ratio grows with n. δ = 0.04 equals the
+  floor at every n. δ = 0.01 sits 3×, 3×, 6×, 3× above it: on the way to
+  jump-like behaviour while h ≥ δ (the ratio rising to 6 at h = δ) and
+  falling back once h < δ. That is the knee of section 2 in the one
+  quantity the floor does not pollute, as a plateau rather than a drop,
+  because at h = 0.71δ the edge is only just resolved.
+- *Spectrum* (`scripts/wave2d_eigenvalues.py --edge-width`, 900 flat nodes,
+  standard γ): max Re λ = +5.9·10⁻² for the jump and for δ = h/8, and
+  +8.2·10⁻⁵ for δ = 2h; RK4 amplification 1.0004, 1.0004, 1.0000. As
+  expected: only the centre-sampled coefficients change.
+
+**Consequences for #38–#40.** The seed stencils can at most remove the
+excess over the floor: 8–20% in v at δ = 0.01, a factor 10 at δ = 0.0025
+(an edge 3–8× thinner than the node spacing), and in spurious u a factor
+3–6 at δ = 0.01 and 11–190× for the jump-like cases. So the flat
+convergence study of #40 should report max |u| and the δ = 0.0025 column
+as its primary evidence, use the wider pulse, and treat the δ = 0.01
+v-curve as a secondary check; a "knee plot" in v alone would show little. The 2-D naive scheme is not first order through
+an unresolved edge the way 1-D FD4 was: the fixed rows straddling the edge
+centre keep the coefficient sampling symmetric, and RBF-FD's error through
+a jump is already the "second order, large constant" of Part 2.

@@ -28,8 +28,11 @@ FD4 has a knee at h = δ, the seed stencils are fourth order at every
 resolution, and the dissertation's jump construction is the δ → 0 limit.
 The 2-D chain (#36–#42, flat first, curved last) has started: #36 added
 smooth flat edges to `LayeredMedium2D` and a normal-incidence reference
-from the 1-D spectral solver; no 2-D seeds yet. Notes and results are in
-`docs/stiff-features.md`.
+from the 1-D spectral solver; #37 measured the naive RBF-FD baseline
+(`scripts/wave2d_stiff.py`): the resolution floor hides most of the edge
+error in v; the spurious u (exactly 0 in the true solution) separates
+unresolved from resolved edges 10× more sharply. No 2-D seeds yet.
+Notes and results are in `docs/stiff-features.md` §5.
 
 Audience: bright tech workers with no assumed PDE background. **No live
 coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
@@ -91,6 +94,8 @@ uv run ruff check . && uv run ruff format .
 uv run python scripts/<driver>.py             # figures / clips into outputs/
 uv run python scripts/wave1d_stiff.py         # Part 3 figures, ~50 s (references
                                               # cached in outputs/)
+uv run python scripts/wave2d_stiff.py         # Part 3 2-D naive baseline, ~2 min
+                                              # per pulse (1-D references cached)
 ./slides/build.sh                             # copy figures and clips from outputs/,
                                               # crop, tectonic → slides/talk.pdf
 uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the notes

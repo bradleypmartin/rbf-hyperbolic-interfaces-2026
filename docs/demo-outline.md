@@ -377,3 +377,10 @@ for the deck. It landed in two working days.
   profiles pointwise into the 1-D spectral solver instead of building a
   `LayeredMedium(edge_width = 2δ)`, and hands it the exact image of the 2-D
   initial state so that f follows from f = f₀ + λ/(λ+2μ) (h − h₀) exactly.
+- 2026-09-19: The 2-D naive baseline (#37) reports both the dissertation
+  pulse and a wider one (sharpness 15, centre 0.875), reads the wider one,
+  and uses fixed δ columns as in 1-D rather than δ ∝ h. The resolution
+  floor hides most of the edge error in v at our node counts, so the
+  spurious u (exactly zero in the true solution) is the primary measure of
+  edge error for the rest of the chain; the eigenvalue driver takes
+  `--edge-width` and defaults to flat interfaces with it.
