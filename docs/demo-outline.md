@@ -70,26 +70,30 @@ unread (Nature, New Scientist, Axios, the Alpöge–Buckmaster paper).
 - **What is still human here?** Problem selection, the physical picture in
   §2, judging significance, deciding what to formalize.
 
-### Slides (built 2026-09-17; `slides/talk.tex`, 24 + 3 backup)
+### Slides (`slides/talk.tex`; culled 2026-09-19 for #18, 19 pages, no backup)
+
+Budget: title, a framing slide, two section slides, seven content slides per
+part, and a links slide. About two minutes a slide. Backup slides were dropped;
+the equations, the stability figure, and the numbers tables live in the repo.
 
 1. Title. 2. Why this talk (thesis, roadmap).
-3. Fluids, Newton, and a question from 1934 (no equations).
-4. Four ways to win the prize (Clay's (A)–(D); "forced" is the hinge).
-5. What happened, in two weeks (dated timeline, Aug 15 – Sep 17).
-6. The claim, in words (abstract verbatim; what it is not).
-7. The picture: a collapsing vortex (TikZ schematic after Fig. 1).
-8. How it was produced, in OpenAI's own account (agents, hours, tokens,
-   cost per Science; press discrepancy footnote).
-9. The parallel story (Alpöge–Buckmaster; Córdoba–Martínez-Zoroa; the
-   Caltech PINN candidate).
-10. The dispute, as each side tells it (two columns, both primary sources).
-11. Reactions (Clay, AMS, Fields Medalists, Tao, Harris, Bubeck, Nature).
-12. What "machine-checked" does and does not mean (Lean vs human checks).
-13. Questions to argue about (five prompts).
-14–24. Part 2 (section, my corner, problem in one picture, 1-D ringing +
-   clip, 1-D convergence, 2-D nodes, 2-D snapshot + clips, 2-D convergence,
-   the collaboration, comparison table, resources).
-Backup: the equations; the eigenvalue/hyperviscosity figure; the numbers.
+3. Fluids, Newton, and a question from 1934 (no equations; flow diagram of
+   the two outcomes; "a counterexample may use a smooth force" is the hinge).
+4. What happened, in two weeks (TikZ timeline, Aug 15 – Sep 17, colour by
+   party).
+5. The claim, and the picture behind it (abstract verbatim; vortex schematic
+   after Fig. 1; what it is not).
+6. How it was produced, in OpenAI's own account (number tiles: agents, hours,
+   tokens, Lean, cost; press discrepancy in the source line).
+7. The parallel story, and the dispute (Alpöge–Buckmaster; two columns, both
+   primary sources).
+8. What "machine-checked" does and does not mean (Lean vs human checks).
+9. Reactions, and questions to argue about (four quotes, three prompts).
+10–16. Part 2 (section; my corner + problem in one picture; 1-D ringing +
+   clip; 2-D nodes; 2-D snapshot + clips; 1-D and 2-D convergence on one
+   slide, left panels cropped by `build.sh`; the collaboration with number
+   tiles; comparison table).
+17. For the curious (links; on screen during questions).
 
 Speaker script with timings: `slides/notes.md`.
 
