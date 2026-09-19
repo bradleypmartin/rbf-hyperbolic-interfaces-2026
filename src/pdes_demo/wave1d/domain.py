@@ -8,6 +8,11 @@ f = stress:
 The medium is a background material everywhere except one layer
 ``[layer_start, layer_start + layer_width)`` with different (c, rho). The two
 layer edges are the interfaces where naive finite differences break down.
+
+With ``edge_width > 0`` the two edges are smooth tanh transitions of that
+scale instead of jumps (issue #27): the same layer, swept from the
+dissertation's discontinuity through the "twilight zone" of edges too steep
+for a grid to resolve, to a gentle transition every scheme handles.
 """
 
 from dataclasses import dataclass
@@ -53,19 +58,32 @@ class LayeredMedium:
     layer: Material = Material(c=2.0, rho=1.0)
     layer_start: float = 0.0
     layer_width: float = 0.5
+    edge_width: float = 0.0
 
     def __post_init__(self) -> None:
         if self.layer_width <= 0:
             raise ValueError("layer_width must be positive")
         if not (X_MIN < self.layer_start and self.layer_end < X_MIN + PERIOD):
             raise ValueError("layer must sit strictly inside (-1, 1)")
+        if self.edge_width < 0:
+            raise ValueError("edge_width must be non-negative (0 = jump)")
 
     @property
     def layer_end(self) -> float:
         return self.layer_start + self.layer_width
 
     @property
+    def is_smooth(self) -> bool:
+        return self.edge_width > 0
+
+    @property
     def interfaces(self) -> tuple[Interface, Interface]:
+        """The two edges as jumps; only meaningful for ``edge_width == 0``.
+
+        With smooth edges the positions still mark the edge centres (the
+        seed ODEs use them as breakpoints), but the materials on each side
+        are the far-field values, not what a stencil sees.
+        """
         return (
             Interface(self.layer_start, self.background, self.layer),
             Interface(self.layer_end, self.layer, self.background),
@@ -78,14 +96,57 @@ class LayeredMedium:
     def in_layer(self, x: np.ndarray) -> np.ndarray:
         return (x >= self.layer_start) & (x < self.layer_end)
 
+    def layer_fraction(self, x: np.ndarray) -> np.ndarray:
+        """Blend weight of the layer material: 1 inside, 0 outside.
+
+        For ``edge_width > 0`` this is a tanh step up at ``layer_start`` and
+        down at ``layer_end``, summed over periodic images so the profile is
+        smooth and periodic to rounding (the images' tails are below
+        ``exp(-2 * (2 * n_images - 1) / edge_width)``).
+        """
+        x = np.asarray(x, dtype=float)
+        if not self.is_smooth:
+            return self.in_layer(x).astype(float)
+        d = self.edge_width
+        n_images = 2 + int(10 * d)
+        base = (x - X_MIN) % PERIOD + X_MIN
+        s = np.zeros_like(base)
+        for m in range(-n_images, n_images + 1):
+            xm = base + m * PERIOD
+            s += 0.5 * (
+                np.tanh((xm - self.layer_start) / d)
+                - np.tanh((xm - self.layer_end) / d)
+            )
+        return s
+
     def c_at(self, x: np.ndarray) -> np.ndarray:
-        return np.where(self.in_layer(x), self.layer.c, self.background.c)
+        if not self.is_smooth:
+            return np.where(self.in_layer(x), self.layer.c, self.background.c)
+        s = self.layer_fraction(x)
+        return self.background.c + (self.layer.c - self.background.c) * s
 
     def rho_at(self, x: np.ndarray) -> np.ndarray:
-        return np.where(self.in_layer(x), self.layer.rho, self.background.rho)
+        if not self.is_smooth:
+            return np.where(self.in_layer(x), self.layer.rho, self.background.rho)
+        s = self.layer_fraction(x)
+        return self.background.rho + (self.layer.rho - self.background.rho) * s
 
     def impedance_at(self, x: np.ndarray) -> np.ndarray:
         return self.rho_at(x) * self.c_at(x)
+
+    def varies_over(self, xs: np.ndarray, rtol: float = 0.0) -> bool:
+        """Whether the material differs between any two of the points ``xs``.
+
+        With ``rtol == 0`` this is exact float inequality: for a tanh edge the
+        tails round to the far-field value beyond about ``19 * edge_width``,
+        so a stencil is "aware" of an edge out to that distance plus its own
+        half-width. For a jump it is the same test as crossing an interface.
+        """
+        c = self.c_at(xs)
+        rho = self.rho_at(xs)
+        spread_c = np.ptp(c) / np.max(np.abs(c))
+        spread_rho = np.ptp(rho) / np.max(np.abs(rho))
+        return bool(max(spread_c, spread_rho) > rtol)
 
 
 @dataclass(frozen=True)
