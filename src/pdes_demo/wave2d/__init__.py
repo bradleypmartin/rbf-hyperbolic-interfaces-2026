@@ -7,7 +7,8 @@ Same split as ``wave1d``:
 - ``rbf``: Gaussian RBF-FD stencil weights with polynomial augmentation
 - ``operators``: sparse derivative, hyperviscosity and block elastic operators
 - ``simulate``: RK4 time stepping
-- ``exact``: analytic reference for the flat-interface plane-wave problem
+- ``exact``: references for the flat-interface plane-wave problem: the ray
+  sum for a jump, the 1-D spectral solver for smooth edges
 - ``resample``: one-sided interpolation to pixel grids and other node sets
 """
 
@@ -22,7 +23,7 @@ from .domain import (
     plane_p_wave,
     straddling_rows,
 )
-from .exact import exact_plane_wave
+from .exact import exact_plane_wave, spectral_plane_wave
 from .neighbors import minimal_image, periodic_knn, stencil_offsets, wrap
 from .operators import Operators, build_operators, hyperviscosity_gamma
 from .resample import pixel_grid, resample_matrix
@@ -48,6 +49,7 @@ __all__ = [
     "plane_p_wave",
     "resample_matrix",
     "run",
+    "spectral_plane_wave",
     "stable_dt",
     "stencil_offsets",
     "straddling_rows",

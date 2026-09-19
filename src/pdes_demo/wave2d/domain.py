@@ -13,6 +13,14 @@ flat interfaces at y = 0.25 and 0.5; §3.4.2 and the MATLAB use amplitude
 0.02). Velocity and traction are continuous across an interface; the stress
 component parallel to it is not.
 
+With ``edge_width > 0`` the two interfaces are smooth tanh transitions of
+that scale in the normal distance instead of jumps (issue #27, 2-D chain
+from #36): lam, mu and rho are blended between the background and the band
+material, so the Lame parameters vary smoothly and ``c_p``, ``c_s`` follow.
+``edge_width = 0`` is the jump, bit for bit. Only flat interfaces take a
+smooth edge for now; the curved case switches the vertical offset for the
+true signed normal distance (#42).
+
 Node sets follow ``EWE2DRbfPrep.m``: fixed hex-staggered rows that straddle
 each interface orthogonally (Brad's empirical stability requirement), with
 every other node relaxed by a simulated electrostatic repulsion. This is the
@@ -82,12 +90,28 @@ class LayeredMedium2D:
     layer: ElasticMaterial = ElasticMaterial(lam=4.0, mu=4.0, rho=2.0)
     lower: SineInterface = SineInterface(0.25)
     upper: SineInterface = SineInterface(0.5)
+    edge_width: float = 0.0
 
     def __post_init__(self) -> None:
         gap = self.upper.y0 - self.lower.y0
         amp = abs(self.lower.amplitude) + abs(self.upper.amplitude)
         if not (0 < self.lower.y0 and self.upper.y0 < 1 and gap > amp):
             raise ValueError("interfaces must be ordered and inside (0, 1)")
+        if self.edge_width < 0:
+            raise ValueError("edge_width must be non-negative (0 = jump)")
+        # Two tanh steps a distance g apart reach only tanh(g / (2 d)) of the
+        # contrast between them: 99.6% at d = g / 8 (delta = 0.03 for the
+        # default band), 96% at d = g / 4, where the band stops being one.
+        if 4 * self.edge_width > gap - amp:
+            raise ValueError(
+                f"edge_width {self.edge_width:g} is too wide for a band of "
+                f"width {gap - amp:g}: the two edges would merge (need 4 d <= width)"
+            )
+        if self.edge_width > 0 and not self.is_flat:
+            raise NotImplementedError(
+                "a smooth edge on a curved interface needs the signed normal "
+                "distance (issue #42); only flat interfaces take edge_width > 0"
+            )
 
     @property
     def interfaces(self) -> tuple[SineInterface, SineInterface]:
@@ -95,30 +119,82 @@ class LayeredMedium2D:
 
     @property
     def c_max(self) -> float:
+        # Valid for smooth edges too: lam + 2 mu and rho are both linear in
+        # the blend weight, so c_p**2 is a ratio of linear functions of it,
+        # monotone, and takes its extremes at the two pure materials.
         return max(self.background.c_p, self.layer.c_p)
 
     @property
     def is_flat(self) -> bool:
         return self.lower.amplitude == 0.0 and self.upper.amplitude == 0.0
 
+    @property
+    def is_smooth(self) -> bool:
+        return self.edge_width > 0
+
     def in_layer(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """Which side of the edge centres a point is on (the band for a jump)."""
         x, y = np.asarray(x), np.asarray(y)
         return (y >= self.lower.height(x)) & (y < self.upper.height(x))
 
-    def _pick(self, x: np.ndarray, y: np.ndarray, attr: str) -> np.ndarray:
-        inside = self.in_layer(x, y)
-        return np.where(
-            inside, getattr(self.layer, attr), getattr(self.background, attr)
-        )
+    def layer_fraction(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """Blend weight of the band material: 1 inside, 0 outside.
+
+        For ``edge_width > 0`` each edge is a tanh step of that scale in the
+        signed normal distance to the interface, which for a flat interface
+        is the vertical offset ``y - y0`` (the curved case, #42, will use
+        the true signed distance). The band profile, a step up at the lower
+        interface and down at the upper, is summed over its periodic images
+        in y so the result is smooth and periodic to rounding: the first
+        omitted image has both edges more than ``n_images`` from any point
+        of [0, 1), where the tails are below ``2 exp(-2 n_images / d)``,
+        which ``n_images > 19 d`` keeps under 1e-16. Inside the band the
+        weight peaks at ``tanh(gap / (2 d))``, not 1, unless ``gap >> d``
+        (99.6% of the contrast at d = 0.03 for the default band).
+        """
+        x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+        if not self.is_smooth:
+            return self.in_layer(x, y).astype(float)
+        d = self.edge_width
+        n_images = 1 + int(19 * d)
+        y0 = np.mod(y, 1.0)
+        lower, upper = self.lower.height(x), self.upper.height(x)
+        s = np.zeros(np.broadcast_shapes(x.shape, y.shape))
+        for m in range(-n_images, n_images + 1):
+            s += 0.5 * (np.tanh((y0 + m - lower) / d) - np.tanh((y0 + m - upper) / d))
+        return s
+
+    def _blend(self, x: np.ndarray, y: np.ndarray, attr: str) -> np.ndarray:
+        bg, ly = getattr(self.background, attr), getattr(self.layer, attr)
+        if not self.is_smooth:
+            return np.where(self.in_layer(x, y), ly, bg)
+        return bg + (ly - bg) * self.layer_fraction(x, y)
 
     def lam_at(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        return self._pick(x, y, "lam")
+        return self._blend(x, y, "lam")
 
     def mu_at(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        return self._pick(x, y, "mu")
+        return self._blend(x, y, "mu")
 
     def rho_at(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        return self._pick(x, y, "rho")
+        return self._blend(x, y, "rho")
+
+    def varies_over(self, x: np.ndarray, y: np.ndarray, rtol: float = 0.0) -> bool:
+        """Whether lam, mu or rho differ between any two of the points.
+
+        The 2-D twin of ``wave1d.domain.LayeredMedium.varies_over``. With
+        ``rtol == 0`` this is exact float inequality: for a tanh edge the
+        tails round to the far-field value beyond about ``19 * edge_width``,
+        so a stencil is "aware" of an edge out to that distance plus its own
+        radius; for a jump it is the same test as straddling an interface.
+        """
+        if np.size(x) == 0 or np.size(y) == 0:
+            return False
+        spread = 0.0
+        for attr in ("lam", "mu", "rho"):
+            values = self._blend(x, y, attr)
+            spread = max(spread, float(np.ptp(values) / np.max(np.abs(values))))
+        return bool(spread > rtol)
 
     def distance_to_interfaces(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         """Smallest |vertical offset| to any interface (fine for mild curves)."""
@@ -297,6 +373,16 @@ def nearest_spacing(nodes: NodeSet) -> np.ndarray:
 FIELDS = ("u", "v", "f", "g", "h")
 
 
+def require_background_start(medium: LayeredMedium2D, center: float) -> None:
+    """Raise unless a plane pulse centred at ``y = center`` starts in the
+    background for every x (between the edge centres is the band, jump or
+    smooth); the initial data and both references assume it."""
+    lowest = medium.lower.y0 - abs(medium.lower.amplitude)
+    highest = medium.upper.y0 + abs(medium.upper.amplitude)
+    if lowest <= center % 1.0 < highest:
+        raise ValueError("pulse must start in the background material for all x")
+
+
 def plane_p_wave(
     nodes: NodeSet,
     medium: LayeredMedium2D,
@@ -311,10 +397,7 @@ def plane_p_wave(
     that is ``h = sqrt(3) v`` and ``f = v / sqrt(3)``.
     """
     mat = medium.background
-    lowest = medium.lower.y0 - abs(medium.lower.amplitude)
-    highest = medium.upper.y0 + abs(medium.upper.amplitude)
-    if lowest <= center % 1.0 < highest:
-        raise ValueError("pulse must start in the background material for all x")
+    require_background_start(medium, center)
     v = np.exp(-(sharpness**2) * minimal_image(nodes.y - center) ** 2)
     state = np.zeros((len(FIELDS), nodes.n))
     state[1] = v

@@ -26,7 +26,10 @@ material edge too steep for the grid can be built from ODE-continued
 monomials, on the same equispaced grid. Built and confirmed in 1-D: naive
 FD4 has a knee at h = δ, the seed stencils are fourth order at every
 resolution, and the dissertation's jump construction is the δ → 0 limit.
-2-D is a design note. Everything is in `docs/stiff-features.md`.
+The 2-D chain (#36–#42, flat first, curved last) has started: #36 added
+smooth flat edges to `LayeredMedium2D` and a normal-incidence reference
+from the 1-D spectral solver; no 2-D seeds yet. Notes and results are in
+`docs/stiff-features.md`.
 
 Audience: bright tech workers with no assumed PDE background. **No live
 coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
@@ -53,18 +56,20 @@ src/pdes_demo/   library code
                    simulate.py (RK4) / exact.py (ray-sum reference solution) /
                    spectral.py (Fourier pseudo-spectral reference for smooth
                    edges) / stiff.py (ODE-continued seed stencils, Part 3)
-  wave2d/          domain.py (materials, sine interfaces, interface-straddling
-                   node sets by repulsion) / neighbors.py (periodic kNN via
+  wave2d/          domain.py (materials, sine interfaces with optional tanh
+                   edges for flat interfaces, interface-straddling node sets
+                   by repulsion) / neighbors.py (periodic kNN via
                    cKDTree boxsize) / rbf.py (Gaussian RBF-FD weights with
                    polynomial augmentation, batched) / interface.py
                    (interface-aware stencils, dissertation §3.3) /
                    operators.py (sparse dx, dy, hyperviscosity, 5-field block
                    operator) / simulate.py (RK4) / exact.py (flat-interface
-                   plane-wave reference) / resample.py (one-sided interpolation
-                   to pixel grids and other node sets)
+                   plane-wave references: ray sum for a jump, 1-D spectral
+                   solver for smooth edges) / resample.py (one-sided
+                   interpolation to pixel grids and other node sets)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 131 tests; every numerical routine has one
+tests/           pytest, 143 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with

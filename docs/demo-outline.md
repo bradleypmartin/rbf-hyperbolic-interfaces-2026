@@ -367,3 +367,13 @@ for the deck. It landed in two working days.
   hides the edge effect below n = 400.
 - 2026-09-19: Part 3 figures are committed under `docs/figures/` (525 KB);
   `outputs/` stays gitignored, including the cached spectral references.
+- 2026-09-19: The 2-D proof of concept for Part 3 goes flat first (Brad):
+  sub-issues #36–#42 in order, one PR each, so the principles and the
+  RBF-FD stability question are settled on a case with an independent
+  reference before curvature enters. #36: `LayeredMedium2D(edge_width=…)`
+  blends λ, μ, ρ linearly in the tanh weight (so K = λ + 2μ is linear and
+  c_p is not, unlike the 1-D medium, which blends c and ρ); the
+  normal-incidence reference `spectral_plane_wave` therefore maps the 2-D
+  profiles pointwise into the 1-D spectral solver instead of building a
+  `LayeredMedium(edge_width = 2δ)`, and hands it the exact image of the 2-D
+  initial state so that f follows from f = f₀ + λ/(λ+2μ) (h − h₀) exactly.
