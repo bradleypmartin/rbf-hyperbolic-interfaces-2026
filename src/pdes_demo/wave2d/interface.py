@@ -29,7 +29,9 @@ satisfy the interface physics:
    (``2n`` unknowns), ``(u, v)`` rates need weights on ``f, g, h`` jointly
    (``3n``). Hyperviscosity uses the same piecewise bases (dissertation
    p. 41). Weights come out in the rotated frame and are rotated back with
-   ``R_uv`` and ``R_fgh`` (eq. 37-38), as ``EWE2DRbfPrep.m`` does.
+   ``R_uv`` and ``R_fgh`` (eq. 37-38), as ``EWE2DRbfPrep.m`` does. This
+   step (:func:`gaussian_rows`, :func:`coupled_weights`) takes any
+   augmenting basis; the seed stencils of :mod:`.seeds` reuse it.
 
 With constant coefficients and the locally flat interface (the MATLAB's
 choice; curvature terms are a possible refinement, JCP Fig. 10) the bases
@@ -263,10 +265,79 @@ class InterfaceWeights:
     hyper_fgh: np.ndarray
 
 
+@dataclass(frozen=True)
+class GaussianRows:
+    """The Gaussian part of a coupled stencil, relative to the evaluation node.
+
+    ``a`` ``(s, n, n)`` is the interpolation block; ``dx``, ``dy`` and
+    ``lap`` ``(s, n)`` are ``d/dx``, ``d/dy`` and ``Delta^k`` of every
+    node's Gaussian at the evaluation node; ``r_max`` ``(s,)`` is the
+    distance to the farthest node, which scales the augmenting basis.
+    """
+
+    a: np.ndarray
+    dx: np.ndarray
+    dy: np.ndarray
+    lap: np.ndarray
+    r_max: np.ndarray
+
+
+@dataclass(frozen=True)
+class Augmentation:
+    """The augmenting basis of a coupled stencil, in the stencil coordinate
+    ``(x' - x_e, y' - y_e) / r_max``.
+
+    ``uv`` ``(s, 2n, n_uv)``: u then v values of every velocity basis
+    function at every node; ``fgh`` ``(s, 3n, n_fgh)`` likewise for the
+    stress basis. ``uv_jet`` ``(s, n_uv, 4)`` holds ``(u_X, u_Y, v_X, v_Y)``
+    and ``fgh_jet`` ``(s, n_fgh, 4)`` holds ``(f_X, g_X, g_Y, h_Y)`` at the
+    evaluation node; ``lap_uv`` ``(s, n_uv, 2)`` and ``lap_fgh``
+    ``(s, n_fgh, 3)`` hold ``Delta^k`` of each component there. All
+    derivatives are per unit of the stencil coordinate.
+    """
+
+    uv: np.ndarray
+    fgh: np.ndarray
+    uv_jet: np.ndarray
+    fgh_jet: np.ndarray
+    lap_uv: np.ndarray
+    lap_fgh: np.ndarray
+
+
 def _laplacian_power(exps: np.ndarray, k: int) -> np.ndarray:
     dx, dy = derivative_matrices(exps)
     lap = dx @ dx + dy @ dy
     return np.linalg.matrix_power(lap, k)
+
+
+def gaussian_rows(
+    local: np.ndarray,
+    *,
+    shape: float = 0.4,
+    shape_neighbor: int = 3,
+    hyper_power: int = 3,
+) -> GaussianRows:
+    """Gaussian block and right-hand sides for stencils ``local`` ``(s, n, 2)``,
+    node 0 the evaluation node; rotation invariant, so any frame will do."""
+    local = np.asarray(local, dtype=float)
+    k = hyper_power
+    off = local - local[:, 0:1, :]
+    r = np.linalg.norm(off, axis=2)
+    r_sorted = np.sort(r, axis=1)
+    d_shape = r_sorted[:, shape_neighbor]
+    r_max = r_sorted[:, -1]
+    if np.any(d_shape <= 0) or np.any(r_max <= 0):
+        raise ValueError("degenerate interface stencil")
+    eps2 = (shape / d_shape) ** 2
+    diff = off[:, :, None, :] - off[:, None, :, :]
+    a = np.exp(-eps2[:, None, None] * np.sum(diff**2, axis=3))
+    phi = np.exp(-eps2[:, None] * r**2)
+    rhs_dx = 2 * eps2[:, None] * off[:, :, 0] * phi
+    rhs_dy = 2 * eps2[:, None] * off[:, :, 1] * phi
+    rhs_lap = (
+        eps2[:, None] ** k * laplacian_power_of_gaussian(k, eps2[:, None] * r**2) * phi
+    )
+    return GaussianRows(a=a, dx=rhs_dx, dy=rhs_dy, lap=rhs_lap, r_max=r_max)
 
 
 def interface_weights(
@@ -287,32 +358,16 @@ def interface_weights(
     frame angle, used only to rotate the finished weights back.
     """
     local = np.asarray(local, dtype=float)
-    s_total, n, _ = local.shape
     exps = basis.exps
     k = hyper_power
     dxm, dym = derivative_matrices(exps)
     lap_k = _laplacian_power(exps, k)
-
-    # Gaussian part, relative to the evaluation node (rotation invariant).
-    off = local - local[:, 0:1, :]
-    r = np.linalg.norm(off, axis=2)
-    r_sorted = np.sort(r, axis=1)
-    d_shape = r_sorted[:, shape_neighbor]
-    r_max = r_sorted[:, -1]
-    if np.any(d_shape <= 0) or np.any(r_max <= 0):
-        raise ValueError("degenerate interface stencil")
-    eps2 = (shape / d_shape) ** 2
-    diff = off[:, :, None, :] - off[:, None, :, :]
-    a = np.exp(-eps2[:, None, None] * np.sum(diff**2, axis=3))
-    phi = np.exp(-eps2[:, None] * r**2)
-    rhs_dx = 2 * eps2[:, None] * off[:, :, 0] * phi
-    rhs_dy = 2 * eps2[:, None] * off[:, :, 1] * phi
-    rhs_lap = (
-        eps2[:, None] ** k * laplacian_power_of_gaussian(k, eps2[:, None] * r**2) * phi
+    gauss = gaussian_rows(
+        local, shape=shape, shape_neighbor=shape_neighbor, hyper_power=k
     )
 
     # Polynomial part in coordinates scaled by r_max about the interface point.
-    pts = local / r_max[:, None, None]
+    pts = local / gauss.r_max[:, None, None]
     mono = pts[..., 0:1] ** exps[:, 0] * pts[..., 1:2] ** exps[:, 1]  # (s, n, m)
     sel = above[..., None]  # (s, n, 1)
 
@@ -328,7 +383,6 @@ def interface_weights(
     # Derivatives of the basis at the evaluation node, in its own material.
     mono_e = mono[:, 0, :]  # (s, m)
     above_e = above[:, 0]
-    scale = 1.0 / r_max
     lam = np.where(above_e, basis.above.lam, basis.below.lam)
     mu = np.where(above_e, basis.above.mu, basis.below.mu)
     rho = np.where(above_e, basis.above.rho, basis.below.rho)
@@ -340,24 +394,64 @@ def interface_weights(
         hi = mono_e @ (op @ coeffs[True][comp])
         return np.where(above_e[:, None], hi, lo)  # (s, n_basis)
 
-    ux, uy = deriv_e(basis.uv, 0, dxm), deriv_e(basis.uv, 0, dym)
-    vx, vy = deriv_e(basis.uv, 1, dxm), deriv_e(basis.uv, 1, dym)
-    fx, gx, gy, hy = (
-        deriv_e(basis.fgh, 0, dxm),
-        deriv_e(basis.fgh, 1, dxm),
-        deriv_e(basis.fgh, 1, dym),
-        deriv_e(basis.fgh, 2, dym),
+    aug = Augmentation(
+        uv=p_uv,
+        fgh=p_fgh,
+        uv_jet=np.stack(
+            [
+                deriv_e(basis.uv, 0, dxm),
+                deriv_e(basis.uv, 0, dym),
+                deriv_e(basis.uv, 1, dxm),
+                deriv_e(basis.uv, 1, dym),
+            ],
+            axis=-1,
+        ),
+        fgh_jet=np.stack(
+            [
+                deriv_e(basis.fgh, 0, dxm),
+                deriv_e(basis.fgh, 1, dxm),
+                deriv_e(basis.fgh, 1, dym),
+                deriv_e(basis.fgh, 2, dym),
+            ],
+            axis=-1,
+        ),
+        lap_uv=np.stack([deriv_e(basis.uv, c, lap_k) for c in range(2)], axis=-1),
+        lap_fgh=np.stack([deriv_e(basis.fgh, c, lap_k) for c in range(3)], axis=-1),
     )
+    return coupled_weights(gauss, aug, (lam, mu, rho), theta, hyper_power=k)
+
+
+def coupled_weights(
+    gauss: GaussianRows,
+    aug: Augmentation,
+    material: tuple[np.ndarray, np.ndarray, np.ndarray],
+    theta: np.ndarray,
+    *,
+    hyper_power: int,
+) -> InterfaceWeights:
+    """The coupled saddle-point solves of step 4, for any augmenting basis.
+
+    ``material`` is ``(lam, mu, rho)`` at each evaluation node, ``(s,)``
+    each. The five right-hand sides per block are the elastic rates of
+    eq. 32 at the evaluation node (``f_t, g_t, h_t`` from ``(u, v)`` data,
+    ``u_t, v_t`` from ``(f, g, h)`` data) and ``Delta^k`` of each field.
+    """
+    s_total, n, _ = gauss.a.shape
+    k = hyper_power
+    lam, mu, rho = material
     lam2mu = (lam + 2 * mu)[:, None]
     lam_c, mu_c, rho_c = lam[:, None], mu[:, None], rho[:, None]
-    sc = scale[:, None]
+    sc = (1.0 / gauss.r_max)[:, None]
+
+    ux, uy, vx, vy = (aug.uv_jet[..., i] for i in range(4))
+    fx, gx, gy, hy = (aug.fgh_jet[..., i] for i in range(4))
     poly_uv = np.stack(
         [
             (lam2mu * ux + lam_c * vy) * sc,  # f_t
             mu_c * (uy + vx) * sc,  # g_t
             (lam_c * ux + lam2mu * vy) * sc,  # h_t
-            deriv_e(basis.uv, 0, lap_k) * sc ** (2 * k),  # Delta^k u
-            deriv_e(basis.uv, 1, lap_k) * sc ** (2 * k),  # Delta^k v
+            aug.lap_uv[..., 0] * sc ** (2 * k),  # Delta^k u
+            aug.lap_uv[..., 1] * sc ** (2 * k),  # Delta^k v
         ],
         axis=-1,
     )  # (s, n_uv, 5)
@@ -365,13 +459,14 @@ def interface_weights(
         [
             (fx + gy) / rho_c * sc,  # u_t
             (gx + hy) / rho_c * sc,  # v_t
-            deriv_e(basis.fgh, 0, lap_k) * sc ** (2 * k),
-            deriv_e(basis.fgh, 1, lap_k) * sc ** (2 * k),
-            deriv_e(basis.fgh, 2, lap_k) * sc ** (2 * k),
+            aug.lap_fgh[..., 0] * sc ** (2 * k),
+            aug.lap_fgh[..., 1] * sc ** (2 * k),
+            aug.lap_fgh[..., 2] * sc ** (2 * k),
         ],
         axis=-1,
     )  # (s, n_fgh, 5)
 
+    rhs_dx, rhs_dy, rhs_lap = gauss.dx, gauss.dy, gauss.lap
     zero = np.zeros_like(rhs_dx)
     rbf_uv = np.stack(
         [
@@ -394,8 +489,8 @@ def interface_weights(
         axis=-1,
     )  # (s, 3n, 5)
 
-    w_uv = _solve_coupled(a, 2, p_uv, rbf_uv, poly_uv)  # (s, 2n, 5)
-    w_fgh = _solve_coupled(a, 3, p_fgh, rbf_fgh, poly_fgh)  # (s, 3n, 5)
+    w_uv = _solve_coupled(gauss.a, 2, aug.uv, rbf_uv, poly_uv)  # (s, 2n, 5)
+    w_fgh = _solve_coupled(gauss.a, 3, aug.fgh, rbf_fgh, poly_fgh)  # (s, 3n, 5)
 
     # Reshape to (s, rows, fields, n) in the rotated frame.
     fgh_from_uv = w_uv[:, :, 0:3].reshape(s_total, 2, n, 3).transpose(0, 3, 1, 2)
