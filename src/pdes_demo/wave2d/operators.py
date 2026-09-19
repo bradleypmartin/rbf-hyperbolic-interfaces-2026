@@ -91,6 +91,11 @@ def build_operators(
     """
     if mode not in ("naive", "aware"):
         raise ValueError(f"unknown mode {mode!r}")
+    if mode == "aware" and medium.is_smooth:
+        raise NotImplementedError(
+            "interface-aware stencils for a smooth edge are the seed stencils of "
+            "issue #39; a medium with edge_width > 0 only runs mode='naive' yet"
+        )
     idx, _ = periodic_knn(nodes.xy, stencil_size)
     offsets = stencil_offsets(nodes.xy, idx)
     weights = rbf_fd_weights(

@@ -16,11 +16,29 @@ for a grid to resolve, to a gentle transition every scheme handles.
 """
 
 from dataclasses import dataclass
+from typing import Protocol
 
 import numpy as np
 
 PERIOD = 2.0
 X_MIN = -1.0
+
+
+class Medium1D(Protocol):
+    """What the solvers ask of a medium: speed, density and impedance at points
+    and the fastest speed for the time step. :class:`LayeredMedium` satisfies
+    it, and so does the 1-D image of a flat 2-D medium that
+    :mod:`pdes_demo.wave2d.exact` hands to the spectral solver.
+    """
+
+    @property
+    def c_max(self) -> float: ...
+
+    def c_at(self, x: np.ndarray) -> np.ndarray: ...
+
+    def rho_at(self, x: np.ndarray) -> np.ndarray: ...
+
+    def impedance_at(self, x: np.ndarray) -> np.ndarray: ...
 
 
 @dataclass(frozen=True)
@@ -173,7 +191,7 @@ def gaussian(
 
 def right_going_pulse(
     x: np.ndarray,
-    medium: LayeredMedium,
+    medium: Medium1D,
     center: float = -0.5,
     sharpness: float = 600.0,
 ) -> tuple[np.ndarray, np.ndarray]:

@@ -26,7 +26,7 @@ import math
 import numpy as np
 import scipy.sparse.linalg as spla
 
-from .domain import Grid1D, LayeredMedium, periodic_grid, right_going_pulse
+from .domain import Grid1D, Medium1D, periodic_grid, right_going_pulse
 from .simulate import Snapshots, rk4_wave
 
 
@@ -56,7 +56,7 @@ def reference_size(edge_width: float, tol: float = 1e-14, n_min: int = 1024) -> 
 
 
 def run_spectral(
-    medium: LayeredMedium,
+    medium: Medium1D,
     n: int,
     *,
     t_end: float = 1.0,
@@ -65,6 +65,7 @@ def run_spectral(
     n_snapshots: int | None = 1,
     pulse_center: float = -0.5,
     pulse_sharpness: float = 600.0,
+    initial: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> tuple[Grid1D, Snapshots]:
     """Pseudo-spectral run of the layer problem on ``n`` nodes to ``t_end``.
 
@@ -74,6 +75,10 @@ def run_spectral(
     for the default pulse the RK4 error is 2e-6 at ``dt = 6.5e-4`` and falls
     as ``dt**4``, so ``dt = 5e-5`` reaches about 1e-10. Pass ``dt`` for a
     reference of known accuracy; it is capped at the CFL step.
+
+    ``initial`` replaces the right-going pulse by samples ``(u0, f0)`` on the
+    grid's nodes; :func:`pdes_demo.wave2d.exact.spectral_plane_wave` uses it
+    to hand over the exact image of the 2-D initial state.
     """
     grid = periodic_grid(n)
     d = spla.LinearOperator((n, n), matvec=spectral_derivative, dtype=float)
@@ -83,7 +88,12 @@ def run_spectral(
     n_steps = max(1, math.ceil(t_end / dt_target))
     dt = t_end / n_steps
     store_every = 1 if n_snapshots is None else max(1, n_steps // n_snapshots)
-    u0, f0 = right_going_pulse(grid.x, medium, pulse_center, pulse_sharpness)
+    if initial is None:
+        u0, f0 = right_going_pulse(grid.x, medium, pulse_center, pulse_sharpness)
+    else:
+        u0, f0 = (np.asarray(a, dtype=float) for a in initial)
+        if u0.shape != (n,) or f0.shape != (n,):
+            raise ValueError(f"initial state must be two arrays of length {n}")
     snaps = rk4_wave(
         u0,
         f0,
@@ -123,7 +133,7 @@ def interpolate(
     return out
 
 
-def energy(u: np.ndarray, f: np.ndarray, grid: Grid1D, medium: LayeredMedium) -> float:
+def energy(u: np.ndarray, f: np.ndarray, grid: Grid1D, medium: Medium1D) -> float:
     """Discrete wave energy ``h/2 * sum(f**2 / K + rho u**2)``."""
     rho = medium.rho_at(grid.x)
     k = rho * medium.c_at(grid.x) ** 2
