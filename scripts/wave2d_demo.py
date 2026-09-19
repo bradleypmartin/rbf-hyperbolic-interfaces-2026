@@ -12,6 +12,7 @@ interface.
     uv run python scripts/wave2d_demo.py                    # flat, 10000 nodes
     uv run python scripts/wave2d_demo.py --amplitude 0.02   # curved (§3.4.2)
     uv run python scripts/wave2d_demo.py --n 2500 --frames 60 --out outputs/quick.mp4
+    uv run python scripts/wave2d_demo.py --amplitude 0.02 --png-only   # snapshot only
 """
 
 import argparse
@@ -86,6 +87,12 @@ def parse_args() -> argparse.Namespace:
         nargs="*",
         default=[0.15, 0.3, 0.45],
         help="times for a static PNG grid saved next to the video",
+    )
+    parser.add_argument(
+        "--png-only",
+        action="store_true",
+        help="write the snapshot PNG and skip the video (ffmpeg output differs "
+        "between runs, so this avoids touching a committed clip)",
     )
     return parser.parse_args()
 
@@ -247,6 +254,8 @@ def main() -> None:
         fig.savefig(png, dpi=160)
         plt.close(fig)
         print(f"wrote {png}")
+    if args.png_only:
+        return
 
     # --- animation ---------------------------------------------------------
     fig, axes = plt.subplots(2, 2, figsize=(10.5, 10.4), constrained_layout=True)

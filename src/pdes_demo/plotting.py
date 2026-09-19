@@ -4,12 +4,14 @@ Colours follow a validated two-series palette (blue for the interface-aware
 method, orange for the naive one); reference curves and annotations use
 neutral inks so colour only ever encodes "which method".
 
-The 2-D colour maps use two single-hue sequential ramps from the same
-palette, light to dark: blue for a field's magnitude and orange for its
-error. The orange steps were derived from the blue ones by keeping each
-step's OKLCH lightness and moving its hue to the palette's orange, so the
-two ramps have the same lightness ladder and the eye reads magnitudes off
-either the same way.
+The 2-D colour maps use two single-hue sequential ramps, light to dark:
+aqua for a field's magnitude and violet for its error. Neither hue is used
+anywhere else in the deck, so on a 2-D figure colour encodes the quantity
+while blue and orange keep meaning "which method" on the line plots around
+it. Both ramps were derived from the palette's blue ramp by keeping each
+step's OKLCH lightness (and chroma, where sRGB allows) and rotating the hue
+to the palette's aqua and violet, so all three share one lightness ladder
+and the eye reads magnitudes off any of them the same way.
 """
 
 import matplotlib as mpl
@@ -27,18 +29,18 @@ NAIVE = "#eb6834"
 LABELS = {"aware": "interface-aware FD", "naive": "standard FD (naive)"}
 COLORS = {"aware": AWARE, "naive": NAIVE}
 
-_BLUE_RAMP = [
-    "#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5",
-    "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b",
+_AQUA_RAMP = [
+    "#c9e9d7", "#afddc5", "#93d2b2", "#76c6a0", "#53bb8d", "#27af7b", "#059f6d",
+    "#078f62", "#077f57", "#056f4b", "#016040", "#005136", "#02432c",
 ]  # fmt: skip
-_ORANGE_RAMP = [
-    "#fbd7ca", "#f5c4b2", "#f2b098", "#eb9c7f", "#e68764", "#df7249", "#d95923",
-    "#c94908", "#b44005", "#9f3600", "#8a2e00", "#742702", "#611e00",
+_VIOLET_RAMP = [
+    "#dbddfb", "#cbccf6", "#babbf4", "#aaaaee", "#9a99eb", "#8c88e6", "#7d75e3",
+    "#6f67d4", "#625bbd", "#564ea9", "#4a4393", "#3e377f", "#322d6a",
 ]  # fmt: skip
 
 # Both start at the surface colour so "zero" recedes into the background.
-FIELD_CMAP = LinearSegmentedColormap.from_list("demo_field", [SURFACE, *_BLUE_RAMP])
-ERROR_CMAP = LinearSegmentedColormap.from_list("demo_error", [SURFACE, *_ORANGE_RAMP])
+FIELD_CMAP = LinearSegmentedColormap.from_list("demo_field", [SURFACE, *_AQUA_RAMP])
+ERROR_CMAP = LinearSegmentedColormap.from_list("demo_error", [SURFACE, *_VIOLET_RAMP])
 
 
 def use_demo_style() -> None:
