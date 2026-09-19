@@ -179,6 +179,20 @@ class LayeredMedium2D:
     def rho_at(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         return self._blend(x, y, "rho")
 
+    def material_at(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """``(lam, mu, rho)`` at the points, from one evaluation of the blend
+        weight (the seed ODE march of :mod:`.seeds` calls this thousands of
+        times per stencil)."""
+        w = self.layer_fraction(x, y)
+        bg, ly = self.background, self.layer
+        return (
+            bg.lam + (ly.lam - bg.lam) * w,
+            bg.mu + (ly.mu - bg.mu) * w,
+            bg.rho + (ly.rho - bg.rho) * w,
+        )
+
     def varies_over(self, x: np.ndarray, y: np.ndarray, rtol: float = 0.0) -> bool:
         """Whether lam, mu or rho differ between any two of the points.
 

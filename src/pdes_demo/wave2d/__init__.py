@@ -10,6 +10,7 @@ Same split as ``wave1d``:
 - ``exact``: references for the flat-interface plane-wave problem: the ray
   sum for a jump, the 1-D spectral solver for smooth edges
 - ``resample``: one-sided interpolation to pixel grids and other node sets
+- ``seeds``: ODE-continued elastic seed bases for stiff smooth edges (Part 3)
 """
 
 from .domain import (
