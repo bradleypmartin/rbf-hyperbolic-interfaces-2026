@@ -10,6 +10,8 @@ shows the error against it.
     uv run python scripts/wave1d_demo.py --layer-width 0.01 --out outputs/thin.mp4
     uv run python scripts/wave1d_demo.py --n 100 --sharpness 150 \
         --out outputs/wave1d_naive_vs_aware_coarse.mp4    # ringing visible to the eye
+    uv run python scripts/wave1d_demo.py --n 100 --sharpness 150 \
+        --out outputs/wave1d_naive_vs_aware_coarse.mp4 --png-only   # snapshot only
 """
 
 import argparse
@@ -68,6 +70,12 @@ def parse_args() -> argparse.Namespace:
         default=[0.4, 0.8, 1.0, 1.2],
         help="times for a static PNG grid saved next to the video",
     )
+    parser.add_argument(
+        "--png-only",
+        action="store_true",
+        help="write the snapshot PNG and skip the video (ffmpeg output differs "
+        "between runs, so this avoids touching a committed clip)",
+    )
     return parser.parse_args()
 
 
@@ -125,16 +133,25 @@ def main() -> None:
             for c, mode in enumerate(MODES):
                 ax = axes[r, c]
                 shade_layer(ax, medium)
-                ax.plot(grid.x, exact[k], "--", color=INK_SECONDARY, lw=1.4)
+                # The exact solution goes under the interface-aware curve only:
+                # the point is that the blue sits on it. Under the naive curve
+                # it is clutter at slide size.
+                if mode == "aware":
+                    ax.plot(grid.x, exact[k], "--", color=INK_SECONDARY, lw=1.4)
                 ax.plot(grid.x, runs[mode].f[k], color=COLORS[mode])
                 ax.set_xlim(-1, 1)
                 ax.set_ylim(-ylim, ylim)
                 if r == 0:
                     ax.set_title(TITLES[mode])
                 if c == 0:
-                    ax.set_ylabel(f"t = {times[k]:.2f}\nstress f")
-            axes[r, 0].plot([], [], "--", color=INK_SECONDARY, label="exact solution")
+                    # Large because the figure is scaled to about a quarter
+                    # size on the slide; this lands near 7pt there.
+                    ax.set_ylabel(f"t = {times[k]:.1f}", fontsize=28)
         for c, mode in enumerate(MODES):
+            if mode == "aware":
+                axes[0, c].plot(
+                    [], [], "--", color=INK_SECONDARY, label="exact solution"
+                )
             axes[0, c].plot([], [], color=COLORS[mode], label=LABELS[mode])
             axes[0, c].legend(loc="upper left", fontsize=10)
             axes[-1, c].set_xlabel("position x")
@@ -143,6 +160,8 @@ def main() -> None:
         fig.savefig(png, dpi=160)
         plt.close(fig)
         print(f"wrote {png}")
+    if args.png_only:
+        return
 
     # --- animation ---------------------------------------------------------
     fig, axes = plt.subplots(
