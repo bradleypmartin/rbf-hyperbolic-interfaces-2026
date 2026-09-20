@@ -263,7 +263,7 @@ of space--time discontinuous Galerkin methods
 their quasi-Trefftz extension to variable coefficients
 \cite{ImbertGerardMoiolaStocker2023,ImbertGerardMoiolaStocker2024,ImbertGerard2025local}
 builds them by Taylor expansion at a point, the route
-Section~\ref{sec:seeds1d} shows cannot reach an edge thinner than the
+Section~\ref{sec:taylor} shows cannot reach an edge thinner than the
 stencil. For a jump, the interface-aware stencils this work generalises
 \cite{Martin2016,MartinFornbergStCyr2015,MartinFornberg2017} stand beside
 the immersed interface \cite{LeVequeLi1994,ZhangLeVeque1997,SabatiniEtAl2023},
@@ -575,7 +575,7 @@ background, because the exact reference of the jump case, a ray sum,
 needs constant pieces; the published treatment of a wave speed that
 varies smoothly up to an interface, a degree-four Taylor expansion of
 $c$ about the interface point \cite{Martin2016,MartinFornberg2017}, is
-the Taylor route of Section~\ref{sec:seeds1d} and is not ported. Everything is fourth order (FD4 in one dimension,
+the Taylor route of Section~\ref{sec:taylor} and is not ported. Everything is fourth order (FD4 in one dimension,
 degree four away from and degree three across the edges in two) at one
 material contrast; Section~\ref{sec:discussion} returns to both
 restrictions.
@@ -583,28 +583,285 @@ restrictions.
 \section{Seeds in one dimension}
 \label{sec:seeds1d}
 % TRACE: notes §1.2 (seeds as profiles of time-polynomial solutions, the
-% chain), §1.3 (nested kernels, the jump limit), §1.4 (ECT well-posedness),
-% §1.5 (the Taylor route); code wave1d/stiff.py (#28, #31). Drafted by #56.
-% Figure: the 1-D seed basis (#54; today docs/figures/wave1d_stiff_seeds.png).
+% chain, the first-order form, the stencil coordinate, condition numbers 20
+% to 60, 5–15 ms per stencil, 2.3 s at n = 1600 and delta = 0.01), §1.3
+% (nested kernels, the weak reading, the jump limit: 22%, 10%, 0.98%,
+% 0.098% at delta = 1e-2 .. 1e-5 for half-width 0.02, the double-cross),
+% §1.4 (Pólya form, ECT, the Newton remainder and the delta-independent
+% constant), §1.5 (poles at ±i pi delta / 2; 17% at delta = 8h), §2 (the
+% seed figure's caption: slope ratio 1/4, curvature ratio 1/4). Code:
+% wave1d/stiff.py (seed_basis: the two first-order systems, y0, the stops
+% at the edge centres and ±10 delta, DOP853 at rtol 1e-13 / atol 1e-15;
+% stiff_weights: A w = e_1, w / h_s), wave1d/operators.py (aware_rows,
+% varies_over: rows whose nodes see different materials, about 19 delta).
+% Tests: tests/test_wave1d_stiff.py. Drafted by #56 (#28, #31). Figure:
+% figures/wave1d_stiff_seeds.pdf from #54.
+
+Fix a stencil of the grid of Section~\ref{sec:setting1d}: nodes
+$x_1 < \cdots < x_p$, $p = 5$ for FD4, and an evaluation point $x_e$,
+one of the nodes. The standard weights are the ones that differentiate
+the monomials $(x - x_e)^k$, $k < p$, exactly at $x_e$; the
+interface-aware weights of Section~\ref{sec:jumpstencils} do the same
+for the translated basis. This section builds the basis for a smooth
+edge and shows that the two are its limits.
+
 \subsection{Seeds as the profiles of solutions polynomial in time}
-\stub{\#56: $u_{tt} = \Lu u$ with $\Lu = \rho^{-1} \px K \px$; the chain
-$\phi_0 = 1$, $K \phi_1' = K(x_e)$, $\Lu \phi_k = k(k-1) c_e^2 \phi_{k-2}$
-with $\phi_k(x_e) = \phi_k'(x_e) = 0$; the even/odd ($u$/$f$) alternation;
-first-order form so that $K$ is never differentiated}
+\label{sec:chain}
+Consider the velocity field with its operator $\Lu$ of \eqref{eq:Lops}
+and look for solutions of $u_{tt} = \Lu u$ that are polynomial in time,
+$u(x, t) = \sum_{j = 0}^{J} t^j g_j(x)$. Matching powers of $t$ gives
+$(j + 2)(j + 1)\, g_{j+2} = \Lu g_j$, so the two top coefficients lie in
+$\ker \Lu$ and the $t = 0$ profile $g_0$ satisfies $\Lu^m g_0 = 0$ for
+some $m$. With constant coefficients $\Lu = c^2 \px^2$ and
+$\ker \px^{2m}$ is exactly the polynomials of degree $< 2m$: the
+profiles of time-polynomial solutions are what plays the role of
+polynomials for the operator. We fix a basis of them by anchoring at the
+evaluation point.
+
+\begin{definition}[Seeds]
+\label{def:seeds}
+Let $x_e$ be the evaluation point, $c_e = c(x_e)$ and $K_e = K(x_e)$.
+The \emph{seeds} of the $u$ field at $x_e$ are the functions
+$\phi_0, \phi_1, \phi_2, \ldots$ with
+\begin{equation}
+  \label{eq:chain}
+  \begin{gathered}
+  \phi_0 = 1, \qquad K \phi_1' = K_e, \quad \phi_1(x_e) = 0, \\
+  \Lu \phi_k = k (k - 1)\, c_e^2\, \phi_{k-2}, \quad
+  \phi_k(x_e) = \phi_k'(x_e) = 0 \quad (k \ge 2).
+  \end{gathered}
+\end{equation}
+The seeds of the $f$ field are defined by the same chain with $\Lf$ in
+place of $\Lu$ and $\phi_1' / \rho = 1 / \rho_e$ in place of the flux
+condition.
+\end{definition}
+
+Each seed is the profile of one time-polynomial solution, and the
+normalisation is chosen so that $\phi_k = (x - x_e)^k$ when the
+coefficients are constant: $\Lu (x - x_e)^k = c^2 k (k - 1) (x - x_e)^{k-2}$,
+and the anchor conditions fix the two integration constants. Read one at
+a time, the chain says what each monomial becomes through the edge.
+The constant solution $u \equiv C$ gives $\phi_0$. A solution linear in
+time, $u = g_0 + t g_1$ with $u_t = g_1 = C$, forces $\Lu g_0 = 0$, that
+is $K g_0' = \mathrm{const}$: the $x$-like seed $\phi_1$ is the profile
+of \emph{constant flux}, $\phi_1(x) = K_e \int_{x_e}^x \mathrm{d}\xi /
+K(\xi)$, and through the other field this says that $f_t = K u_x$ is
+constant in $x$. It is the flux that stays smooth through the edge, not
+the slope. A solution with $u_{tt} = C$ forces $\Lu g_0 = C$, and
+$C = 2 c_e^2$ with the anchor conditions gives the $x^2$-like seed; here
+$C \ne 0$ matters, since $C = 0$ would only return $\ker \Lu$. The cubic
+condition $u_{ttt} = C$ fixes the profile of $u_t$, not of $u$, so
+$\phi_3$ is the profile whose second time derivative is $x$-like,
+$\Lu \phi_3 = 6 c_e^2 \phi_1$; through the other field,
+$f_{ttt} = K (u_{tt})_x = 6 c_e^2 K_e$ is constant. The even seeds are
+thus the conditions $\pt^k u = \mathrm{const}$ and the odd seeds the
+conditions $\pt^k f = \mathrm{const}$, the same alternation between the
+fields as in the continuity conditions of the jump case, where the even
+conditions relate a field to itself and the odd ones route through the
+other field.
+
+\para{First-order form}
+The chain is integrated as a first-order system that never
+differentiates the coefficients. For the $u$ seeds the state is
+$(\phi_k, \psi_k)$ with $\psi_k = K \phi_k'$ the flux,
+\begin{equation}
+  \label{eq:firstorder}
+  \phi_k' = \psi_k / K, \qquad
+  \psi_k' = \rho\, k (k - 1)\, c_e^2\, \phi_{k-2},
+\end{equation}
+with initial data $\phi_0(x_e) = 1$, $\psi_1(x_e) = K_e$ and zero
+otherwise; for the $f$ seeds the state is $(\phi_k, \psi_k)$ with
+$\psi_k = \phi_k' / \rho$, $\phi_k' = \rho \psi_k$,
+$\psi_k' = k (k - 1)\, c_e^2\, \phi_{k-2} / K$, and $\psi_1(x_e) = 1 /
+\rho_e$. All $p$ seeds of a field march together, from $x_e$ outward to
+each side of the stencil, since the right-hand side of $\phi_k$ only
+involves $\phi_{k-2}$. In the stencil coordinate $\xi = (x - x_e) / h_s$,
+with $h_s$ the stencil half-width, the chain reads the same with $\px$
+replaced by $\partial_\xi$, and then $\phi_k \approx \xi^k$: the
+interpolation matrix $A_{kj} = \phi_k(\xi_j)$ is a small perturbed
+Vandermonde matrix, and its condition number stays between $20$ and
+$60$ for $\delta$ from $10^{-5}$ to $1$ in the setting of
+Section~\ref{sec:setting1d}. Only $\phi_1$ has a non-zero derivative at
+the anchor, so the weights solve $A \tilde w = e_1$ and $w = \tilde w /
+h_s$. Figure~\ref{fig:seeds1d} shows the $u$ seeds of one stencil for
+three edge widths.
+
+\begin{figure}
+  \centering
+  % figures/wave1d_stiff_seeds.pdf: scripts/paper_figures.py (#54), from
+  % pdes_demo.stiff_figures; never hand-edited.
+  \includegraphics[width=\textwidth]{wave1d_stiff_seeds}
+  \caption{The $u$ seeds $\phi_1, \ldots, \phi_4$ of one five-point
+  stencil whose evaluation point lies $h / 2$ to the left of the lower
+  edge of the layer of Section~\ref{sec:setting1d} ($K$ from $1$ to
+  $4$), for a jump, for $\delta = h / 4$ and for $\delta = 2h$, against
+  the monomials. The jump seeds are the translated Taylor basis of the
+  interface-aware stencils: a slope ratio $K_L / K_R = 1 / 4$ for
+  $\phi_1$, a curvature ratio $c_L^2 / c_R^2 = 1 / 4$ for $\phi_2$. The
+  seeds for $\delta = h / 4$ are indistinguishable from them, the seeds
+  for $\delta = 2h$ bend over the whole stencil, and all of them leave
+  the monomials at the edge.}
+  \label{fig:seeds1d}
+\end{figure}
+
 \subsection{Nested kernels and the jump as the limit}
 \label{sec:jumplimit}
-\stub{\#56: $\{1\} \subset \ker \Lu \subset \{\Lu g = \mathrm{const}\}
-\subset \ker \Lu^2 \subset \cdots$; the seed weights converge to the
-interface-aware weights at first order in $\delta$}
+Only the span of the seeds enters the weights, and the spans are
+canonical. Since $\Lu$ sends each seed two steps down the chain,
+$\operatorname{span}\{\phi_0, \ldots, \phi_k\}$ is the $(k + 1)$-th
+space of
+\begin{equation}
+  \label{eq:nested}
+  \{1\} \subset \ker \Lu \subset \{ \Lu g = \mathrm{const} \}
+  \subset \ker \Lu^2 \subset \{ \Lu^2 g = \mathrm{const} \}
+  \subset \cdots,
+\end{equation}
+where $\{ \Lu g = \mathrm{const} \}$ is short for the space of $g$ with
+$\Lu g$ constant, so that a different anchor or normalisation changes
+the basis and not the space, and the weights not at all.
+
+For a jump, read $\Lu$ in the weak sense: $\phi$ and the flux $K \phi'$
+continuous across it. Then $\ker \Lu$ is spanned by $1$ and a
+piecewise-linear function whose slopes are in the ratio $K_L / K_R$,
+which is the translated $x$ of Section~\ref{sec:jumpstencils}, the
+function that keeps $\rho c^2 u_x$ continuous; $\Lu \phi_2 = 2 c_e^2$
+gives $\phi_2'' = 2 c_e^2 / c^2$ on each side, which is the continuity
+of $u_{tt}$; and so on up the chain, each condition $\pt^k u =
+\mathrm{const}$ or $\pt^k f = \mathrm{const}$ being one of the
+continuity conditions the translated basis was built from. The chain
+for a jump is therefore the translated Taylor basis, and the
+interface-aware stencils are the seed stencils at $\delta = 0$: one
+construction with two implementations, algebra for a jump and an ODE
+march for a smooth edge. The limit is approached at first order in
+$\delta$. For a stencil of half-width $0.02$ straddling an edge of the
+default contrast, the seed weights differ from the interface-aware
+weights by $22\%$, $10\%$, $0.98\%$ and $0.098\%$ of the largest weight
+at $\delta = 10^{-2}$, $10^{-3}$, $10^{-4}$ and $10^{-5}$, for both
+fields, and equally for a stencil that straddles both edges of a layer
+thinner than itself, the double-cross of the jump case, which the march
+handles by passing through both edges.
+
 \subsection{Well-posedness}
-\stub{\#56: the seeds are an extended complete Chebyshev system (P\'olya,
-Karlin--Studden), so the per-stencil solve is nonsingular on any distinct
-nodes for every $\delta$}
+\label{sec:ect}
+The per-stencil solve $A \tilde w = e_1$ is nonsingular for every edge
+width, including the jump, and not only for the node sets we happened to
+use.
+
+\begin{proposition}
+\label{prop:ect}
+Let $K$ and $\rho$ be positive and continuous on an interval $I$
+containing $x_e$ (or positive and piecewise continuous, with $\Lu$ read
+in the weak sense). Then for every $k$ the seeds $\phi_0, \ldots,
+\phi_k$ of Definition~\ref{def:seeds} form an extended complete
+Chebyshev system on $I$: interpolation in their span at any $k + 1$
+distinct points of $I$ is uniquely solvable. The same holds for the $f$
+seeds.
+\end{proposition}
+
+\begin{proof}
+Each space in \eqref{eq:nested} is the kernel of an operator in P\'olya
+form, a product of $\px$ and multiplications by positive functions:
+\begin{equation}
+  \label{eq:polya}
+  \begin{aligned}
+  \rho\, \Lu^m &= \px K \px\, \tfrac{1}{\rho}\, \px K \px \cdots \px K \px
+  &&(2m \text{ derivatives}), \\
+  \px \Lu^m &= \px\, \tfrac{1}{\rho}\, \px K \px \cdots \px K \px
+  &&(2m + 1 \text{ derivatives}),
+  \end{aligned}
+\end{equation}
+with $\ker \Lu^m = \ker (\rho \Lu^m)$ the even spaces and $\{ g :
+\Lu^m g = \mathrm{const} \} = \ker (\px \Lu^m)$ the odd ones; for $\Lf$
+the roles of $K$ and $1 / \rho$ are swapped. The kernel of such an
+operator with positive weights $w_0, w_1, \ldots$ has the nested basis
+$w_0$, $w_0 \int w_1$, $w_0 \int w_1 \int w_2$, \ldots, and is an
+extended complete Chebyshev system on any interval where the weights are
+positive \cite{Polya1922,KarlinStudden1966,Coppel1971}; in particular it
+has the Haar property, so interpolation at distinct points in it is
+uniquely solvable. It remains to see that the seeds span these kernels.
+Their number matches the order of the operator, and they are
+independent because their jets at $x_e$ are triangular: by induction on
+the chain, $(K \phi_k')' = \rho\, k (k - 1) c_e^2 \phi_{k-2}$ vanishes to
+order $k - 2$ at $x_e$, so with $\phi_k(x_e) = \phi_k'(x_e) = 0$ the seed
+$\phi_k$ vanishes to order exactly $k$ there. For the weak reading, the
+integrals in the nested basis are unaffected by finitely many jumps of
+the weights, and the argument is the same.
+\end{proof}
+
+Interpolation in an extended complete Chebyshev system also has a Newton
+form with a remainder in which the operator that annihilates the space
+takes the place of the $(k + 1)$-th derivative (generalised divided
+differences, \cite{Muhlbach1973}). For the five-point stencil the
+annihilator of $\operatorname{span}\{\phi_0, \ldots, \phi_4\}$ is
+$\px \Lu^2$, so the truncation error of the seed stencil on a function
+$g$ is $O(h^4\, \px \Lu^2 g)$. On a \emph{solution} of the wave
+equation, $\Lu u = u_{tt}$ and hence $\px \Lu^2 u = \px \pt^4 u$, the
+$x$-derivative of another solution, which is bounded independently of
+$\delta$: $u_x$ changes by $O(1)$ across the edge whatever its width,
+and it is the flux $K u_x$ that is smooth. Standard FD4 has the error
+$O(h^4 u^{(5)})$ with $u^{(5)} \sim \delta^{-4}$ inside the edge. This
+is the prediction that Section~\ref{sec:results1d} tests: standard FD4
+converges at fourth order only once $h \lesssim \delta$ and looks
+low-order above that, with a knee at $h \approx \delta$; the seed
+stencils converge at fourth order with a constant that does not depend
+on $\delta$.
+
+\begin{remark}
+The seeds are close relatives of two classical objects. Splines whose
+pieces lie in $\ker L$ for a differential operator $L$ are the
+L-splines of \cite{SchultzVarga1967}, and the harmonic-mean coefficient
+$h / \int \mathrm{d}x / K$ of the conservative difference schemes of
+\cite{TikhonovSamarskii1962} is the two-point version of $\phi_1$.
+Section~\ref{sec:priorwork} places the construction among them.
+\end{remark}
+
 \subsection{Why the Taylor route does not reach a sub-grid edge}
-\stub{\#56: notes §1.5; the quasi-Trefftz comparison}
+\label{sec:taylor}
+The interface-aware construction of Section~\ref{sec:jumpstencils} can
+take smoothly varying coefficients: the continuity conditions are built
+from multiplication matrices formed from the Taylor coefficients of
+$1 / \rho$ and $K$ about the interface \cite{Martin2016,MartinFornberg2017}, and polynomial
+quasi-Trefftz spaces \cite{ImbertGerardMoiolaStocker2023} do the same in
+general, with basis functions that satisfy the variable-coefficient
+equation to Taylor order at a point. For a sub-grid edge this route
+cannot work, and the reason is not the algebra. The profile
+$\tanh(x / \delta)$ has poles at $\pm i \pi \delta / 2$, so its Taylor
+series about the edge converges only within a distance $\pi \delta / 2$
+of it, while the stencil reaches $2h \gg \delta$; no polynomial degree
+that the stencil could carry represents the coefficients across it. The
+ODE march is what a sub-grid edge needs. For a resolved edge,
+$\delta \gg h$, the seed weights still differ from Fornberg's at first
+order in $h / \delta$, by $17\%$ of the largest weight at $\delta = 8h$
+for the default contrast, because the seeds are exact for a different
+five-dimensional space; both stencils are fourth order on solutions
+there, and Section~\ref{sec:results1d} finds them indistinguishable end
+to end.
+
 \subsection{Stencil assembly and cost}
-\stub{\#56: the Fornberg-style solve on the seeds; one ODE march per
-stencil}
+\label{sec:assembly1d}
+The seed scheme rebuilds every row of $D_u$ and $D_f$ whose stencil
+nodes see different material values, and leaves every other row the
+standard one. For a $\tanh$ edge that region reaches about $19\delta$
+from each edge centre, where the tails round to the far-field value in
+double precision, plus the stencil's reach. In each rebuilt row the
+$2p$ states of \eqref{eq:firstorder} for each field are integrated from $\xi = 0$
+outward to each side with an explicit adaptive Runge--Kutta method of
+order eight, at relative tolerance $10^{-13}$ and absolute tolerance
+$10^{-15}$, with segment boundaries at the edge centres and at
+$\pm 10\delta$ from them, so that the adaptive step never has to
+discover the edge in the middle of a long step across flat material.
+One march serves both fields and all $p$ seeds, and a stencil that
+straddles both edges of a thin layer needs nothing further. The two
+$p \times p$ solves follow. In the reference implementation a march
+costs $5$ to $15$\,ms, and the $n = 1600$ operator at $\delta = 0.01$
+takes $2.3$\,s to build: seconds rather than milliseconds, fine for a
+study and not tuned. Two remarks on the range of $\delta$. Since the
+seeds converge to the translated basis at first order in $\delta$, an
+edge below about $10^{-5} h$ is better served by the interface-aware
+weights directly; and for $\delta$ of the order of the stencil or wider
+every row is rebuilt and the standard weights would have done as well
+(Section~\ref{sec:taylor}), so the rule of when to seed, settled in two
+dimensions in Section~\ref{sec:results2d}, applies here too.
 
 % ===========================================================================
 \section{One-dimensional results}
