@@ -57,6 +57,7 @@ polynomial ``fgh`` basis is, so a consumer multiplies first derivatives at
 the anchor by ``1 / r_max`` once.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from math import comb
 
@@ -64,7 +65,13 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 from .domain import ElasticMaterial, LayeredMedium2D, SineInterface
-from .interface import pde_operator
+from .interface import (
+    Augmentation,
+    InterfaceWeights,
+    coupled_weights,
+    gaussian_rows,
+    pde_operator,
+)
 from .rbf import monomial_exponents
 
 # Tail of the tanh at which the ODE march gets a fresh start (as wave1d.stiff).
@@ -396,3 +403,53 @@ def seed_basis(
         keep_uv=keep_uv,
         keep_fgh=keep_fgh,
     )
+
+
+# --- the weights -------------------------------------------------------------------
+
+
+def seed_weights(
+    local: np.ndarray,
+    theta: np.ndarray,
+    seeds: Sequence[SeedBasis],
+    *,
+    shape: float = 0.4,
+    shape_neighbor: int = 3,
+    hyper_power: int = 3,
+) -> InterfaceWeights:
+    """Coupled RBF-FD weights for stencils that see a smooth edge, one
+    :class:`SeedBasis` per stencil.
+
+    Same contract as :func:`.interface.interface_weights`: ``local``
+    ``(s, n, 2)`` in the interface frame with node 0 the evaluation node,
+    ``theta`` ``(s,)`` the frame angle. The Gaussian block is the same; the
+    augmenting basis is the seeds, whose values at the nodes and jets at the
+    anchor ``seed_basis`` already gives in the stencil coordinate. The
+    material at the evaluation node is the seeds' anchor material, and the
+    hyperviscosity right-hand sides on the seed columns are zero (module
+    docstring).
+    """
+    local = np.asarray(local, dtype=float)
+    s_total = local.shape[0]
+    if len(seeds) != s_total:
+        raise ValueError("one SeedBasis per stencil")
+    gauss = gaussian_rows(
+        local, shape=shape, shape_neighbor=shape_neighbor, hyper_power=hyper_power
+    )
+    scales = np.array([sb.scale for sb in seeds])
+    if not np.allclose(scales, gauss.r_max, rtol=1e-12, atol=0):
+        raise ValueError("seed bases were built for other stencils (r_max differs)")
+    n_uv, n_fgh = seeds[0].n_uv, seeds[0].n_fgh
+    aug = Augmentation(
+        uv=np.stack([np.concatenate(sb.uv) for sb in seeds]),
+        fgh=np.stack([np.concatenate(sb.fgh) for sb in seeds]),
+        uv_jet=np.stack([sb.uv_jet for sb in seeds]),
+        fgh_jet=np.stack([sb.fgh_jet for sb in seeds]),
+        lap_uv=np.zeros((s_total, n_uv, 2)),
+        lap_fgh=np.zeros((s_total, n_fgh, 3)),
+    )
+    material = tuple(
+        np.array([getattr(sb.anchor, attr) for sb in seeds])
+        for attr in ("lam", "mu", "rho")
+    )
+    return coupled_weights(gauss, aug, material, theta, hyper_power=hyper_power)

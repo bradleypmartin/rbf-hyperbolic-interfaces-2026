@@ -1,4 +1,5 @@
-"""Elastic seed bases for a straight stiff feature (issue #38)."""
+"""Elastic seed bases (#38) and seed-augmented weights (#39) for a straight
+stiff feature."""
 
 import numpy as np
 import pytest
@@ -11,14 +12,19 @@ from pdes_demo.wave2d import (
     minimal_image,
     periodic_knn,
 )
-from pdes_demo.wave2d.interface import evaluate_basis, interface_basis
-from pdes_demo.wave2d.rbf import monomial_exponents
+from pdes_demo.wave2d.interface import (
+    evaluate_basis,
+    interface_basis,
+    interface_weights,
+)
+from pdes_demo.wave2d.rbf import monomial_exponents, rbf_fd_weights
 from pdes_demo.wave2d.seeds import (
     SeedChain,
     basis_columns,
     chain_matrix,
     normal_profile,
     seed_basis,
+    seed_weights,
     shift_matrix,
 )
 
@@ -284,3 +290,118 @@ def test_seed_blocks_are_conditioned_like_the_polynomial_block(nodes) -> None:
         seeds = seed_basis(local, profile, DEGREE)
         assert np.linalg.cond(np.concatenate(seeds.uv)) < 2 * cond_uv, width
         assert np.linalg.cond(np.concatenate(seeds.fgh)) < 2 * cond_fgh, width
+
+
+# --- the weights (#39) -------------------------------------------------------------
+
+BLOCKS = ("fgh_from_uv", "uv_from_fgh", "hyper_uv", "hyper_fgh")
+
+
+def _weights_for(local, medium, x0, degree=DEGREE):
+    seeds = seed_basis(local, normal_profile(medium, medium.lower, x0), degree)
+    return seed_weights(local[None], np.zeros(1), [seeds]), seeds
+
+
+def test_seed_weights_reduce_to_naive_in_constant_material(nodes) -> None:
+    # Acceptance criterion 1: no contrast, so the seeds are the monomials and
+    # the stress-rate and Delta^3 rows on (u, v) data are the plain degree-3
+    # RBF-FD weights; every block equals the polynomial interface weights,
+    # whose constraint spaces are the same (the 27-dimensional stress space
+    # is not the full degree-3 space, dissertation p. 39).
+    same = ElasticMaterial(lam=1.3, mu=0.7, rho=0.9)
+    uniform = LayeredMedium2D(background=same, layer=same, edge_width=0.01)
+    local, _ = _stencil(nodes, 0.5)
+    w, _ = _weights_for(local, uniform, 0.0)
+    naive = rbf_fd_weights((local - local[0])[None], poly_degree=3, hyper_power=3)
+    lam, mu = same.lam, same.mu
+    rows = {
+        0: ((lam + 2 * mu) * naive.dx[0], lam * naive.dy[0]),
+        1: (mu * naive.dy[0], mu * naive.dx[0]),
+        2: (lam * naive.dx[0], (lam + 2 * mu) * naive.dy[0]),
+    }
+    tol = 1e-10 * np.abs(naive.dx[0]).max()
+    for r, (on_u, on_v) in rows.items():
+        np.testing.assert_allclose(w.fgh_from_uv[0, r, 0], on_u, atol=tol)
+        np.testing.assert_allclose(w.fgh_from_uv[0, r, 1], on_v, atol=tol)
+    htol = 1e-10 * np.abs(naive.hyper[0]).max()
+    for r in range(2):
+        np.testing.assert_allclose(w.hyper_uv[0, r, r], naive.hyper[0], atol=htol)
+        np.testing.assert_allclose(w.hyper_uv[0, r, 1 - r], 0.0, atol=htol)
+    above = (local[:, 1] > 0)[None]
+    w_poly = interface_weights(
+        local[None], above, np.zeros(1), interface_basis(same, same, DEGREE)
+    )
+    for name in BLOCKS:
+        a, b = getattr(w, name), getattr(w_poly, name)
+        np.testing.assert_allclose(a, b, rtol=0, atol=1e-10 * np.abs(b).max())
+
+
+@pytest.mark.parametrize("row", [0.5, -0.5])
+@pytest.mark.parametrize("standard_above", [True, False])
+def test_seed_weights_tend_to_the_interface_weights_at_first_order(
+    nodes, row, standard_above
+) -> None:
+    # Acceptance criterion 2, all five fields: the weights are set by the
+    # span, and the seeds' span tends to that of the piecewise polynomials,
+    # whichever side carries the standard monomials (the translation keeps
+    # the degree, so both choices span the same 20 velocity and 27 stress
+    # functions).
+    local, centre = _stencil(nodes, row)
+    above = (local[:, 1] > 0)[None]
+    basis = interface_basis(BG, LAYER, DEGREE, standard_above=standard_above)
+    w_jump = interface_weights(local[None], above, np.zeros(1), basis)
+    errors = []
+    for width in (1e-3, 1e-4, 1e-5):
+        w, _ = _weights_for(local, LayeredMedium2D(edge_width=width), nodes.x[centre])
+        errors.append(max(_rel(getattr(w, k), getattr(w_jump, k)) for k in BLOCKS))
+    ratios = np.array(errors[:-1]) / np.array(errors[1:])
+    assert np.all(ratios > 8), errors
+    assert errors[-1] < 1e-3, errors
+
+
+def test_seed_weights_are_exact_on_the_seed_space(nodes) -> None:
+    # Apply every weight block to every seed (values at the nodes) and
+    # compare with the elastic rate of that seed at the evaluation node,
+    # from the jets; the hyperviscosity blocks must annihilate the seeds.
+    local, centre = _stencil(nodes, 0.5)
+    medium = LayeredMedium2D(edge_width=nodes.h / 4)
+    w, seeds = _weights_for(local, medium, nodes.x[centre])
+    sc = 1.0 / seeds.scale
+    lam, mu, rho = seeds.anchor.lam, seeds.anchor.mu, seeds.anchor.rho
+    u, v = seeds.uv
+    f, g, h = seeds.fgh
+    ux, uy, vx, vy = seeds.uv_jet.T * sc
+    fx, gx, gy, hy = seeds.fgh_jet.T * sc
+
+    def check(weights: np.ndarray, data: list[np.ndarray], expected: np.ndarray):
+        got = sum(weights[c] @ d for c, d in enumerate(data))
+        scale = sum(np.abs(weights[c])[:, None] * np.abs(d) for c, d in enumerate(data))
+        residual = np.abs(got - expected) / scale.sum(axis=0)
+        assert residual.max() < 1e-9, residual.max()
+
+    check(w.fgh_from_uv[0, 0], [u, v], (lam + 2 * mu) * ux + lam * vy)
+    check(w.fgh_from_uv[0, 1], [u, v], mu * (uy + vx))
+    check(w.fgh_from_uv[0, 2], [u, v], lam * ux + (lam + 2 * mu) * vy)
+    check(w.uv_from_fgh[0, 0], [f, g, h], (fx + gy) / rho)
+    check(w.uv_from_fgh[0, 1], [f, g, h], (gx + hy) / rho)
+    for r in range(2):
+        check(w.hyper_uv[0, r], [u, v], np.zeros(seeds.n_uv))
+    for r in range(3):
+        check(w.hyper_fgh[0, r], [f, g, h], np.zeros(seeds.n_fgh))
+    # Through an edge the u_t row draws on h data (coupled stress seeds).
+    assert (
+        np.abs(w.uv_from_fgh[0, 0, 2]).max()
+        > 0.01 * np.abs(w.uv_from_fgh[0, 0, 0]).max()
+    )
+
+
+def test_seed_weights_guards(nodes) -> None:
+    local, centre = _stencil(nodes, 0.5)
+    medium = LayeredMedium2D(edge_width=0.01)
+    seeds = seed_basis(
+        local, normal_profile(medium, medium.lower, nodes.x[centre]), DEGREE
+    )
+    with pytest.raises(ValueError, match="per stencil"):
+        seed_weights(local[None], np.zeros(1), [seeds, seeds])
+    with pytest.raises(ValueError, match="r_max"):
+        seed_weights(1.1 * local[None], np.zeros(1), [seeds])
