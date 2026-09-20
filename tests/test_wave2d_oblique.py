@@ -1,18 +1,23 @@
-"""Oblique incidence on flat smooth edges (#41): the plane-wave train and the
-Fourier-in-x reference."""
+"""Oblique incidence on flat smooth edges (#41): the plane-wave train, the
+Fourier-in-x reference, and the tangential-seed ablation."""
 
 import numpy as np
 import pytest
 
 from pdes_demo.wave2d import (
     LayeredMedium2D,
+    build_operators,
     make_node_set,
+    minimal_image,
     oblique_p_wave,
+    periodic_knn,
     plane_p_wave,
     run,
     run_fourier,
     spectral_plane_wave,
 )
+from pdes_demo.wave2d.rbf import monomial_exponents
+from pdes_demo.wave2d.seeds import normal_profile, seed_basis
 
 FLAT = LayeredMedium2D()
 UNIFORM = LayeredMedium2D(layer=FLAT.background, edge_width=0.01)
@@ -89,3 +94,55 @@ def test_fourier_reference_conserves_energy_and_self_converges(nodes) -> None:
     assert np.abs(a - b).max() / np.abs(b).max() < 1e-7
     # S waves exist only because of the edge.
     assert np.abs(coarse[-1].curl(nodes.xy)).max() > 1.0
+
+
+# --- the ablation ------------------------------------------------------------------
+
+
+def test_tangential_ablation_swaps_the_x_dependent_seeds_for_monomials(nodes) -> None:
+    medium = LayeredMedium2D(edge_width=nodes.h / 4)
+    fixed = np.flatnonzero(nodes.fixed)
+    off = FLAT.lower.vertical_offset(nodes.x[fixed], nodes.y[fixed])
+    cand = fixed[np.isclose(off, 0.5 * nodes.h)]
+    centre = int(cand[np.argmin(np.abs(nodes.x[cand] - 0.3))])
+    idx, _ = periodic_knn(nodes.xy, 19, query=nodes.xy[[centre]])
+    local = minimal_image(nodes.xy[idx[0]] - np.array([nodes.x[centre], FLAT.lower.y0]))
+    profile = normal_profile(medium, medium.lower, nodes.x[centre])
+    full = seed_basis(local, profile, 3)
+    ablated = seed_basis(local, profile, 3, tangential=False)
+
+    exps = monomial_exponents(3)
+    m = len(exps)
+    x_dependent = exps[:, 0] >= 1
+    off_e = (local - local[0]) / full.scale
+    monomials = np.stack([off_e[:, 0] ** a * off_e[:, 1] ** b for a, b in exps], -1)
+    for comp in range(2):
+        cols = comp * m + np.arange(m)
+        # The x'-dependent seeds are the monomials in their own component and
+        # zero in the other; the pure y'^b seeds are the marched ones.
+        own = ablated.uv[comp][:, cols[x_dependent]]
+        other = ablated.uv[1 - comp][:, cols[x_dependent]]
+        assert np.abs(own - monomials[:, x_dependent]).max() < 1e-12
+        assert np.abs(other).max() < 1e-12
+        same = cols[~x_dependent]
+        assert np.array_equal(ablated.uv[:, :, same], full.uv[:, :, same])
+    assert np.array_equal(ablated.uv_jet, full.uv_jet)
+    assert np.array_equal(ablated.fgh_jet, full.fgh_jet)
+    # In the full seeds u = x' bends v across the edge (continuity of the
+    # normal stress lam u_x + K v_y with lam changing): that is what the
+    # ablation removes.
+    assert np.abs(full.uv[1][:, 1]).max() > 0.3
+    assert np.abs(ablated.uv[1][:, 1]).max() == 0.0
+
+
+def test_ablated_operator_differs_only_on_the_seed_rows(nodes) -> None:
+    medium = LayeredMedium2D(edge_width=nodes.h / 4)
+    full = build_operators(nodes, medium, mode="aware", workers=4)
+    ablated = build_operators(
+        nodes, medium, mode="aware", seed_tangential=False, workers=4
+    )
+    assert np.array_equal(full.interface_nodes, ablated.interface_nodes)
+    diff = (full.elastic - ablated.elastic).tocoo()
+    rows = np.unique(diff.row % nodes.n)
+    assert diff.nnz > 0
+    assert np.isin(rows, full.interface_nodes).all()

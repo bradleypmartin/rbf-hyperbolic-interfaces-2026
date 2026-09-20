@@ -360,11 +360,29 @@ def basis_columns(degree: int) -> tuple[np.ndarray, np.ndarray]:
     return keep_uv, keep_fgh
 
 
+def frozen_profile(profile: NormalProfile, y_e: float) -> NormalProfile:
+    """The profile with the material frozen at ``y' = y_e``: a uniform medium
+    of the anchor material on the same geometry, whose seeds are the
+    monomials."""
+    lam, mu, rho = (float(v) for v in profile.material(y_e))
+    anchor = ElasticMaterial(lam=lam, mu=mu, rho=rho)
+    medium = profile.medium
+    uniform = LayeredMedium2D(
+        background=anchor,
+        layer=anchor,
+        lower=medium.lower,
+        upper=medium.upper,
+        edge_width=medium.edge_width,
+    )
+    return NormalProfile(uniform, profile.x0, profile.y0)
+
+
 def seed_basis(
     local: np.ndarray,
     profile: NormalProfile,
     degree: int,
     *,
+    tangential: bool = True,
     rtol: float = 1e-13,
     atol: float = 1e-15,
 ) -> SeedBasis:
@@ -374,6 +392,14 @@ def seed_basis(
     the foot point, ``x'`` tangential), node 0 the evaluation node, as
     ``operators._local_frames`` provides. ``profile`` gives the material
     along the normal through that foot point.
+
+    ``tangential=False`` is the ablation of issue #41: only the seeds of
+    the pure ``y'^b`` monomials are marched through the edge; every
+    ``x'^a y'^b`` with ``a >= 1`` is the plain monomial with the anchor
+    material's stress, in both components, from a second chain on
+    :func:`frozen_profile` (a frozen column must see frozen lower seeds on
+    its right-hand side, or ``x'^2 y'^2`` would still be driven by the
+    marched ``y'^2``). Same span dimension, same jets.
     """
     local = np.asarray(local, dtype=float)
     off = local - local[0]
@@ -382,7 +408,17 @@ def seed_basis(
         raise ValueError("degenerate stencil")
     xs, ys = off[:, 0] / scale, off[:, 1] / scale
     chain = SeedChain(profile, local[0, 1], scale, degree, rtol=rtol, atol=atol)
-    u, v, f, g, h = chain.evaluate(xs, ys)
+    fields = chain.evaluate(xs, ys)
+    if not tangential:
+        frozen = SeedChain(
+            frozen_profile(profile, local[0, 1]), local[0, 1], scale, degree
+        )
+        swap = np.tile(chain.exps[:, 0] >= 1, 2)  # x'-degree >= 1, u and v seeds
+        fields = tuple(
+            np.where(swap, plain, marched)
+            for marched, plain in zip(fields, frozen.evaluate(xs, ys), strict=True)
+        )
+    u, v, f, g, h = fields
     keep_uv, keep_fgh = basis_columns(degree)
 
     y0 = chain.y0.reshape(chain.shape)
