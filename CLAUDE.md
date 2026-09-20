@@ -34,9 +34,15 @@ error in v; the spurious u (exactly 0 in the true solution) separates
 unresolved from resolved edges 10× more sharply; #38 built the elastic seeds
 (`wave2d/seeds.py`): all 30 seeds of one stencil march as one 600-state
 ODE system in the normal coordinate, anchored at the evaluation node, with
-constant-material, jump-limit, residual and conditioning checks. No
-seed-augmented operator yet (#39). Derivation in `docs/stiff-features.md`
-§4, results in §5.
+constant-material, jump-limit, residual and conditioning checks; #39 built
+`seed_weights` and the dispatch in `build_operators(mode="aware")` for
+smooth edges (19-node seed rows for the elastic operator, Δ³ rows on the
+naive 30-node footprint with the seeds annihilated) and answered the
+stability question: stable at the standard γ at every δ
+(`scripts/wave2d_stiff_eigenvalues.py`); at n = 2500, δ = h/8 the seeds
+cut the spurious u 5.6× and v below the naive floor; a resolved edge
+(δ ≥ h/2) is better left naive. Next #40 (flat δ sweep).
+Derivation in `docs/stiff-features.md` §4, results in §5.
 
 Audience: bright tech workers with no assumed PDE background. **No live
 coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
@@ -78,7 +84,7 @@ src/pdes_demo/   library code
                    coordinate, Part 3)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 154 tests; every numerical routine has one
+tests/           pytest, 163 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
@@ -102,6 +108,8 @@ uv run python scripts/wave1d_stiff.py         # Part 3 figures, ~50 s (reference
                                               # cached in outputs/)
 uv run python scripts/wave2d_stiff.py         # Part 3 2-D naive baseline, ~2 min
                                               # per pulse (1-D references cached)
+uv run python scripts/wave2d_stiff_eigenvalues.py   # Part 3 2-D spectra, seed vs naive,
+                                              # ~10 min at n = 900; --n 2500 --run ~25 min
 ./slides/build.sh                             # copy figures and clips from outputs/,
                                               # crop, tectonic → slides/talk.pdf
 uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the notes

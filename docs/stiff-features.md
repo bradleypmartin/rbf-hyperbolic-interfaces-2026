@@ -704,7 +704,8 @@ derivatives through the ODE), but hyperviscosity is a stabiliser, not
 part of the discretised operator, and the natural choice is to let it
 annihilate the seed space as it annihilates the polynomial one, i.e.
 impose zero. Whether that is right is an eigenvalue question and belongs
-with the spectrum study of #39.
+with the spectrum study of #39 (§5.3: it is, provided the Δ³ row has the
+naive stencil's footprint).
 
 ## 5. Two dimensions: results (#36–)
 
@@ -828,3 +829,227 @@ v-curve as a secondary check; a "knee plot" in v alone would show little. The 2-
 an unresolved edge the way 1-D FD4 was: the fixed rows straddling the edge
 centre keep the coefficient sampling symmetric, and RBF-FD's error through
 a jump is already the "second order, large constant" of Part 2.
+
+### 5.3 Seed-augmented stencils and the stability question (#39, `scripts/wave2d_stiff_eigenvalues.py`)
+
+**What was built.** `wave2d/seeds.py: seed_weights` is the coupled
+saddle-point solve of `interface_weights` with the seeds of §4.2 in place
+of the piecewise polynomials: `interface.py` now exposes the Gaussian
+block (`gaussian_rows`) and the solve-and-rotate step (`coupled_weights`)
+for any augmenting basis, the seed values at the nodes are the
+augmentation, the elastic right-hand sides come from the jets at the
+anchor, and the hyperviscosity rows impose Δ³ = 0 on the seed space
+(Brad's decision on #39). The jump path is unchanged bit for bit.
+`build_operators(mode="aware")` on a medium with `edge_width > 0` rebuilds
+every row whose 19-node stencil sees varying material (the 1-D rule,
+`LayeredMedium2D.varies_over`, exact inequality by default and `seed_rtol`
+to trim the tails); the nearest interface only sets the frame, the
+material profile along the normal carries both edges, so a stencil that
+sees both is marched through both and the thin-layer guard of the jump
+path does not apply. Checks (`tests/test_wave2d_seeds.py`,
+`tests/test_wave2d_smooth_edges.py`): without contrast the seed weights
+equal the degree-3 RBF-FD weights and the no-contrast interface weights to
+10⁻¹⁰; as δ → 0 they tend to `interface_weights` at first order in δ on a
+real stencil, all four blocks, whichever side carries the standard
+monomials (the translation keeps the degree, so both choices span the
+same functions); every block is exact on the seed space through a
+δ = h/4 edge and the Δ³ blocks annihilate it; the operator's rebuilt rows
+are exactly the stencils that see the edge and no other entry moves.
+
+**The question.** Brad's empirical stability recipe for RBF-FD (Δ³
+hyperviscosity at γ = 2.4·10⁻¹¹ (h/0.02)⁵, fixed rows straddling each
+interface) took years to find; does it survive when the augmentation is
+no longer polynomial? Measured on the 900-node flat set (4500 eigenvalues,
+dense), standard γ, CFL 0.5, by the largest real part with hyperviscosity
+and the RK4 amplification max |R(λΔt)|; 1.0004 is the naive scheme's own
+value (a mode growing by 4·10⁻⁴ per step, harmless over a run), anything
+above 1.001 is a run that visibly grows.
+
+**First attempt: 19-node seed rows with their own Δ³ rows.** Each seed
+row (19 nodes, degree 3, as the dissertation's interface stencils) also
+built its Δ³ weights on those 19 nodes with the seeds annihilated, the
+exact twin of the jump path (dissertation p. 41).
+
+| operator | rebuilt rows | max Re λ, with γ | RK4 max \|R\| |
+|---|---|---|---|
+| jump, naive | 0 | +5.9e-2 | 1.0004 |
+| jump, interface-aware | 460 | +4.2e-2 | 1.0003 |
+| δ = h/8, naive | 0 | +5.9e-2 | 1.0004 |
+| δ = h/8, seeds | 513 | +6.2e-2 | 1.0004 |
+| δ = h/4, seeds | 634 | +8.7e-2 | 1.0006 |
+| δ = h/2, seeds | 900 | +1.05 | 1.003 |
+| δ = h, seeds | 900 | +2.65 | 1.018 |
+| δ = 1.9h (0.0625, the band's limit), seeds | 900 | +0.93 | 1.003 |
+
+Fine while the seed rows form a band around each edge, unstable once the
+tails (19δ plus the stencil radius) make every row a seed row, from about
+δ = h/2 on this node set. The naive spectrum does not move with δ (§5.2),
+so the movement is the seed rows'; but it is not the seeds:
+
+- *Control.* Plain 19-node degree-3 RBF-FD stencils everywhere on the
+  jump medium, no seeds at all: max Re = +2.4, max |R| = 1.012, worse
+  than any seed operator. Doubling γ brings it to +1.4·10⁻². The 19-node
+  degree-3 scheme is unstable at the MATLAB γ, which was tuned for the
+  30-node degree-4 stencils; the jump path never sees this because its
+  band is 4h wide.
+- *Why.* The extreme Δ³ eigenvalue of the all-seed-row operator is −82
+  against −151 for the naive one: the 19-node Δ³ rows carry half the
+  damping. A 19-node stencil with the coupled degree-3 augmentation has
+  38 unknowns and 20 constraints, 18 degrees of freedom for the Gaussian
+  part of a sixth-order operator, and what comes out is barely a Δ³.
+- *Trimming the rows does not help.* At δ = h/2, `seed_rtol` of 10⁻⁶,
+  10⁻³ and 10⁻² leave 574, 458 and 420 rows and max Re +1.05, +1.05 and
+  +0.35; at δ = h, 800, 578 and 513 rows and +2.65, +2.65 and +2.60. It is
+  the width of the contiguous 19-node region that matters, not the count.
+- *γ × 2.* Everywhere: stable (+2.9·10⁻² at δ = h/2, +3.9·10⁻² at δ = h),
+  at the price of doubling the damping of the whole solution. On the seed
+  rows only: also stable (same numbers), which is the measured ratio of
+  the two Δ³ extremes; 1.5γ is stable too (+2.2·10⁻², +2.9·10⁻²).
+- *The naive footprint for everything* (30-node degree-4 seed stencils):
+  stable for a resolved edge (+0.10, +0.05, +0.06 at δ = h/2, h, 1.9h) and
+  violently unstable for a sharp one, +22, +30, +28 at δ = h/20, h/8, h/4
+  with max |R| up to 1.23. The jump-aware path with 30-node degree-4
+  stencils is unstable the same way (+17, 1.12): a degree-4 basis across
+  a sharp feature is the problem, presumably why the dissertation settled
+  on 19 nodes and degree 3. Conditioning is not the cause (the 30-node
+  seed blocks are at 85–215 against 17–34, still fine). 30-node
+  *degree-3* seed stencils, for the record, are stable everywhere
+  (+0.12, +0.06, +0.06), but they are a different scheme from the
+  dissertation's and were not pursued.
+- *Keeping the naive Δ³ rows on the seed rows* (the issue's first
+  reading): stable everywhere (+0.09, +0.08, +0.03, +0.009 at
+  δ = h/8 … h) but the naive Δ³ does not annihilate the seeds, and the
+  seeds are what the scheme resolves through the edge.
+
+**What works: annihilate the seeds on the naive footprint.** The elastic
+rows keep the 19-node seed stencils; the Δ³ rows of the same nodes are
+built on the naive 30-node footprint with the same seeds annihilated, a
+second march per stencil (`seed_hyper_stencil`, default `stencil_size`).
+Stable at every width at the standard γ, with the naive damping restored
+(extreme Δ³ eigenvalue −176):
+
+| δ | rebuilt rows | max Re λ, with γ | min Re λ | RK4 max \|R\| |
+|---|---|---|---|---|
+| h/8 | 513 | +4.1e-2 | −176 | 1.0003 |
+| h/2 | 900 | +6.6e-2 | −167 | 1.0005 |
+| h | 900 | +5.2e-2 | −175 | 1.0004 |
+| 1.9h | 900 | +5.6e-2 | −168 | 1.0004 |
+
+![Spectra of the naive, seed-aware and rejected operators on 900 nodes](figures/wave2d_stiff_eigenvalues_variants_n900.png)
+
+**Accuracy, as a check on the choice** (n = 2500, δ = 0.0025 = h/8, the
+wider pulse of §5.2, t = 1, against the cached spectral reference; the
+floor is the naive scheme in a uniform medium; the rejected rows come
+from `--variants hyper19 naive-hyper seeds30` and, for 2γ,
+`--seed-hyper-scale 2 --variants hyper19`):
+
+| operator | error in v | max \|u\| | E(1)/E(0) |
+|---|---|---|---|
+| naive | 8.9e-2 | 9.5e-3 | 0.969 |
+| floor | 5.2e-2 | 8.9e-4 | |
+| seeds, 19-node Δ³ rows (unstable when wide) | 4.7e-2 | 1.5e-3 | 0.982 |
+| seeds, naive Δ³ rows kept | 4.4e-2 | 2.2e-3 | 0.993 |
+| seeds, 19-node Δ³ rows at 2γ | 6.5e-2 | 1.0e-3 | 0.971 |
+| seeds, 30-node degree-4 (unstable when sharp) | 5.8e-2 | 1.1e-3 | 0.994 |
+| **seeds, 30-node annihilating Δ³ rows (chosen)** | **3.0e-2** | **1.7e-3** | **0.995** |
+
+Every seed variant removes most of the naive scheme's excess: the
+spurious u falls 4–9×, to 1–2.5× the floor, and v reaches the floor. The
+chosen one is the best in v (below the naive floor: the 19-node seed rows
+in the tails, where the seeds are monomials, are not the naive scheme,
+and its "floor" is not theirs) and keeps the most energy; the 2γ variant
+buys the smallest u with extra damping of the pulse, twice the chosen
+operator's error in v. The
+answer to the question, then: yes, RBF-FD stability survives
+seed-augmented stencils, at the standard γ and with the straddling rows
+kept, provided the hyperviscosity row of a seed stencil has the footprint
+γ was tuned for. Hyperviscosity annihilating the seed space is the right
+choice (it was the only variant tried that both annihilates and is
+stable), and the alternative in #38's open point, the seeds' true sixth
+derivatives, was never needed.
+
+**Acceptance run on 2500 nodes** (`--n 2500 --run --floor`, 12,500
+eigenvalues per operator, the wide pulse to t = 1, references as in §5.2):
+
+| δ | operator | rebuilt rows | max Re λ, with γ | RK4 max \|R\| | E(1)/E(0) | max \|u\| | error in v |
+|---|---|---|---|---|---|---|---|
+| jump | naive | 0 | +3.5e-3 | 1.00001 | 0.969 | 9.6e-3 | 1.3e-1 |
+| jump | interface-aware | 805 | +4.9e-2 | 1.0002 | 0.979 | 1.2e-3 | 5.4e-2 |
+| (floor) | naive, uniform medium | 0 | 0 | 1.0000 | 0.925 | 8.9e-4 | 5.2e-2 |
+| h/8 | naive | 0 | +3.5e-3 | 1.00001 | 0.969 | 9.5e-3 | 8.9e-2 |
+| h/8 | seeds | 985 | +6.3e-2 | 1.0003 | 0.995 | 1.7e-3 | 3.0e-2 |
+| h/2 | naive | 0 | +4.6e-3 | 1.00002 | 0.992 | 2.7e-3 | 6.2e-2 |
+| h/2 | seeds | 1796 | +7.8e-2 | 1.0003 | 1.003 | 3.5e-3 | 3.0e-2 |
+| 2h | naive | 0 | +6.7e-5 | 1.0000 | 0.988 | 1.2e-3 | 5.2e-2 |
+| 2h | seeds | 2500 | +9.6e-2 | 1.0004 | 1.012 | 5.9e-3 | 7.5e-2 |
+
+![Spectra of the naive and seed-aware operators on 2500 nodes at three edge widths](figures/wave2d_stiff_eigenvalues.png)
+
+The seed operator's rightmost eigenvalues sit at max |R| = 1.0003–1.0004
+whatever δ, the level of the jump-aware operator (1.0002) and of the naive
+scheme on 900 nodes (1.0004), while the naive scheme on 2500 nodes is at
+1.00001: the rebuilt rows carry a slightly larger rightmost eigenvalue
+than plain stencils, as the dissertation's interface rows do, and no
+more. The energy ratios say the same in the time domain, 0.995 at δ = h/8
+and 1.003 at h/2 against a quadrature drift of ±5% for the exact solution
+on these nodes (the floor loses 7.5%); at δ = 2h the ratio is 1.012.
+Run to t = 3 that last case keeps rising, 1.045, 1.055, 1.063, 1.071 at
+t = 1.5 … 3, a rate of about 0.012 per unit time, while the naive scheme
+(0.999 at t = 3), the jump-aware operator (0.96; its rightmost eigenvalue
+is +0.049) and the seed operator at δ = h/8 (1.006) all stay bounded. So
+the acceptance run passes cleanly at δ = h/8 and not quite at 2h: a
+weakly excited mode near the +0.1 rightmost eigenvalue, far below what
+max |R| = 1.0004 would allow (10% per unit time), confined to the regime
+where every row is a seed row, and the item to fix, with a slightly
+larger γ on the seed rows or the 30-node degree-4 stencils that are
+stable there, if #40 ever seeds a resolved edge.
+
+Where the seeds earn their keep is as sharp as the spectrum is uniform.
+At δ = h/8 they cut the spurious u from 9.5·10⁻³ to 1.7·10⁻³ (the floor
+is 8.9·10⁻⁴) and the error in v from 8.9·10⁻² to 3.0·10⁻², below the naive
+floor; the 900-node run says the same (u 3.4·10⁻² → 6.7·10⁻³ against a
+floor of 4.4·10⁻³). At δ = h/2 the picture is mixed (v halves, u is 30%
+worse than naive), and at δ = 2h, where every row is a 19-node degree-3
+seed row and the naive scheme is already at its floor, the seed operator
+is the worse scheme: u 5.9·10⁻³ against 1.2·10⁻³, v 7.5·10⁻² against
+5.2·10⁻², and the 900-node run agrees (v 0.28 against 0.16). The 30-node
+degree-4 seed stencils are the accurate ones there (on 900 nodes u is
+3.5× below naive at δ = h/2 and at the naive level at 1.9h), and they are
+the ones that blow up on a sharp edge (their run at δ = h/8 reaches 10¹⁴).
+So the seeds are for the twilight zone, δ ≲ h/4, and #40 should either
+not seed a resolved edge (a rule on the variation per node spacing, not
+`seed_rtol`, which trims tails but not the contiguous region) or find
+what makes a degree-4 seed basis unstable across a sharp feature, since
+that is the accurate stencil wherever it is stable.
+
+**The true Δ³ of the seeds as right-hand sides** (Brad's question,
+2026-09-20): the hyperviscosity rows impose Δ³ S = 0 on every seed; the
+honest alternative is the seeds' actual sixth derivatives at the anchor,
+Δ³ S = Σ_k C(3,k) (2k)! a_{2k}^{(6−2k)}(0) from the ansatz, which needs
+the Y-derivatives of the coefficient functions to sixth order and so the
+material's derivatives to fifth. Finite differences of the marched seeds
+along Y cannot give them at a sharp edge (a sixth difference at step
+δ/10 amplifies rounding by 10¹³); the clean route is a Taylor recursion
+on the first-order system at the anchor, y_{k+1} = (1/(k+1)) Σ_i M_i
+y_{k−i}, with the Taylor coefficients M_i of the coefficient matrix from
+the tanh recurrence T' = (1 − T²)/δ, about sixty lines plus a test
+against the monomials' Δ³ in constant material. Not built here. What it
+would do is predictable: at an anchor a distance d from an edge of width
+δ the sixth derivative scales like (r_max/δ)⁵ e^(−2d/δ), so the
+hyperviscosity would act on the seed part of the solution with strength
+γ Δ³ S ∝ (h/δ)⁵, a consistent discretisation of γ Δ³ applied to the
+edge structure, strong exactly when the edge is unresolved. That is the
+behaviour the seeds exist to remove, so the expectation is a stable
+operator (more damping, not less) that damps the resolved physics at
+the edge; the comparison is a half-day item on #40 if the spectrum or
+the errors ever call for it.
+
+**Cost.** One march per 19-node stencil is 21–25 ms; with the second,
+30-node march a seed row costs 53 ms. On 10,000 nodes (the clip
+resolution) δ = h/8 has 1965 seed rows and builds in 105 s (49 s with the
+19-node Δ³ rows); δ = 0.01 = h has 6719 rows and builds in 331 s.
+The two optimisations for #40, if it hurts: the 19-node
+stencil is the prefix of the 30-node one, so one march with the seeds
+rescaled to the smaller r_max (column scalings, the span is unchanged)
+serves both; and the flat case's translation symmetry (§4.2). Neither is
+built.

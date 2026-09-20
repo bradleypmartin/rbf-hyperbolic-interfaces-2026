@@ -396,3 +396,16 @@ for the deck. It landed in two working days.
   shear pair shares its stress through any edge, not just for constant
   coefficients. Hyperviscosity rows for seed stencils (impose Δ³ = 0 on
   the seed space, or not) are an eigenvalue question deferred to #39.
+- 2026-09-19: Seed-augmented stencils (#39). Hyperviscosity annihilates
+  the seed space (Brad's call), but on the naive 30-node footprint, not
+  the 19-node interface stencil: a 19-node Δ³ row carrying 20 coupled
+  constraints has half the naive damping and turns the operator unstable
+  at the MATLAB γ once the seed rows fill the domain (δ ≥ h/2), which a
+  plain 19-node scheme does even without seeds. The fix, a second seed
+  march on 30 nodes for the Δ³ rows, is stable at every δ at the standard
+  γ with the straddling rows kept; the 30-node degree-4 stencils are
+  unstable across a sharp feature for the jump path too, so the elastic
+  rows stay at 19 nodes and degree 3. `seed_weights` lives in
+  `wave2d/seeds.py` (not `interface.py` as the issue said) to avoid a
+  circular import; `interface.py` exposes `gaussian_rows` and
+  `coupled_weights` for any augmenting basis, jump path bit for bit.
