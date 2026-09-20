@@ -40,8 +40,14 @@ smooth edges (19-node seed rows for the elastic operator, Δ³ rows on the
 naive 30-node footprint with the seeds annihilated) and answered the
 stability question: stable at the standard γ at every δ
 (`scripts/wave2d_stiff_eigenvalues.py`); at n = 2500, δ = h/8 the seeds
-cut the spurious u 5.6× and v below the naive floor; a resolved edge
-(δ ≥ h/2) is better left naive. Next #40 (flat δ sweep).
+cut the spurious u 5.6× and v below the naive floor. #40 ran the flat δ
+sweep (`scripts/wave2d_stiff.py`, naive vs seeds at every (n, δ), seed
+marches on a process pool, operators cached under `outputs/`): through
+an edge the nodes never resolve (δ = 0.0025) the seeds are fourth order
+at every n, 20× below naive in v and 67× in spurious u at 19,600 nodes,
+at their own floor, half the naive one; the crossover is at h ≈ δ and a
+resolved edge (δ = 0.04) is 1.4–2× worse seeded, so the rule is seed
+when δ ≤ h. Next #41 (oblique incidence).
 Derivation in `docs/stiff-features.md` §4, results in §5.
 
 Audience: bright tech workers with no assumed PDE background. **No live
@@ -84,7 +90,7 @@ src/pdes_demo/   library code
                    coordinate, Part 3)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 163 tests; every numerical routine has one
+tests/           pytest, 164 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
@@ -106,8 +112,9 @@ uv run ruff check . && uv run ruff format .
 uv run python scripts/<driver>.py             # figures / clips into outputs/
 uv run python scripts/wave1d_stiff.py         # Part 3 figures, ~50 s (references
                                               # cached in outputs/)
-uv run python scripts/wave2d_stiff.py         # Part 3 2-D naive baseline, ~2 min
-                                              # per pulse (1-D references cached)
+uv run python scripts/wave2d_stiff.py         # Part 3 2-D flat δ sweep, naive vs seeds,
+                                              # and a still: ~11 min on 12 workers, ~4 min
+                                              # once the seed operators are cached in outputs/
 uv run python scripts/wave2d_stiff_eigenvalues.py   # Part 3 2-D spectra, seed vs naive,
                                               # ~10 min at n = 900; --n 2500 --run ~25 min
 ./slides/build.sh                             # copy figures and clips from outputs/,

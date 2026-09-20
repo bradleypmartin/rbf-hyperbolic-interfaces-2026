@@ -409,3 +409,16 @@ for the deck. It landed in two working days.
   `wave2d/seeds.py` (not `interface.py` as the issue said) to avoid a
   circular import; `interface.py` exposes `gaussian_rows` and
   `coupled_weights` for any augmenting basis, jump path bit for bit.
+- 2026-09-19: Flat δ sweep (#40). Seed every row that sees the edge at
+  every (n, δ) and let the sweep set the rule, instead of hard-coding the
+  δ ≤ h/4 guess of #39: the crossover sits at h ≈ δ (the δ = 0.01
+  panel), so the rule is "seed when δ ≤ h, naive otherwise", per edge.
+  Through an edge the nodes never resolve (δ = 0.0025) the seeds are
+  fourth order at every n and land at their own resolution floor, which
+  is half the naive scheme's (measured by seeding through a 10⁻⁶
+  contrast); why the mix of 19-node seed rows and 30-node annihilating
+  Δ³ rows beats 30/4 on this pulse is left open (§5.4). The seed marches
+  run on a process pool (`build_operators(workers=...)`, bit for bit the
+  serial weights) and the driver caches seed operators under `outputs/`,
+  which turns an hour of marches into ten minutes once and four from
+  then on.
