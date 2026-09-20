@@ -68,18 +68,19 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
-from matplotlib.ticker import NullFormatter
 
 from pdes_demo.plotting import (
-    AWARE,
-    COLORS,
     ERROR_CMAP,
     FIELD_CMAP,
     INK,
     INK_MUTED,
     INK_SECONDARY,
+    TEXTWIDTH_IN,
     use_demo_style,
+    use_print_style,
 )
+from pdes_demo.results_cache import ResultsCache
+from pdes_demo.stiff_figures import convergence_2d
 from pdes_demo.wave1d import periodic_grid
 from pdes_demo.wave1d.spectral import reference_size
 from pdes_demo.wave2d import (
@@ -102,18 +103,9 @@ from pdes_demo.wave2d import (
 )
 from pdes_demo.wave2d.exact import plane_wave_from_1d, spectral_plane_wave_1d
 
-MODE_LABELS = {
-    "naive": "standard RBF-FD (naive)",
-    "aware": "seed stencils (interface-aware at delta = 0)",
-    "ablate": "seeds for the normal monomials only (ablation)",
-}
 MODE_SHORT = {"naive": "naive", "aware": "seeds", "ablate": "ablat"}
 TITLES = {"naive": "Standard RBF-FD (naive)", "aware": "Seed stencils"}
-STYLE = {
-    "naive": dict(color=COLORS["naive"], marker="o", ls="-"),
-    "aware": dict(color=COLORS["aware"], marker="o", ls="-"),
-    "ablate": dict(color=COLORS["aware"], marker="^", ls="--", mfc="none"),
-}
+PRINT_TITLES = {"naive": "naive", "aware": "seeds"}
 BUILD_MODE = {"naive": "naive", "aware": "aware", "ablate": "aware"}
 UNIFORM = LayeredMedium2D(layer=ElasticMaterial(lam=1.0, mu=1.0, rho=1.0))
 # A band the exact uniform solution cannot tell from the background, on
@@ -197,6 +189,19 @@ def parse_args() -> argparse.Namespace:
         "--snapshot-only", action="store_true", help="skip the sweep, write the still"
     )
     parser.add_argument("--out-dir", type=Path, default=Path("outputs"))
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        help="also write the results JSON here (paper/data for the committed copy)",
+    )
+    parser.add_argument(
+        "--style",
+        choices=["demo", "print"],
+        default="demo",
+        help="deck style (default) or the manuscript's print style",
+    )
+    parser.add_argument("--format", choices=["png", "pdf"], default="png")
     args = parser.parse_args()
     args.direction = tuple(args.direction)
     args.oblique = args.direction != (0, 1)
@@ -232,6 +237,20 @@ def direction_tag(args: argparse.Namespace) -> str:
 
 def angle_deg(args: argparse.Namespace) -> float:
     return float(np.degrees(np.arctan2(*args.direction)))
+
+
+def run_tag(args: argparse.Namespace) -> str:
+    """Suffix that names this configuration's figure and results files."""
+    tag = "_naive" if args.modes == ["naive"] else ""
+    tag += "" if args.sharpness == 15.0 else f"_s{args.sharpness:g}"
+    tag += direction_tag(args) + geometry_tag(args)
+    tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
+    return tag
+
+
+def u_field(args: argparse.Namespace) -> str:
+    """Cache field name of the u column: a relative error, or the spurious max."""
+    return "u" if args.u_error else "max_u"
 
 
 # --- references ---------------------------------------------------------------
@@ -648,7 +667,33 @@ def print_table(
         print(line)
 
 
-def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
+def record_errors(
+    cache: ResultsCache,
+    ns: np.ndarray,
+    results: dict[str, list[dict[str, float]]],
+    delta: float | None,
+    args: argparse.Namespace,
+) -> None:
+    """``error`` records for every (mode, field) of one edge width; ``delta``
+    is ``None`` for the floors, which do not depend on it."""
+    h = [1 / np.sqrt(n) for n in ns]
+    for mode, errs in results.items():
+        for f in "vhu":
+            values = [e[f] for e in errs]
+            cache.add_errors(
+                [int(n) for n in ns],
+                values,
+                list(rates(ns, values)),
+                h=h,
+                delta=delta,
+                mode=mode,
+                field=u_field(args) if f == "u" else f,
+            )
+
+
+def sweep(
+    args: argparse.Namespace, node_sets: dict[int, NodeSet], cache: ResultsCache
+) -> None:
     ns = np.array(args.ns, dtype=float)
     t0 = time.perf_counter()
     floor = [
@@ -662,18 +707,9 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         for n in args.ns
     ]
     print(f"resolution floor (uniform medium): {time.perf_counter() - t0:.1f}s")
+    record_errors(cache, ns, {"floor": floor}, None, args)
 
-    fig, panels = plt.subplots(
-        2,
-        len(args.widths),
-        figsize=(3.6 * len(args.widths), 7.6),
-        sharey="row",
-        sharex=True,
-        constrained_layout=True,
-        squeeze=False,
-    )
-    axes, axes_u = panels
-    for ax, ax_u, width in zip(axes, axes_u, args.widths, strict=True):
+    for width in args.widths:
         medium = medium_for(width, args)
         title = (
             "jump edges (delta = 0)" if width == 0 else f"edge width delta = {width:g}"
@@ -699,6 +735,9 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             ]
         print(f"  ({time.perf_counter() - t0:.1f}s)")
         print_table(width, ns, results, floors, args)
+        record_errors(cache, ns, results, width, args)
+        if "sfloor" in floors:
+            record_errors(cache, ns, {"sfloor": floors["sfloor"]}, width, args)
         if args.truncation and args.curved and width > 0:
             print("  truncation error on the reference state, edge rows | bulk rows")
             for n in args.ns:
@@ -708,100 +747,23 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
                     for m, e in errs.items()
                 )
                 print(f"  {int(n):5d}  {cells}")
+                for m, e in errs.items():
+                    for group, err in e.items():
+                        cache.add(
+                            "truncation",
+                            n=int(n),
+                            h=1 / np.sqrt(n),
+                            delta=width,
+                            mode=m,
+                            group=group,
+                            error=err,
+                        )
 
-        for mode in args.modes:
-            ax.loglog(
-                ns,
-                [e["v"] for e in results[mode]],
-                label=MODE_LABELS[mode],
-                ms=5,
-                **STYLE[mode],
-            )
-            ax_u.loglog(ns, [e["u"] for e in results[mode]], ms=5, **STYLE[mode])
-        ax.loglog(
-            ns,
-            [e["v"] for e in floor],
-            "s--",
-            color=INK_SECONDARY,
-            label="no interface (resolution floor)",
-            ms=5,
-            lw=1.4,
-        )
-        if not args.curved:  # the curved floors' u is spurious, not an error
-            ax_u.loglog(
-                ns, [e["u"] for e in floor], "s--", color=INK_SECONDARY, ms=5, lw=1.4
-            )
-        if "sfloor" in floors:
-            kw = dict(color=AWARE, ms=5, lw=1.4, ls=":", marker="s", mfc="none")
-            ax.loglog(
-                ns,
-                [e["v"] for e in floors["sfloor"]],
-                label="seed operator, no contrast (seed floor)",
-                **kw,
-            )
-            if not args.curved:
-                ax_u.loglog(ns, [e["u"] for e in floors["sfloor"]], **kw)
-        guides = [("naive", 2, "2nd order")]
-        if "aware" in args.modes:
-            guides.append(("aware", 4, "4th order"))
-        for mode, order, label in guides:
-            anchor = results[mode][0]["v"]
-            guide = anchor * (ns[0] / ns) ** (order / 2)
-            ax.loglog(ns, guide, ":", color=INK_MUTED, lw=1.1)
-            ax.annotate(
-                label,
-                (ns[-1], guide[-1]),
-                xytext=(5, 0),
-                textcoords="offset points",
-                color=INK_SECONDARY,
-                fontsize=9,
-                va="center",
-            )
-        if width and ns[0] <= width**-2 <= ns[-1]:
-            for a in (ax, ax_u):
-                a.axvline(width**-2, color=INK_MUTED, lw=1.0, ls=":")
-            ax.annotate(
-                "h = delta",
-                (width**-2, 0.97),
-                xycoords=("data", "axes fraction"),
-                xytext=(4, 0),
-                textcoords="offset points",
-                color=INK_SECONDARY,
-                fontsize=9,
-                rotation=90,
-                va="top",
-            )
-        ax.set_title(title, fontsize=11)
-        ax_u.set_xlabel("number of nodes")
-        ax_u.set_xticks(ns, [str(int(n)) for n in ns])
-        ax_u.xaxis.set_minor_formatter(NullFormatter())
-        ax_u.set_xlim(ns[0] / 1.3, ns[-1] * 2.4)
-    axes[0].set_ylabel(f"relative error in v at t = {args.t_end:g}")
-    handles, labels = axes[0].get_legend_handles_labels()
-    if len(labels) <= 3:
-        axes[0].legend(loc="lower left", fontsize=9)
-    else:
-        fig.legend(handles, labels, loc="outside lower center", ncol=2, fontsize=9)
-    axes_u[0].set_ylabel(
-        f"relative error in u at t = {args.t_end:g}"
-        if args.u_error
-        else "max |u| (exact: 0)"
+    out = convergence_2d(
+        cache,
+        args.out_dir / f"wave2d_stiff{run_tag(args)}.{args.format}",
+        print_mode=args.style == "print",
     )
-    title = "Same nodes, same time step: the edge is only as sharp as delta"
-    if args.oblique:
-        title += (
-            f"\nP train at {angle_deg(args):.1f} deg to the normal, direction "
-            f"{args.direction}"
-        )
-    if args.curved:
-        title += f"\nsine interfaces of amplitude {args.amplitude:g} (curved case)"
-    fig.suptitle(title, fontsize=12)
-    tag = "_naive" if args.modes == ["naive"] else ""
-    tag += "" if args.sharpness == 15.0 else f"_s{args.sharpness:g}"
-    tag += direction_tag(args) + geometry_tag(args)
-    tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
-    out = args.out_dir / f"wave2d_stiff{tag}.png"
-    fig.savefig(out, dpi=160)
     print(f"\nwrote {out}")
 
 
@@ -823,7 +785,9 @@ def style_map(ax: plt.Axes, medium: LayeredMedium2D) -> None:
         ax.plot(xs, ifc.height(xs), ls="--", color=INK_SECONDARY, lw=1.0)
 
 
-def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
+def snapshot(
+    args: argparse.Namespace, node_sets: dict[int, NodeSet], cache: ResultsCache
+) -> None:
     n, width = args.snapshot_n, args.snapshot_width
     nodes = node_sets.get(n) or make_node_set(medium_for(0.0, args), n, seed=args.seed)
     medium = medium_for(width, args)
@@ -879,16 +843,19 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
     imshow_kw = dict(origin="lower", extent=(0, 1, 0, 1), interpolation="bilinear")
     field_kw = dict(cmap=FIELD_CMAP, vmin=0, vmax=1, **imshow_kw)
     error_kw = dict(cmap=ERROR_CMAP, vmin=0, vmax=err_lim, **imshow_kw)
-    text_kw = dict(fontsize=10, color=INK, va="top", ha="left")
+    print_mode = args.style == "print"
+    fs = 7 if print_mode else 11
+    text_kw = dict(fontsize=6 if print_mode else 10, color=INK, va="top", ha="left")
+    titles = PRINT_TITLES if print_mode else TITLES
 
     n_ref = 2 if show_curl else 1
     n_rows, n_cols = len(frames), n_ref + len(modes)
-    fig, axes = plt.subplots(
-        n_rows,
-        n_cols,
-        figsize=(3.4 * n_cols, 3.2 * n_rows + 1.2),
-        constrained_layout=True,
-    )
+    if print_mode:
+        # One text width across; the colorbars below add about 0.5 in per figure.
+        figsize = (TEXTWIDTH_IN, TEXTWIDTH_IN / n_cols * 1.15 * n_rows + 0.55)
+    else:
+        figsize = (3.4 * n_cols, 3.2 * n_rows + 1.2)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, constrained_layout=True)
     axes = np.atleast_2d(axes)
     ref_name = (
         "Fourier reference" if (args.oblique or args.curved) else "spectral reference"
@@ -898,7 +865,10 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         im_v = ax_v.imshow(wave[k], **field_kw)
         style_map(ax_v, medium)
         if r == 0:
-            ax_v.set_title(f"The wave ({ref_name})\n|v|", fontsize=11)
+            ax_v.set_title(
+                "$|v|$, reference" if print_mode else f"The wave ({ref_name})\n|v|",
+                fontsize=fs,
+            )
         if show_curl:
             ax_c = axes[r, 1]
             curl_kw = dict(
@@ -907,7 +877,12 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             im_c = ax_c.imshow(curl[k], **curl_kw, **imshow_kw)
             style_map(ax_c, medium)
             if r == 0:
-                ax_c.set_title("S waves: |u_y - v_x|\n(zero for a P wave)", fontsize=11)
+                ax_c.set_title(
+                    r"$|u_y - v_x|$, S waves"
+                    if print_mode
+                    else "S waves: |u_y - v_x|\n(zero for a P wave)",
+                    fontsize=fs,
+                )
         for c, mode in enumerate(modes):
             ax_e = axes[r, n_ref + c]
             im_e = ax_e.imshow(image(to_grid @ diff[mode][k]), **error_kw)
@@ -916,46 +891,70 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             if args.u_error:
                 rel_u = rel_error(runs[mode].state[k][0], refs[k][0])
                 u_line, u_print = f"rel. error in u {rel_u:.1%}", f"u {rel_u:.2e}"
+                u_short = f"$u$: {rel_u:.1%}"
             else:
                 u_max = np.abs(runs[mode].state[k][0]).max()
                 u_line, u_print = f"max |u| {u_max:.1e}", f"max|u| {u_max:.1e}"
+                u_short = f"max $|u|$: {u_max:.1e}"
             ax_e.text(
                 0.03,
                 0.97,
-                f"rel. error in v {rel:.1%}\n{u_line}",
+                f"$v$: {rel:.1%}\n{u_short}"
+                if print_mode
+                else f"rel. error in v {rel:.1%}\n{u_line}",
                 transform=ax_e.transAxes,
                 **text_kw,
             )
             print(f"  t = {times[k]:.2f}  {mode:5s}  v {rel:.2e}  {u_print}")
+            u_value = rel_u if args.u_error else u_max
+            for field, value in (("v", rel), (u_field(args), u_value)):
+                cache.add(
+                    "snapshot",
+                    n=nodes.n,
+                    delta=width,
+                    t=float(times[k]),
+                    mode=mode,
+                    field=field,
+                    error=value,
+                )
             if r == 0:
-                ax_e.set_title(f"{TITLES[mode]}\nerror in v vs reference", fontsize=11)
-        axes[r, 0].set_ylabel(f"t = {times[k]:.2f}\ny")
+                ax_e.set_title(
+                    f"error in $v$, {titles[mode]}"
+                    if print_mode
+                    else f"{titles[mode]}\nerror in v vs reference",
+                    fontsize=fs,
+                )
+        axes[r, 0].set_ylabel(
+            f"$t = {times[k]:.2f}$" if print_mode else f"t = {times[k]:.2f}\ny"
+        )
     for ax in axes[-1]:
-        ax.set_xlabel("x")
+        ax.set_xlabel("$x$" if print_mode else "x")
+    cb_kw = dict(location="bottom", pad=0.02)
     fig.colorbar(
         im_v,
         ax=axes[:, 0].tolist(),
-        location="bottom",
         shrink=0.8,
-        pad=0.02,
-        label="|v|, vertical particle velocity",
+        label="$|v|$" if print_mode else "|v|, vertical particle velocity",
+        **cb_kw,
     )
     if show_curl:
         fig.colorbar(
             im_c,
             ax=axes[:, 1].tolist(),
-            location="bottom",
             shrink=0.8,
-            pad=0.02,
-            label="|curl of the velocity|",
+            label="|curl|" if print_mode else "|curl of the velocity|",
+            **cb_kw,
         )
     fig.colorbar(
         im_e,
         ax=axes[:, n_ref:].ravel().tolist(),
-        location="bottom",
         shrink=0.5,
-        pad=0.02,
-        label=f"|error in v| vs the {ref_name}, one colour scale",
+        label=(
+            "$|$error in $v|$, one scale"
+            if print_mode
+            else f"|error in v| vs the {ref_name}, one colour scale"
+        ),
+        **cb_kw,
     )
     incidence = (
         f"P train at {angle_deg(args):.1f} deg to the normal"
@@ -968,23 +967,28 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         if args.curved
         else "a band with 4x stiffness and 2x density"
     )
-    fig.suptitle(
-        f"{incidence} through {band}, "
-        f"edges of width delta = {width:g} = h/{nodes.h / width:.3g}\n"
-        f"{nodes.n} scattered nodes, RBF-FD, RK4",
-        fontsize=11,
-    )
+    if not print_mode:
+        fig.suptitle(
+            f"{incidence} through {band}, "
+            f"edges of width delta = {width:g} = h/{nodes.h / width:.3g}\n"
+            f"{nodes.n} scattered nodes, RBF-FD, RK4",
+            fontsize=11,
+        )
     out = args.out_dir / (
-        f"wave2d_stiff_snapshot{direction_tag(args)}{geometry_tag(args)}.png"
+        f"wave2d_stiff_snapshot{direction_tag(args)}{geometry_tag(args)}.{args.format}"
     )
     fig.savefig(out, dpi=160)
+    plt.close(fig)
     print(f"wrote {out}")
 
 
 def main() -> None:
     args = parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    use_demo_style()
+    if args.style == "print":
+        use_print_style()
+    else:
+        use_demo_style()
     t_all = time.perf_counter()
     t0 = time.perf_counter()
     wanted = set() if args.snapshot_only else set(args.ns)
@@ -993,10 +997,19 @@ def main() -> None:
     geometry = medium_for(0.0, args)
     node_sets = {n: make_node_set(geometry, n, seed=args.seed) for n in sorted(wanted)}
     print(f"node sets: {time.perf_counter() - t0:.1f}s")
+    cache = ResultsCache.new("scripts/wave2d_stiff.py", args)
     if not args.snapshot_only:
-        sweep(args, node_sets)
+        sweep(args, node_sets, cache)
     if not args.no_snapshot:
-        snapshot(args, node_sets)
+        snapshot(args, node_sets, cache)
+    # A still-only run must not overwrite the sweep's cache of the same tag.
+    kind = "_snapshot" if args.snapshot_only else ""
+    name = f"wave2d_stiff{run_tag(args)}{kind}.json"
+    paths = [args.out_dir / name]
+    if args.data_dir is not None:
+        paths.append(args.data_dir / name)
+    cache.write(*paths)
+    print("results ->", ", ".join(str(p) for p in paths))
     print(f"total {time.perf_counter() - t_all:.0f}s")
 
 
