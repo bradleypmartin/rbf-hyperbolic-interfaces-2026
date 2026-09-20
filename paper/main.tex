@@ -1515,33 +1515,1102 @@ lists it first among the things to do next.
 % ===========================================================================
 \section{Two-dimensional results}
 \label{sec:results2d}
-% TRACE: notes §5.2 (#37), §5.3 (#39), §5.4 (#40), §5.5 (#41), §5.6 (#42);
-% scripts/wave2d_stiff.py, scripts/wave2d_stiff_eigenvalues.py; numbers from
-% #54's cache. Drafted by #59.
+% TRACE: notes §5.1 (#36: the mapped 1-D reference and its checks), §5.2
+% (#37: the naive baseline, the two pulses, the floor, the spurious u), §5.3
+% (#39: the stability question, the variants on 900 nodes, the accuracy
+% check of the variants, the 2500-node acceptance run, the t = 3 energies),
+% §5.4 (#40: the flat sweep, the seed floor, the crossover, the rule, the
+% still), §5.5 (#41: the train, the Fourier-in-x reference, the ablation,
+% the six measurements behind the order, the still), §5.6 with
+% §5.6.1–5.6.2 (#42: the product-grid and 122,500-node references and their
+% bars, the curved sweep, the truncation probe, delta = 0.0025, the trim,
+% the curved spectra, the still, the route (b) decision, the costs).
+% Scripts: scripts/wave2d_stiff.py (--direction 1 2, --amplitude 0.02,
+% --seed-floor, --truncation, --seed-rtol), scripts/wave2d_stiff_eigenvalues.py
+% (--n 2500, --amplitude 0.02, --variants). Every error, rate, truncation,
+% snapshot and spectrum number is #54's cache (paper/data/wave2d_stiff.json,
+% _d12, _a0.02, _a0.02_r0.001, _eigenvalues_n2500, _eigenvalues_n2500_a0.02,
+% _eigenvalues_n900_variants) and the tables are the tab_2d_*.tex and
+% tab_spectra_*.tex fragments from it. Ratios in the text are computed from
+% the cache's unrounded errors; where they refine the notes' rounded ones
+% the cache is quoted: 116x (notes 113x) and 194x (190x) for the spurious u
+% over the floor; the ablation worse than naive in u at every n and in v
+% from 10,000 nodes on (notes: "from 4900 nodes on"); ablation over seeds in
+% u 1.3x at 2500 nodes (notes 1.4x); seeds 3.7–5.6x worse in u on the
+% resolved edge (notes 4–5x); untrimmed over trimmed in u up to 1.5x (notes
+% "1.5x throughout"); seed-row truncation rates 3.2–3.9 and bulk 3.1–3.7
+% (notes 3.4–4.1 and 3.2–3.7); the oblique still's u error 3.6% (notes
+% 3.7%); the curved naive scheme within 17% of the flat one at delta = 0.01
+% (notes: "to two digits", which holds for the seeds). Rates of the floor
+% rows and the seed-floor rows are the cache's, which differ from the notes'
+% hand-derived ones by up to 0.2 (#61 reconciles). Notes-only, not in the
+% cache: the dissertation-pulse baseline and the tanh(h / 2 delta) values
+% (§5.2), the seed-row counts, the flat seed floor (§5.4: 2.7e-2 .. 6.9e-4
+% through a 1e-6 contrast) and the 19/3-everywhere errors (§5.4), the
+% trimmed, 1.5-gamma and 2-gamma variants and the 2500-node accuracy check
+% of the variants (§5.3), the t = 3 energies (§5.3), the six oblique
+% diagnostics (§5.5, scratch runs of 2026-09-19), the reference checks and
+% costs (§5.1, §5.5, §5.6), the trimmed rows' truncation (§5.6.1). Drafted
+% by #59.
+
+This section is the two-dimensional test of the construction of
+Section~\ref{sec:seeds2d}, on the flat and curved geometries of
+Section~\ref{sec:setting2d}. It answers three questions in turn. Whether
+the seed-augmented operator is stable at the hyperviscosity the standard
+scheme was tuned for (Section~\ref{sec:stability2d}); what the seeds do
+through a flat edge at normal incidence, which settles the rule of when
+to seed (Section~\ref{sec:flatsweep}); and whether the same holds at
+oblique incidence, where the tangential structure of the seeds is put to
+work (Section~\ref{sec:oblique2d}), and through a curved edge, where the
+seeds are marched along the true normal (Section~\ref{sec:curvedresults}).
+Section~\ref{sec:tests2d} describes the test problems and the reference
+solutions, and Section~\ref{sec:naive2d} what the standard scheme does on
+its own, which is what the seeds have to improve on.
+
 \subsection{Test problems and references}
-\stub{\#59: 1-D spectral at normal incidence; Fourier-in-$x$ for oblique;
-product-grid for the curved $\delta > 0$; the $122{,}500$-node jump-aware
-run for the curved $\delta = 0$}
+\label{sec:tests2d}
+\para{Pulses and floors}
+Every run in this section uses the medium, node sets, stencils,
+hyperviscosity and time step of Section~\ref{sec:setting2d}, the node
+counts $n = 2500$, $4900$, $10{,}000$ and $19{,}600$ ($h$ from $0.02$ to
+$0.0071$), and $t = 1$ as the measurement time. The pulse at normal
+incidence is the Gaussian plane P-wave of sharpness $15$ started at
+$y = 0.875$, whose tails are $2 \times 10^{-14}$ at the edges. We tried
+the dissertation's narrower pulse first (sharpness $23$ from $y = 0.75$)
+and found its resolution floor, $10^{-2}$ in $v$ on the finest node set
+against $10^{-7}$ in the one-dimensional study, high enough to hide
+everything but the jump; the wider pulse lowers the floor by $8\times$ at
+$19{,}600$ nodes, and the pulse can be widened no further if its tails
+are to clear both edges. Two floors are used. The
+\emph{resolution floor} is the same pulse on the same nodes in the
+uniform background, measured against its exact translate: the error of
+the standard scheme with no edge at all. The \emph{seed floor} is the
+seed operator's own: the same rows that a given $\delta$ would seed,
+built through a contrast of $10^{-6}$, a medium the exact translated
+pulse cannot tell from uniform and through which the seeds equal the
+monomials to rounding, measured against the same translate. It exists
+because the seeded rows are a different scheme from the bulk, $19$-node
+degree-three elastic rows with $30$-node annihilating $\Delta^3$ rows
+against $30$-node degree-four stencils, with a resolution floor of their
+own.
+
+\para{The two operators}
+Both operators are run at every $(n, \delta)$: the standard scheme, which
+samples the coefficients at the nodes, and the seed operator of
+Section~\ref{sec:assembly2d}, which at $\delta = 0$ is the interface-aware
+operator of Section~\ref{sec:jumpstencils} and for $\delta > 0$ puts the
+seed stencils on every row whose $19$-node stencil sees the edge, tails
+included. No rule about which edges to seed was imposed beforehand; the
+flat sweep is what sets the rule. On the flat geometry the seeded rows
+number $985$, $1627$, $2735$ and $4888$ at $\delta = 0.0025$ ($39\%$ down
+to $25\%$ of the nodes, the $19\delta$ tails plus a stencil radius),
+$1796$, $3388$, $6719$ and $12{,}929$ at $\delta = 0.01$ ($72\%$ to
+$66\%$), and every row at $\delta = 0.04$. Rates are measured in
+$h = n^{-1/2}$ between successive node sets. The tables give two
+significant digits, three when the leading digit is $1$; the ratios
+quoted in the text are computed from the unrounded errors.
+
+\para{References}
+Each experiment has a reference that shares nothing with the stencils
+under test. For a jump on a flat interface it is the exact solution, the
+ray sum of Section~\ref{sec:results1d} applied to the P wave. For a flat
+edge of width $\delta > 0$ at normal incidence the solution depends on
+$y$ alone, and the reference is the one-dimensional pseudo-spectral
+solver of Section~\ref{sec:results1d} on the image of the problem under
+$x = 1 - 2y$ (wave speed $2 c_p$, density $\rho / 2$, impedances
+unchanged), fed the exact image of the two-dimensional initial state,
+with $\sigma_{xx}$ recovered exactly from $\sigma_{yy}$ through
+$\partial_t \sigma_{xx} = \lambda v_y$. The two-dimensional blend of
+\eqref{eq:profile2d}, linear in the weight for $\lambda$, $\mu$ and
+$\rho$, is mapped pointwise rather than rebuilt as a one-dimensional
+layer, since the one-dimensional profile \eqref{eq:profile1d} blends $c$
+and $\rho$ and the two agree only in the jump limit. This reference tends
+to the ray sum at first order in $\delta$ (the largest difference in $v$
+at $t = 0.3$ is $0.167$, $0.090$, $0.046$, $0.023$ and $0.012$ for
+$\delta = 0.016$ down to $0.001$), doubling its grid or halving its step
+moves $v$, $\sigma_{xx}$ and $\sigma_{yy}$ by under $3 \times 10^{-10}$ at
+$t = 1$ ($\delta = 0.005$), and it is run on $4096$ nodes for $\delta = 0.0025$ and $1024$
+otherwise with $\Delta t = 5 \times 10^{-5}$. Because it depends on $y$
+only it is evaluated at every node directly, and no resampling enters
+the flat errors.
+
+At oblique incidence on a flat medium the coefficients still depend on
+$y$ only, so the Fourier modes of the state in $x$ never mix: each mode
+is a one-dimensional system in $y$ with $\px \to 2\pi i k$ and complex
+coefficients, Fourier pseudo-spectral in $y$, and all modes march
+together under RK4. The reference is exact in $x$ ($13$ modes carry the
+train of Section~\ref{sec:oblique2d} to $10^{-14}$), uses $4096$ points
+in $y$ for $\delta = 0.0025$, and costs minutes ($220$\,s at
+$\delta = 0.0025$, $40$\,s at $0.01$). Its checks: the train in a
+uniform medium is its exact translate to $10^{-10}$ and has zero curl;
+at normal incidence the solver agrees with the mapped one-dimensional
+reference to $10^{-10}$, two independent code paths; through an edge at
+oblique incidence the elastic energy is conserved to $10^{-12}$, and
+doubling the grid while halving the step moves the answer by $10^{-8}$.
+The fields and their derivatives are evaluated at the nodes by
+trigonometric interpolation in both directions.
+
+For a curved edge of width $\delta > 0$ the modes mix, and the reference
+is the same solver on an $n_x \times n_y$ product grid: derivatives by
+FFT along each axis, the material multiplied in physical space, and
+RK4 with the step $\Delta t = 0.5 / (c_{p,\max} \sqrt{n_x^2 + n_y^2})$,
+the CFL number $0.5$ on the grid's largest wavenumber. The grids are
+$512 \times 1024$ for $\delta = 0.01$, $1024 \times 2048$ for $0.005$ and
+$2048 \times 4096$ for $0.0025$. On a flat medium at oblique incidence
+the product-grid solver agrees with the Fourier-in-$x$ one to
+$10^{-11}$, two representations of one scheme; on a curved edge the
+energy is conserved to $10^{-9}$, and the curl is no longer zero,
+because a curved edge converts P to S. Its error bars, measured at $t = 1$
+on $6000$ random points: at $\delta = 0.01$ the $512 \times 1024$ grid
+moves by $1.3 \times 10^{-9}$ when $n_x$ is halved and by
+$3.1 \times 10^{-9}$ when both directions are doubled or the step is
+halved (the same number, because the doubled grid's difference is its
+halved step), and at $\delta = 0.005$ the $1024 \times 2048$ grid moves by
+$8 \times 10^{-11}$ and $2.6 \times 10^{-10}$ under doubling in $x$ and in
+$y$; both are five orders below anything measured. A jump on a curved
+interface has no product-grid reference, and for it we use the
+interface-aware operator of Section~\ref{sec:jumpstencils} on a node set
+of its own, $122{,}500$ nodes ($h = 1 / 350$), resampled onto the
+sweep's nodes by one-sided interpolation that never crosses an
+interface. Its bar is about $5\%$
+of the finest point: runs of $62{,}500$ and $122{,}500$ nodes differ by
+$1.7 \times 10^{-4}$ in $v$ on the $19{,}600$-node set, where the
+$19{,}600$-node interface-aware run's error is $1.39 \times 10^{-3}$
+against the finer reference and $1.25 \times 10^{-3}$ against the
+coarser, a reference made by the same scheme flattering a run of it by
+the correlation of their errors; the finer one's numbers are the ones
+reported. The references cost $201$\,s ($512 \times 1024$), $1952$\,s
+($1024 \times 2048$), $3.6$\,h ($2048 \times 4096$) and $286$\,s (the
+jump run) to $t = 1$, and are cached.
+
+\para{Errors}
+As fixed in Section~\ref{sec:setting2d}: relative $\ell^2$ errors in $v$
+and in $\sigma_{yy}$ at $t = 1$ over all nodes, and for $u$ the largest
+$|u|$ at normal incidence on a flat edge, where the true $u$ is
+identically zero, and the relative $\ell^2$ error in $u$ at oblique
+incidence and on the curved geometry, where it is not (a curved edge
+makes $u$ of size $0.12$ out of the incident pulse at normal incidence,
+and its relative error then measures the scattered field alone).
+
 \subsection{Naive baseline}
-\stub{\#59: the resolution floor hides the edge error in $v$; the spurious
-$u$ separates unresolved from resolved edges $10\times$ more sharply}
+\label{sec:naive2d}
+The naive rows of Tables~\ref{tab:flat2d_v} and~\ref{tab:flat2d_u} are
+the standard scheme through flat edges of width $\delta = 0$, $0.0025$,
+$0.01$ and $0.04$ at normal incidence, and the floor rows are the same
+pulse with no edge. In the ratio $h / \delta$ the three widths run from
+$8$ to $2.9$ (never resolved), from $2$ to $0.71$ (resolved from
+$10{,}000$ nodes on) and from $0.5$ to $0.18$ (resolved on every node
+set), the three regimes of Section~\ref{sec:results1d}. Four things are
+to be read off before the seeds enter.
+
+The resolution floor is the first. Through the edge every node set
+resolves, $\delta = 0.04$, the naive error in $v$ is the floor to within
+$7\%$ at every $n$, with the floor's rates: a resolved edge costs the
+standard scheme nothing. Through the edge no node set resolves,
+$\delta = 0.0025$, the naive scheme behaves like the jump: second order
+in $v$ (rates $1.9$, $1.6$, $2.2$), $10\times$ the floor at $19{,}600$
+nodes, and at $0.6$ to $0.75$ of the jump's error, since the rows that
+straddle the edge centre at $h / 2$ see $\tanh(h / 2\delta)$ of the
+contrast, $0.9993$ at $2500$ nodes and $0.89$ at $19{,}600$. The knee is
+there, at $\delta = 0.01$, but small in $v$: the naive error exceeds the
+floor by $19\%$, $17\%$, $18\%$ and $7\%$ from $h = 2\delta$ to
+$h = 0.71\delta$, so that the edge's own contribution, the excess in
+quadrature, falls from $3.3 \times 10^{-2}$ to $5.2 \times 10^{-4}$,
+faster than second order and accelerating, which is the knee shape of
+Section~\ref{sec:results1d} seen through a high floor. And the spurious
+$u$ separates the cases an order of magnitude more sharply than $v$
+does. The naive stencils excite $u$ where a field varies sharply in $y$,
+because $\partial_x$ on scattered nodes does not annihilate such a field
+exactly, and $u$ carries none of the pulse's own dispersion error, so
+its floor is low ($8.9 \times 10^{-4}$ down to $3.0 \times 10^{-5}$).
+Against that floor the jump is $11\times$, $24\times$, $46\times$ and
+$194\times$ from $2500$ to $19{,}600$ nodes and $\delta = 0.0025$ is
+$11\times$, $24\times$, $39\times$ and $116\times$: an unresolved edge's
+error decays like the jump's, slower than the floor, and the ratio grows
+with $n$. The resolved edge equals the floor at every $n$. The edge of
+width $0.01$ sits $3\times$, $3\times$, $6\times$ and $3\times$ above it,
+rising while $h \ge \delta$ and falling back once $h < \delta$, a drop of
+$9\times$ between $10{,}000$ and $19{,}600$ nodes against $4\times$ for
+the floor: the knee of Section~\ref{sec:results1d}, at $h = \delta$ as
+there, in the one quantity the floor does not pollute.
+
+Two remarks. The two-dimensional naive scheme is not first order through
+an unresolved edge as one-dimensional FD4 was: the fixed rows straddling
+the edge centre keep the coefficient sampling symmetric, and RBF-FD
+through a jump is already second order with a large constant
+\cite{MartinFornberg2017}, so the knee is a change of constant rather
+than of order and shows as a bend rather than a kink. And the seeds can
+at most remove the excess over the floor: a factor $10$ in $v$ and up to
+$116$ in spurious $u$ through $\delta = 0.0025$, $8$ to $19\%$ in $v$
+and $3$ to $6\times$ in $u$ through $\delta = 0.01$, nothing through
+$\delta = 0.04$. So the $\delta = 0.0025$ column and the spurious $u$
+are the primary evidence of the flat sweep, and a knee plot in $v$ alone
+would show little.
+
+\begin{table}
+  \caption{Flat edges at normal incidence: relative $\ell^2$ error in
+  $v$ at $t = 1$ and the rates between successive node sets, for the
+  standard scheme (naive) and the seed operator (the interface-aware
+  stencils at $\delta = 0$), with the resolution floor. $h / \delta$
+  runs from $8$ to $2.9$ at $\delta = 0.0025$, from $2$ to $0.71$ at
+  $0.01$ and from $0.5$ to $0.18$ at $0.04$.}
+  \label{tab:flat2d_v}
+  \centering
+  \tablesetup
+  % figures/tab_2d_flat_v.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff.json; never hand-edited.
+  \input{figures/tab_2d_flat_v.tex}
+\end{table}
+
+\begin{table}
+  \caption{Flat edges at normal incidence: the largest spurious $|u|$ at
+  $t = 1$ (the true $u$ is identically zero) for the runs of
+  Table~\ref{tab:flat2d_v}.}
+  \label{tab:flat2d_u}
+  \centering
+  \tablesetup
+  % figures/tab_2d_flat_u.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff.json; never hand-edited.
+  \input{figures/tab_2d_flat_u.tex}
+\end{table}
+
 \subsection{Stability}
-\stub{\#59: spectra at $n = 900$ and $2500$, standard $\gamma$, every
-$\delta$, flat and curved}
+\label{sec:stability2d}
+The empirical stability recipe for interface-aware RBF-FD, $\Delta^3$
+hyperviscosity at $\gamma = 2.4 \times 10^{-11} (h / 0.02)^5$ with the
+fixed rows straddling each interface, was found empirically
+\cite{Martin2016,MartinFornberg2017}, and the question of this section
+is whether it survives an augmentation that is no longer polynomial.
+It was measured on the $900$-node flat set ($4500$ eigenvalues, dense) at
+the standard $\gamma$ and CFL $0.5$, by the largest real part of the
+spectrum with the hyperviscosity in and by the largest RK4 amplification
+$\max |R(\lambda \Delta t)|$ over it; $1.0004$ is the naive scheme's own
+value on that node set, a mode growing by $4 \times 10^{-4}$ per step and
+harmless over a run, and anything above $1.001$ is a run that visibly
+grows. Table~\ref{tab:variants900} collects the operators tried.
+
+\para{What fails}
+The first construction gave each $19$-node seed row its own $\Delta^3$
+row on the same $19$ nodes with the seeds annihilated, the exact twin of
+the jump path. It is fine while the seed rows form a band around each
+edge ($+6.2 \times 10^{-2}$ at $\delta = h / 8$, $+8.7 \times 10^{-2}$ at
+$h / 4$, the naive scheme's level) and unstable once the tails, $19\delta$
+plus the stencil radius, make every row a seed row, from about
+$\delta = h / 2$ on this node set: $+1.05$ at $h / 2$ and $+2.65$ at
+$h$, with $\max |R|$ of $1.003$ and $1.018$. The naive spectrum does not
+move with $\delta$, so the movement is the seed rows', but it is not the
+seeds. Plain $19$-node degree-three stencils everywhere on the jump
+medium, with no seeds at all, give $+2.4$ and worse: the $19$-node
+degree-three scheme is unstable at the $\gamma$ tuned for the $30$-node
+degree-four one, and the jump path never sees this because its band of
+rebuilt rows is $4h$ wide. The reason is at the damping end of the spectrum: the extreme eigenvalue of the $\Delta^3$ block of the all-seed
+operator is $-82$ against $-151$ for the naive one, half the damping,
+because a $19$-node stencil carrying $20$ coupled constraints leaves $18$
+degrees of freedom for the Gaussian part of a sixth-order operator and
+what comes out is barely a $\Delta^3$. Trimming the seed rows with a
+tolerance on the material spread does not help (at $\delta = h / 2$,
+$574$, $458$ and $420$ rows in place of $900$ leave $+1.05$, $+1.05$ and
+$+0.35$): it is the width of the contiguous $19$-node region that
+matters, not the count. Doubling $\gamma$, everywhere or on the seed rows
+alone, stabilises every width ($+2.9 \times 10^{-2}$ at $h / 2$,
+$+3.9 \times 10^{-2}$ at $h$, and $1.5\gamma$ does as well) at the price
+of the extra damping. Building the seed rows themselves on the naive
+footprint, $30$ nodes and degree four, is stable through a resolved edge
+($+0.10$, $+0.05$, $+0.06$ at $\delta = h / 2$, $h$, $1.9h$) and
+violently unstable through a sharp one ($+30$ and $+28$ at $h / 8$ and
+$h / 4$, $\max |R|$ up to $1.23$), exactly as the jump path is with
+degree-four stencils across the interface ($+17$, $\max |R|$ $1.12$):
+a degree-four basis across a sharp feature is the problem, presumably
+why the original work settled on $19$ nodes and degree three, and
+conditioning is not the cause (the $30$-node seed blocks are at $85$ to
+$215$). Keeping the naive $\Delta^3$ rows on the seed rows is stable
+everywhere, but the naive $\Delta^3$ does not annihilate the seeds, and
+the seeds are what the scheme resolves through the edge.
+
+\para{What works}
+The elastic rows keep the $19$-node seed stencils, and the $\Delta^3$
+rows of the same nodes are built on the naive $30$-node footprint with
+the same seeds annihilated, the construction of
+Section~\ref{sec:assembly2d}. It is stable at every width at the
+standard $\gamma$, $+4.1 \times 10^{-2}$ to $+6.6 \times 10^{-2}$ with
+$\max |R| \le 1.0005$, and the extreme $\Delta^3$ eigenvalue is back at
+$-176$: the naive damping restored on the seed rows. As a check that
+the choice is not bought with accuracy, the variants were run on
+$2500$ nodes through $\delta = h / 8$ with the pulse of
+Section~\ref{sec:tests2d}: every seed variant removes most of the naive
+excess (spurious $u$ down $4$ to $9\times$, to $1$ to $2.5\times$ the
+floor, and $v$ to the floor), the chosen one is the best in $v$
+($3.0 \times 10^{-2}$ against $4.4 \times 10^{-2}$ with the naive
+$\Delta^3$ rows kept and $4.7 \times 10^{-2}$ with $19$-node rows, below
+the naive floor of $5.2 \times 10^{-2}$) and keeps the most energy
+($E(1) / E(0) = 0.995$), and the $2\gamma$ variant buys the smallest $u$
+with twice the chosen operator's error in $v$. The answer to the
+question is therefore yes: RBF-FD stability survives seed-augmented
+stencils at the standard $\gamma$ and with the straddling rows kept,
+provided the hyperviscosity row of a seed stencil has the footprint
+$\gamma$ was tuned for. Annihilating the seed space was the only variant
+tried that both annihilates and is stable, and the alternative of
+Section~\ref{sec:assembly2d}, the seeds' true sixth derivatives as
+right-hand sides, was never needed.
+
+\begin{table}
+  \caption{The operators tried on the $900$-node flat set, at the
+  standard $\gamma$ and CFL $0.5$: rebuilt rows, the largest real part
+  of the spectrum with the hyperviscosity in, and the largest RK4
+  amplification over it. ``Seeds'' is the operator of
+  Section~\ref{sec:assembly2d}; the four variants below it at each width
+  are the rejected constructions of the text; the last row at each width
+  is the control with plain $19$-node degree-three stencils everywhere
+  and no seeds.}
+  \label{tab:variants900}
+  \centering
+  \tablesetup
+  % figures/tab_spectra_n900_variants.tex: scripts/paper_figures.py (#54)
+  % from paper/data/wave2d_stiff_eigenvalues_n900_variants.json; never
+  % hand-edited.
+  \input{figures/tab_spectra_n900_variants.tex}
+\end{table}
+
+\para{Acceptance on 2500 nodes}
+Table~\ref{tab:spectra2500} and Figure~\ref{fig:spectra2500} are the
+chosen operator on the $2500$-node set ($12{,}500$ eigenvalues per
+operator) at $\delta = h / 8$, $h / 2$ and $2h$, with the pulse run to
+$t = 1$ against the references of Section~\ref{sec:tests2d}. The seed
+operator's rightmost eigenvalues sit at $\max |R| = 1.0003$ to $1.0004$
+whatever $\delta$, the level of the jump-aware operator ($1.0002$) and of
+the naive scheme on $900$ nodes ($1.0004$), while the naive scheme on
+$2500$ nodes is at $1.00001$: the rebuilt rows carry a slightly larger
+rightmost eigenvalue than plain stencils, as the interface rows of the
+jump case do, and no more. The energy ratios say the same in the time
+domain, $0.995$ at $\delta = h / 8$ and $1.003$ at $h / 2$ against a
+quadrature drift of $\pm 5\%$ for the exact solution on these nodes (the
+floor loses $7.5\%$). At $\delta = 2h$, where every row is a seed row, the
+ratio is $1.012$ and keeps rising when the run is continued, $1.045$,
+$1.055$, $1.063$ and $1.071$ at $t = 1.5$, $2$, $2.5$ and $3$, about
+$0.012$ per unit time, while the naive scheme ($0.999$ at $t = 3$), the
+jump-aware operator ($0.96$) and the seed operator at $\delta = h / 8$
+($1.006$) stay bounded: a weakly excited mode near the $+0.1$ rightmost
+eigenvalue, far below what $\max |R| = 1.0004$ would allow ($10\%$ per
+unit time), confined to the regime in which every row is a seed row,
+which is the regime the rule of Section~\ref{sec:flatsweep} excludes.
+The same operator on the curved geometry is in
+Section~\ref{sec:curvedresults}, row for row the same.
+
+\begin{table}
+  \caption{The chosen operator on the $2500$-node flat set at three edge
+  widths, against the naive scheme, the interface-aware operator at the
+  jump and the uniform-medium floor: rebuilt rows, the spectrum's largest
+  real part with the hyperviscosity in, the largest RK4 amplification,
+  the energy ratio $E(1) / E(0)$ of the run, its largest spurious $|u|$
+  and its error in $v$.}
+  \label{tab:spectra2500}
+  \centering
+  \tablesetup
+  % figures/tab_spectra_n2500.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff_eigenvalues_n2500.json; never hand-edited.
+  % Eight columns: the widest 2-D fragment, scaled to the text width like
+  % Table~\ref{tab:knee1d}.
+  \resizebox{\textwidth}{!}{\input{figures/tab_spectra_n2500.tex}}
+\end{table}
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_eigenvalues_n2500.pdf: scripts/wave2d_stiff_eigenvalues.py
+  % --n 2500 --style print --format pdf, through scripts/paper_figures.py
+  % --all (#54); never hand-edited.
+  \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{wave2d_stiff_eigenvalues_n2500}
+  \caption{Spectra of the naive (top) and seed (bottom) operators on
+  the $2500$-node flat set through edges of width $\delta = h / 8$,
+  $h / 2$ and $2h$, scaled by the time step, with the RK4 stability
+  boundary. The annotations give the largest real part of
+  $\lambda \Delta t$ and the largest amplification over the spectrum.}
+  \label{fig:spectra2500}
+\end{figure}
+
 \subsection{The flat sweep and the rule}
-\stub{\#59: seeds fourth order through $\delta = 0.0025$ at every $n$,
-$20\times$ below naive in $v$ and $67\times$ in spurious $u$ at $19{,}600$
-nodes; crossover at $h \approx \delta$; a resolved edge $1.4$--$2\times$
-worse seeded; the rule: seed when $\delta \le h$}
+\label{sec:flatsweep}
+Tables~\ref{tab:flat2d_v}, \ref{tab:flat2d_u} and~\ref{tab:flat2d_syy}
+and Figure~\ref{fig:conv2d} are the two-dimensional twin of the knee
+experiment of Section~\ref{sec:results1d}: both operators at every
+$(n, \delta)$ through the flat edges at normal incidence, with the seeds
+on every row that sees the edge.
+
+\para{An edge the nodes never resolve}
+Through $\delta = 0.0025$, $h / \delta$ from $8$ to $2.9$, the seeds are
+fourth order at every resolution, rates $4.1$, $3.7$, $3.5$ in $v$ and
+$3.6$, $3.2$, $3.5$ in $\sigma_{yy}$ against $1.6$ to $2.2$ for the naive
+scheme, which is $3.0\times$, $6.2\times$, $13\times$ and $20\times$
+worse in $v$ and $5.5\times$, $16\times$, $25\times$ and $67\times$ worse
+in spurious $u$ from $2500$ to $19{,}600$ nodes; the seeds' $u$ sits at
+$1.5$ to $1.9\times$ the floor's, where the naive scheme's sits at
+$11$ to $116\times$. That is the one-dimensional result in two
+dimensions: the order of the jump-aware stencils, reached without the
+nodes seeing the edge, on the same nodes and the same time step. The
+constant is not the jump row's but about half of it at every $n$
+($3.0 \times 10^{-2}$ against $5.4 \times 10^{-2}$ at $2500$ nodes,
+$6.4 \times 10^{-4}$ against $1.23 \times 10^{-3}$ at $19{,}600$), and
+half the uniform-medium floor's. That is the seed operator's own floor,
+not the edge: seeding the same rows through a contrast of $10^{-6}$
+gives $2.7 \times 10^{-2}$, $6.2 \times 10^{-3}$, $1.9 \times 10^{-3}$
+and $6.9 \times 10^{-4}$, half the naive floor at every $n$ and within
+$10$ to $25\%$ of the seed errors through $\delta = 0.0025$. So the seeds
+remove the edge error down to their own resolution floor, as the
+jump-aware operator removes it down to the naive one. Why a band of
+$19$-node degree-three seed rows with $30$-node annihilating $\Delta^3$
+rows is more accurate on this pulse than $30$-node degree-four stencils
+everywhere is not settled. It is not the degree, since plain $19$-node
+degree-three stencils everywhere with their own $\Delta^3$ rows are $2$
+to $4\times$ worse than the standard scheme ($9.5 \times 10^{-2}$ down to
+$4.9 \times 10^{-3}$; the operator Section~\ref{sec:stability2d} found
+unstable at the standard $\gamma$, harmless to $t = 1$), and it is not
+less damping, since the energy ratios match the floor's ($0.93$, $0.92$,
+$0.99$, $0.99$ for both). The variants of Section~\ref{sec:stability2d}
+point at the $\Delta^3$ rows, and a dispersion study of those rows in a
+uniform medium would settle it; nothing in what follows depends on it.
+
+\para{The crossover}
+Through $\delta = 0.01$ the seeds lead by $2.1\times$ in $v$ at
+$h = 2\delta$ (with $u$ equal), $2.0\times$ at $h = 1.4\delta$ ($u$
+$1.4\times$) and $1.5\times$ at $h = \delta$ ($u$ $1.8\times$), and trail
+by $0.88\times$ ($u$ $0.75\times$) at $h = 0.71\delta$. Across the panel
+the seed rates fall from $3.1$ to $2.7$ while the naive rates rise from
+$3.1$ to $4.2$: the naive scheme is resolving the edge, and the seeds are
+seeding rows that no longer need it, $66$ to $72\%$ of the nodes here.
+Through the edge every node set resolves, $\delta = 0.04$, where every
+row is a seed row, the seeds are $1.4$ to $2.0\times$ worse than the
+naive scheme in $v$ and $3.7$ to $5.6\times$ worse in $u$, at rates of
+$2.9$ to $3.6$ against $2.9$ to $3.9$, as the $2500$-node acceptance run
+already found. The naive scheme is at its floor to within $7\%$ at every
+$n$; there is nothing left for the seeds to remove, and the $19$-node
+degree-three stencils through a resolved profile are the less accurate
+scheme. The break-even is between $h = \delta$ and $h = 0.71\delta$, and
+the estimate $\delta \lesssim h / 4$ that the three points of
+Section~\ref{sec:stability2d} suggested was too cautious: at
+$\delta = h / 2$ the seeds halve $v$ and only just lose in $u$.
+
+\para{The rule}
+\emph{Seed when $\delta \le h$, and run the standard scheme otherwise.}
+The rule is per edge, $\delta$ the edge's width and $h$ the node set's
+spacing, not per row: the tolerance on the material spread of
+Section~\ref{sec:assembly2d} trims the tails of the seeded region, and
+the accuracy lost on a resolved edge comes from the rows at its centre,
+not its tails. With the rule the seed operator is never worse than the
+naive scheme and is at or below the resolution floor wherever it is
+used; in this sweep it means every node set at $\delta = 0.0025$, up to
+$10{,}000$ nodes at $\delta = 0.01$ and never at $\delta = 0.04$. The
+comparison is against coefficient sampling on the same nodes; the
+smoothing and averaging methods of seismic finite differences were not
+run, and their second-order interface error is a proven property of a
+different scheme, not a measurement made here. The rule applies in one
+dimension as well (Section~\ref{sec:assembly1d}), where the resolved
+edge $\delta = 0.04$ of Table~\ref{tab:knee1d} is the case in which the
+two schemes agree to three digits and nothing is gained by seeding.
+
+\para{The naive knee, and the stress}
+In $v$ the naive knee is the $8$ to $19\%$ excess over the floor of
+Section~\ref{sec:naive2d}; in spurious $u$ it is the plateau at $3$ to
+$6\times$ the floor while $h \ge \delta$ and the drop of $9\times$
+between $10{,}000$ and $19{,}600$ nodes once $h < \delta$, visible in the
+$\delta = 0.01$ panel of Figure~\ref{fig:conv2d}. The error in
+$\sigma_{yy}$ (Table~\ref{tab:flat2d_syy}) says what $v$ says: fourth
+order for the seeds through $\delta = 0.0025$, from $2.3 \times 10^{-2}$
+down to $6.7 \times 10^{-4}$, $18\times$ below the naive scheme at
+$19{,}600$ nodes, and the same crossover at $\delta = 0.01$ and the same
+loss at $0.04$.
+
+\begin{table}
+  \caption{Flat edges at normal incidence: relative $\ell^2$ error in
+  $\sigma_{yy}$ at $t = 1$ and rates, for the runs of
+  Table~\ref{tab:flat2d_v}. The floor row is the error in $v$ of the
+  uniform-medium run, repeated for reference.}
+  \label{tab:flat2d_syy}
+  \centering
+  \tablesetup
+  % figures/tab_2d_flat_h.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff.json (the code's h is sigma_yy); never
+  % hand-edited.
+  \input{figures/tab_2d_flat_h.tex}
+\end{table}
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_convergence.pdf: scripts/paper_figures.py (#54),
+  % from pdes_demo.stiff_figures.convergence_2d and the cache; never
+  % hand-edited.
+  \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{wave2d_stiff_convergence}
+  \caption{The flat sweep of Tables~\ref{tab:flat2d_v}
+  and~\ref{tab:flat2d_u}: relative error in $v$ (upper panels) and
+  largest spurious $|u|$ (lower panels) against $n$ for the jump and
+  three edge widths, naive scheme against seeds, with the
+  uniform-medium floor and second- and fourth-order guides; the vertical
+  line in the $\delta = 0.01$ panel is the node set at which $h = \delta$.
+  Through $\delta = 0.0025$ the seeds lie on a fourth-order line below
+  the floor; through $\delta = 0.04$ they lie above the naive scheme,
+  which is at the floor.}
+  \label{fig:conv2d}
+\end{figure}
+
+\para{The coarse-grid picture}
+Figure~\ref{fig:snapshot2d} is the run on $10{,}000$ nodes through edges
+of width $\delta = 0.0025 = h / 4$ at $t = 1$, the reference and the two
+error maps in $v$ on one colour scale, resampled one-sided to a pixel
+grid. The naive error is $2.7\%$ of the pulse with a spurious $u$ of
+$4.7 \times 10^{-3}$; the seeds' is $0.21\%$ with $1.9 \times 10^{-4}$.
+At $t = 0.25$, when the pulse has just split at the upper edge, the
+numbers are $1.5\%$ and $3.5 \times 10^{-3}$ against $0.07\%$ and
+$1.9 \times 10^{-4}$: the naive error is the horizontal streaking along
+the edge that the stencils straddling it produce, already spread over the
+whole pulse, and by $t = 1$ it has been carried everywhere the
+reflections went, while the seeds' $0.2\%$ is the resolution error of
+the pulse itself.
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_snapshot.pdf: scripts/wave2d_stiff.py
+  % --snapshot-only --style print --format pdf, through
+  % scripts/paper_figures.py --all (#54); never hand-edited.
+  \includegraphics[width=\textwidth]{wave2d_stiff_snapshot}
+  \caption{The pulse on $10{,}000$ nodes through flat edges of width
+  $\delta = h / 4$ at $t = 1$ (the band between the dashed lines): the
+  reference $|v|$, and the error in $v$ of the naive scheme and of the
+  seeds on one colour scale, with each map's relative error and largest
+  spurious $|u|$.}
+  \label{fig:snapshot2d}
+\end{figure}
+
 \subsection{Oblique incidence}
-\stub{\#59: seeds $1.4$--$1.9\times$ over naive at $26.6^\circ$, the
-ablation worse than naive, every scheme about $2.5$ from the converted-S
-floor, reported as it is}
+\label{sec:oblique2d}
+At normal incidence on a flat edge the solution is independent of $x$
+and $u \equiv 0$, so the seeds of the monomials $x^a y^b$ with $a \ge 1$
+can show only through the weights, never through the solution. This
+experiment sends the wave in at an angle, where $u \ne 0$, the tangential
+strain of the incident P wave meets the edge, and P-to-S conversion
+appears.
+
+\para{The train}
+A single tilted plane pulse cannot be periodic on the unit square and
+stay out of the band, so the initial data is the doubly periodic train
+of Section~\ref{sec:setting2d}: crests $x - 2y = \mathrm{const}$, at
+$26.6^\circ$ to the edge normal, travelling towards $+x$ and $-y$, one
+crest through $(0, 0.875)$ repeated every $0.447$ along the direction of
+travel with the Gaussian profile of sharpness $15$, so that neighbouring
+crests overlap at $1.3 \times 10^{-5}$ and $13$ Fourier modes in $x$
+carry the train to $10^{-14}$. The direction $(1, 2)$ has the largest
+crest spacing of any lattice direction below the critical angle (P-to-P
+transmission into the band turns critical at $45^\circ$); at $26.6^\circ$
+the transmitted P, transmitted S and reflected S waves leave at
+$39^\circ$, $21^\circ$ and $15^\circ$, all propagating. A quarter of each
+strip starts inside the band. Every point carries the \emph{background}
+material's P eigenvector, so that every field is one smooth profile
+everywhere and the part inside the band is a smooth superposition of the
+band's own waves. Our first attempt used the local material's
+eigenvector, which makes the tractions jump by the impedance ratio,
+$2.8\times$, over the width $\delta$ at every edge crossing; the true
+dynamics resolve that into $O(1)$ waves with $\delta$-sharp fronts, and
+both schemes then sat $50\times$ above the resolution floor at
+first-order rates whatever the stencils did at the edge. Initial data
+must respect the interface conditions at the sub-grid scale, or every
+scheme measures the initial data.
+
+\para{What is measured}
+The sweep of Section~\ref{sec:flatsweep} through $\delta = 0.0025$ and
+$0.01$ with the same node sets and the same seed operators, which do not
+depend on the pulse: relative errors in $v$, $u$ and $\sigma_{yy}$
+against the Fourier-in-$x$ reference, the two floors, and the ablation
+of Section~\ref{sec:assembly2d}, in which only the seeds of the pure
+normal monomials $y^b$ are marched and every $x^a y^b$ with $a \ge 1$ is
+the plain monomial. What the ablation removes is, for instance, the
+$v$-component that the seed of $u = x$ acquires across the edge ($0.5$
+at $\delta = h / 4$ on a $400$-node stencil): continuity of the normal
+stress $\lambda u_x + K v_y$ with $\lambda$ changing forces a kink in
+$v_y$, the Poisson coupling of the edge, which a monomial cannot carry.
+
+\para{What the seeds do}
+Tables~\ref{tab:oblique2d_v}, \ref{tab:oblique2d_u}
+and~\ref{tab:oblique2d_syy} and Figure~\ref{fig:obliqueconv} give the
+results. The seeds win at every $(n, \delta)$, by less than at normal
+incidence: $1.4\times$, $1.7\times$, $1.9\times$ and $1.7\times$ in $v$
+and $1.2\times$, $1.4\times$, $1.5\times$ and $1.6\times$ in $u$ through
+$\delta = 0.0025$, and $1.4$ to $1.8\times$ in $v$ and $1.1$ to
+$1.7\times$ in $u$ through $\delta = 0.01$, where the naive scheme has
+$h \le 2\delta$ and is resolving the edge. They still lead there at
+$h = 0.71\delta$, by $1.6\times$, so the rule of
+Section~\ref{sec:flatsweep} is safe on the seeded side here; it was set
+on $v$ at normal incidence, and this train does not reach below
+$h = 0.71\delta$. The tangential seeds are what acts, and they act where
+the edge is sharp. Through $\delta = 0.0025$ the ablation is worse than
+the full seeds by $1.2\times$, $1.6\times$, $2.2\times$ and $2.3\times$
+in $v$ and $1.3\times$, $1.7\times$, $2.4\times$ and $2.7\times$ in $u$,
+and it is worse than the \emph{naive} scheme in $u$ at every $n$ and in
+$v$ from $10{,}000$ nodes on ($1.91 \times 10^{-2}$ against
+$1.40 \times 10^{-2}$ in $v$ at $19{,}600$ nodes, $4.3 \times 10^{-2}$
+against $2.6 \times 10^{-2}$ in $u$): the normal-only seeds bend $v$
+across the edge for the $y^b$ columns and leave $u = x$ straight, an
+inconsistent pair that costs more than doing nothing. Through
+$\delta = 0.01$ the ablation and the full seeds agree to within $4\%$
+at every $n$: with $h \le 2\delta$ the kink of the tangential columns is
+spread over half a stencil radius or more, and a cubic in $y$ carries
+it. So the same crossover $h \approx \delta$ that decides whether to seed
+decides whether the tangential columns are worth their march.
+
+\para{The order, reported as it is}
+The order is not four. Through $\delta = 0.0025$ the seeds converge at
+$2.5$, $2.3$ and $1.9$ in $v$ (the naive scheme at $2.0$, $2.0$ and $2.2$)
+and sit $7\times$ above the train's resolution floor at $19{,}600$
+nodes, where at normal incidence they sat at half the floor; in
+$\sigma_{yy}$ they are no better than the naive scheme at $19{,}600$
+nodes ($1.62 \times 10^{-2}$ against $1.58 \times 10^{-2}$, at rates of
+$1.3$ to $1.5$). Six measurements located where this comes from. It is
+not the hyperviscosity: at $\gamma / 4$ the seeds' $v$ moves by under
+$15\%$ wherever the run stays stable. It is not the angle: the trains
+along $(1, 3)$, $(1, 4)$ and $(1, 6)$, at $18.4^\circ$, $14.0^\circ$ and
+$9.5^\circ$, give the same rates with a constant that falls with the
+angle ($8.3 \times 10^{-3}$, $7.5 \times 10^{-3}$, $6.5 \times 10^{-3}$
+and $4.8 \times 10^{-3}$ at $19{,}600$ nodes from $26.6^\circ$ to
+$9.5^\circ$). It is not the $u$-component seeds: an S pulse at normal
+incidence, which has no $x$-dependence and no conversion, comes through
+$\delta = 0.0025$ at rates $4.4$, $3.9$ and $3.2$ in $u$, at half the
+naive floor and with a spurious $v$ of $2.7 \times 10^{-5}$ against the
+naive scheme's $6.2 \times 10^{-4}$ at $19{,}600$ nodes, the
+normal-incidence result in the other polarisation. The jump-aware
+stencils do the same: the interface-aware operator at $\delta = 0$ with
+this train, measured against a $78{,}400$-node run of itself resampled
+one-sided, converges at $2.4$, $2.5$ and $2.4$ in $v$ with
+$8.9 \times 10^{-3}$ at $19{,}600$ nodes, and the seeds through
+$\delta = 0.0025$ ($8.3 \times 10^{-3}$) are where their $\delta \to 0$
+limit is; they keep the order of the stencils they generalise, an order
+that was never measured at oblique incidence in
+\cite{Martin2016,MartinFornberg2017}. The stencils at the edge are not
+the bottleneck: the truncation error of the elastic operator on the
+exact reference state at $t = 1$ is fourth order for the bulk rows and
+for the seed rows at normal incidence, while at oblique incidence the
+\emph{bulk} rows, nowhere near an edge, sit at $5.8 \times 10^{-2}$ down
+to $2.2 \times 10^{-2}$, first order, and the seed rows below them. And
+it is the converted S waves: they keep the P pulse's temporal spectrum
+at wavelengths shorter by $c_p / c_s = 1.73$ on both sides of each edge,
+the spatial profile of an S pulse of sharpness $26$, whose own
+resolution floor in the uniform medium is $2.1 \times 10^{-1}$ down to
+$1.19 \times 10^{-2}$ at rates $2.0$, $2.8$ and $3.5$: pre-asymptotic on
+every node set here, and at $19{,}600$ nodes above the seeds' whole
+error. Weighted by the S waves' share of the solution it is the seeds'
+error, rates included. So at oblique incidence the seeds keep the order
+of the jump-aware stencils and land at the resolution floor of the
+mode-converted S waves, which the train's own floor, a P wave, does not
+see; the right yardstick for an oblique run is a floor with the
+converted content in it, and fourth-order behaviour of any scheme on
+this problem needs $h$ below about $1 / 300$, the next node set up. We
+report the result as it is.
+
+\begin{table}
+  \caption{The train at $26.6^\circ$ through flat edges: relative
+  $\ell^2$ error in $v$ at $t = 1$ and rates for the naive scheme, the
+  seeds, the normal-only ablation and the seed floor (the same rows
+  seeded through a contrast of $10^{-6}$), with the train's resolution
+  floor.}
+  \label{tab:oblique2d_v}
+  \centering
+  \tablesetup
+  % figures/tab_2d_oblique_v.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff_d12.json; never hand-edited.
+  \input{figures/tab_2d_oblique_v.tex}
+\end{table}
+
+\begin{table}
+  \caption{The train at $26.6^\circ$: relative $\ell^2$ error in $u$ at
+  $t = 1$ and rates, for the runs of Table~\ref{tab:oblique2d_v}.}
+  \label{tab:oblique2d_u}
+  \centering
+  \tablesetup
+  % figures/tab_2d_oblique_u.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff_d12.json; never hand-edited.
+  \input{figures/tab_2d_oblique_u.tex}
+\end{table}
+
+\begin{table}
+  \caption{The train at $26.6^\circ$: relative $\ell^2$ error in
+  $\sigma_{yy}$ at $t = 1$ and rates, for the runs of
+  Table~\ref{tab:oblique2d_v}. The seed-floor and floor rows are the
+  errors in $v$ of those runs, repeated for reference.}
+  \label{tab:oblique2d_syy}
+  \centering
+  \tablesetup
+  % figures/tab_2d_oblique_h.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff_d12.json (the code's h is sigma_yy); never
+  % hand-edited.
+  \input{figures/tab_2d_oblique_h.tex}
+\end{table}
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_oblique_convergence.pdf: scripts/paper_figures.py
+  % (#54), from pdes_demo.stiff_figures.convergence_2d and the cache;
+  % never hand-edited.
+  \includegraphics[width=\textwidth]{wave2d_stiff_oblique_convergence}
+  \caption{The oblique sweep of Tables~\ref{tab:oblique2d_v}
+  and~\ref{tab:oblique2d_u}: relative error in $v$ (upper panels) and in
+  $u$ (lower panels) against $n$ through $\delta = 0.0025$ and $0.01$,
+  for the naive scheme, the seeds and the normal-only ablation, with the
+  train's resolution floor and the seed floor. Every scheme converges at
+  about second order through the sharp edge, and the ablation crosses
+  above the naive scheme.}
+  \label{fig:obliqueconv}
+\end{figure}
+
+\para{The picture}
+Figure~\ref{fig:obliquesnapshot} is the train on $10{,}000$ nodes
+through $\delta = 0.0025 = h / 4$ at $t = 1$: the reference's $|v|$, its
+curl $|u_y - v_x|$, which is zero for the incident P wave and maps the S
+waves the edges make, and the two error maps in $v$ on one colour scale.
+The errors in $v$ and $u$ are $3.0\%$ and $5.5\%$ for the naive scheme
+and $1.6\%$ and $3.6\%$ for the seeds; at $t = 0.25$ they are $1.2\%$ and
+$2.0\%$ against $0.9\%$ and $1.5\%$, both maps showing the edge's
+horizontal streaks, the seeds' fainter, and by $t = 1$ the seeds' map is
+about half the naive one everywhere, which is the ratio of the tables.
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_oblique_snapshot.pdf: scripts/wave2d_stiff.py
+  % --direction 1 2 --snapshot-only --style print --format pdf, through
+  % scripts/paper_figures.py --all (#54); never hand-edited.
+  \includegraphics[width=\textwidth]{wave2d_stiff_oblique_snapshot}
+  \caption{The train at $26.6^\circ$ on $10{,}000$ nodes through flat
+  edges of width $\delta = h / 4$ at $t = 1$: the reference $|v|$, its
+  curl $|u_y - v_x|$ (the mode-converted S waves), and the error in $v$
+  of the naive scheme and of the seeds on one colour scale, with each
+  map's relative errors in $v$ and $u$.}
+  \label{fig:obliquesnapshot}
+\end{figure}
+
 \subsection{The curved edge}
-\stub{\#59: jump stencils at the resolution floor at every $n$; seeds equal
-the flat seeds at their own floor, $2.2$--$7\times$ ($\delta = 0.005$) and
-$3$--$12\times$ ($\delta = 0.0025$) below naive; where route (a)'s geometry
-first shows; the fine-end rate and the trim; costs}
+\label{sec:curvedresults}
+The last experiment bends both interfaces into the sine curves of
+amplitude $0.02$ of Section~\ref{sec:setting2d}, curvature up to
+$\kappa = 0.79$ and tilt up to $7.2^\circ$, with edges of width $\delta$
+in the true signed normal distance and the seeds marched along the true
+normal, route (a) of Section~\ref{sec:curved2d}. Everything is at normal
+incidence, which is locally oblique by up to $7.2^\circ$, so the
+tangential seeds of Section~\ref{sec:oblique2d} act on every stencil not
+at a crest or a trough, while mode conversion at $7^\circ$ is weak and
+the converted-S floor of that section should be small. The node sets are
+those of Section~\ref{sec:setting2d} with their rows straddling the sine curves, independent of $\delta$; the widths are $\delta = 0$, $0.005$,
+$0.01$ and then $0.0025$; the seeded rows number $1320$, $2452$, $4631$
+and $8553$ at $\delta = 0.005$ ($53\%$ down to $44\%$ of the nodes) and
+match the flat counts to within a percent at $0.0025$ and $0.01$; the
+references are the product-grid solver and the $122{,}500$-node
+jump-aware run of Section~\ref{sec:tests2d}. Two probes are added. The
+error in $u$ is now the relative error against the reference's own $u$,
+which the curved edges make out of the incident pulse ($0.12$ at most),
+so it measures the scattered field alone. And the \emph{truncation
+probe} applies each operator to the reference state at $t = 1$ on the
+nodes and compares with the exact rate from the reference's own
+derivatives and the material at the nodes, as a relative $\ell^2$ error
+over the seeded rows and over the rest, for both operators (the naive
+operator's ``edge rows'' are the rows the seeds would rebuild); this is
+the direct measurement of what route (a)'s geometry costs the stencils,
+with no time stepping in between.
+
+\para{The jump stencils, and the edge the nodes do not resolve}
+Tables~\ref{tab:curved2d_v}, \ref{tab:curved2d_u}
+and~\ref{tab:curved2d_syy} and Figure~\ref{fig:curvedconv} give the
+sweep. The curved jump stencils of \cite{MartinFornberg2017} are at the
+resolution floor at every $n$, $0.93$ to $1.07\times$ it, at rates
+$3.3$, $3.6$, $3.6$, with the naive scheme $14\times$ worse at
+$19{,}600$ nodes. That is the measurement Section~\ref{sec:oblique2d}
+asked for before the curved seeds could be judged: at tilts up to
+$7.2^\circ$ the locally flat jump construction keeps the order it has on
+a flat interface through $19{,}600$ nodes, against a reference of its own
+kind with a $5\%$ bar, and the converted-S floor that took a third of
+the order away at $26.6^\circ$ does not register at $7^\circ$. Through
+$\delta = 0.005$, $h / \delta$ from $4$ to $1.4$, the curved seeds are at
+their own floor at every $n$ ($0.79\times$, $0.96\times$, $1.2\times$ and
+$1.06\times$ the seed floor) and $3.1\times$, $7.0\times$, $3.1\times$
+and $2.2\times$ below the naive scheme, which has its knee at
+$h \approx 2\delta$ (rates $2.8$, $4.5$, $3.5$: it resolves the edge from
+$10{,}000$ nodes on and is still above the seeds at $h = 1.4\delta$); in
+$\sigma_{yy}$ the seeds are $3.8\times$, $7.7\times$, $5.1\times$ and
+$2.9\times$ below it. Through $\delta = 0.01$ the seeds' curved numbers
+are the flat ones to two digits from $4900$ nodes on
+($1.04 \times 10^{-2}$, $3.9 \times 10^{-3}$, $1.62 \times 10^{-3}$
+against $1.05 \times 10^{-2}$, $3.9 \times 10^{-3}$,
+$1.57 \times 10^{-3}$) and the naive scheme's are within $17\%$ of
+them, and the rule reads off the same column as before: at $h = \delta$
+the seeds win by $1.35\times$, at $h = 0.71\delta$ the naive scheme wins
+by $1.25\times$, the flat crossover. Curvature at amplitude $0.02$
+changed nothing that these node sets can see.
+
+\para{The seeds' floor}
+The seed floor is below the naive floor at $4900$ and $10{,}000$ nodes
+($4.7 \times 10^{-3}$ against $1.81 \times 10^{-2}$ and
+$1.68 \times 10^{-3}$ against $4.8 \times 10^{-3}$ at $\delta = 0.005$)
+and above it at $19{,}600$ ($8.3 \times 10^{-4}$ against
+$1.30 \times 10^{-3}$), with its rates falling to $2.1$ to $2.6$ there:
+$19$-node degree-three rows are third order in the first derivatives
+with a small constant, and with exact inequality they cover the
+$19\delta$ tails on both sides of both edges, $44$ to $72\%$ of the
+nodes. That is the mechanism behind the seeds' rates of $2.3$ to $2.6$
+at the fine end, here and in Sections~\ref{sec:flatsweep}
+and~\ref{sec:oblique2d}: a resolution effect of the seeded region's
+stencils and not of the edge, which the trim below confirms. The
+scattered field says the same from the other side. In $u$ the jump
+stencils are $4.2\times$ better than the naive scheme at $19{,}600$
+nodes ($6.6 \times 10^{-3}$ against $2.8 \times 10^{-2}$) at rates $2.5$,
+$3.1$, $3.4$ against $2.0$, $2.2$, $1.6$; through $\delta = 0.005$ the
+seeds are $2.3\times$ better ($2.6 \times 10^{-3}$ against
+$6.0 \times 10^{-3}$) at $3.4$, $3.5$, $3.7$; through $\delta = 0.01$ the
+two agree at $19{,}600$ nodes ($3.9 \times 10^{-3}$ against
+$4.4 \times 10^{-3}$), where the naive scheme resolves the edge. The
+seeds' $u$ converges faster than their $v$ at $\delta = 0.005$ ($3.4$ to
+$3.7$ against $2.3$ to $2.5$) because the $v$ floor at the fine end is
+the seeded rows' resolution of the \emph{incident} pulse, which $u$,
+born at the edge, does not carry.
+
+\begin{table}
+  \caption{Curved edges (amplitude $0.02$) at normal incidence: relative
+  $\ell^2$ error in $v$ at $t = 1$ and rates, for the naive scheme, the
+  seeds marched along the true normal (the interface-aware stencils at
+  $\delta = 0$) and the seed floor, with the resolution floor.
+  $h / \delta$ runs from $8$ to $2.9$ at $\delta = 0.0025$, from $4$ to
+  $1.4$ at $0.005$ and from $2$ to $0.71$ at $0.01$.}
+  \label{tab:curved2d_v}
+  \centering
+  \tablesetup
+  % figures/tab_2d_curved_v.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff_a0.02.json; never hand-edited.
+  \input{figures/tab_2d_curved_v.tex}
+\end{table}
+
+\begin{table}
+  \caption{Curved edges: relative $\ell^2$ error in $u$ at $t = 1$ and
+  rates, for the runs of Table~\ref{tab:curved2d_v}. The curved edges
+  make $u$ out of the incident pulse, so its relative error measures the
+  scattered field; the floors' pulse has no $u$, and their rows are the
+  largest spurious $|u|$.}
+  \label{tab:curved2d_u}
+  \centering
+  \tablesetup
+  % figures/tab_2d_curved_u.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff_a0.02.json; never hand-edited.
+  \input{figures/tab_2d_curved_u.tex}
+\end{table}
+
+\begin{table}
+  \caption{Curved edges: relative $\ell^2$ error in $\sigma_{yy}$ at
+  $t = 1$ and rates, for the runs of Table~\ref{tab:curved2d_v}. The
+  seed-floor and floor rows are the errors in $v$ of those runs, repeated
+  for reference.}
+  \label{tab:curved2d_syy}
+  \centering
+  \tablesetup
+  % figures/tab_2d_curved_h.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff_a0.02.json (the code's h is sigma_yy); never
+  % hand-edited.
+  \input{figures/tab_2d_curved_h.tex}
+\end{table}
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_convergence_curved.pdf: scripts/paper_figures.py
+  % (#54), from pdes_demo.stiff_figures.convergence_2d and the cache;
+  % never hand-edited.
+  \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{wave2d_stiff_convergence_curved}
+  \caption{The curved sweep of Tables~\ref{tab:curved2d_v}
+  and~\ref{tab:curved2d_u}: relative error in $v$ (upper panels) and in
+  $u$ (lower panels) against $n$ for the jump and three edge widths,
+  naive scheme against seeds, with the resolution floor and the seed
+  floor; the vertical line in the $\delta = 0.01$ panel is the node set
+  at which $h = \delta$. The jump stencils lie on the floor; through
+  $\delta = 0.0025$ and $0.005$ the seeds lie on the seed floor.}
+  \label{fig:curvedconv}
+\end{figure}
+
+\para{What route (a) costs}
+Table~\ref{tab:truncation2d} is the truncation probe. On the true curved
+solution the seed rows' error is $2.0$ to $3.6\times$ the bulk rows' at
+$\delta = 0.005$ and $0.01$ and converges at the bulk rows' rate ($3.2$
+to $3.9$ against $3.1$ to $3.7$), with no flattening at the fine end,
+where $\kappa r^2 / 2$ is $2.6\%$ of $\delta = 0.005$; the naive edge
+rows are $4$ to $24\times$ the seeds' at $\delta = 0.005$ and converge at
+$1.5$ to $2.4$ until the edge is resolved. A degree-three $19$-node row
+is expected to sit a factor above a degree-four $30$-node row on a
+smooth solution, and the factor is the same at both widths, so nothing
+of it is the curvature. Through $\delta = 0.0025$, the case the estimate
+of Section~\ref{sec:curved2d} singled out ($\kappa r^2 / 2$ is $40\%$,
+$20\%$, $10\%$ and $5\%$ of $\delta$ on the four node sets), three
+things happen. The headline holds: through an edge the nodes never
+resolve, on curved interfaces, the seeds are $3.2\times$, $5.7\times$,
+$8.2\times$ and $12.5\times$ below the naive scheme in $v$ ($14\times$ in
+$\sigma_{yy}$ and $4.8\times$ in $u$ at $19{,}600$ nodes), at rates $3.8$, $2.9$ and $3.3$ against $2.1$, $1.9$ and $2.1$, and at $19{,}600$ nodes their
+$9.5 \times 10^{-4}$ is below the naive scheme's floor with no edge at
+all ($1.30 \times 10^{-3}$). This is also where route (a)'s geometry
+first shows: the curved seeds are $0.95\times$, $1.04\times$, $1.4\times$
+and $1.5\times$ the flat seeds on the four node sets, they sit at
+$1.05\times$, $1.2\times$, $1.5\times$ and $1.3\times$ their own floor
+where through $\delta = 0.005$ they sat at $0.8$ to $1.2\times$, and the
+seed rows' truncation ratio to the bulk rows \emph{rises} with $n$, from
+$4.3$ to $4.8$, where through $\delta = 0.005$ it fell from $3.6$ to
+$2.8$: a term that shrinks as $h^2$ against one that shrinks as
+$h^{3.5}$. Taking the excess over the seed floor in quadrature, the
+geometric contribution at $19{,}600$ nodes is $6.3 \times 10^{-4}$, half
+the naive floor and level with the seed floor; it would lead at the next
+node set. And the estimate was the right size: $5\%$ of $\delta$ in the
+material at the far nodes of a stencil costs the seeds half their error
+at $19{,}600$ nodes, and $40\%$ of $\delta$ at $2500$ nodes costs nothing,
+because the resolution error there is $30\times$ larger.
+
+\begin{table}
+  \caption{The truncation probe on the curved geometry: relative
+  $\ell^2$ error of the elastic operator applied to the reference state
+  at $t = 1$, over the rows the seeds rebuild (for the naive operator and
+  for the seeds) and over the remaining rows (the same $30$-node
+  degree-four stencils in both operators), and the ratio of the seed
+  rows' error to the bulk rows'.}
+  \label{tab:truncation2d}
+  \centering
+  \tablesetup
+  % figures/tab_2d_curved_truncation.tex: scripts/paper_figures.py (#54)
+  % from paper/data/wave2d_stiff_a0.02.json; never hand-edited.
+  \input{figures/tab_2d_curved_truncation.tex}
+\end{table}
+
+\para{The trim}
+Table~\ref{tab:trim2d} seeds only the rows whose $19$-node stencil sees
+more than $10^{-3}$ of the contrast, the $\tanh$ tails to $3.8\delta$
+instead of $19\delta$: $601$, $977$, $1585$ and $2746$ rows at
+$\delta = 0.005$ ($24\%$ down to $14\%$ of the nodes) in place of $1320$
+to $8553$. The trim does for the rate what the floor paragraph
+predicted: $3.4$, $3.2$, $3.6$ all the way, no decay at the fine end, and
+the trimmed rows keep rates of $3.4$ to $4.0$ in the truncation probe.
+It does not lower the error on these node sets: at $19{,}600$ nodes the
+two are equal in $v$ ($9.4 \times 10^{-4}$ against $8.8 \times 10^{-4}$,
+both below the naive floor), and at every coarser $n$ the untrimmed
+seeds are $1.2$ to $2.2\times$ better in $v$ and up to $1.5\times$
+better in $u$, because the $19$-node degree-three rows have the smaller
+error constant there and the wide seeded region gets that constant on
+half the domain. So the fine-end rate of the untrimmed seeds is
+confirmed to be the seeded region's own resolution and not the edge, the
+trim is the lever that restores the order beyond $19{,}600$ nodes
+(extrapolating the two rates, the trimmed seeds lead by $40\%$ at
+$40{,}000$ nodes), and where between $3.8\delta$ and $19\delta$ to put the
+seeded region's boundary is a tuning question for larger node sets
+(Section~\ref{sec:discussion}).
+
+\begin{table}
+  \caption{The trimmed seeds through curved edges of width
+  $\delta = 0.005$: relative $\ell^2$ error in $v$ at $t = 1$ and rates
+  with the seeded rows trimmed to the stencils that see more than
+  $10^{-3}$ of the contrast, against the naive scheme and the
+  resolution floor. The untrimmed seeds are the $\delta = 0.005$ row of
+  Table~\ref{tab:curved2d_v}.}
+  \label{tab:trim2d}
+  \centering
+  \tablesetup
+  % figures/tab_2d_curved_trim_v.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave2d_stiff_a0.02_r0.001.json; never hand-edited.
+  \input{figures/tab_2d_curved_trim_v.tex}
+\end{table}
+
+\para{Stability, curved}
+Table~\ref{tab:spectra2500curved} and Figure~\ref{fig:spectra2500curved}
+repeat the acceptance run of Section~\ref{sec:stability2d} on the curved
+geometry, the seeds on their true normals. Row for row it is the flat
+table: $+6.0 \times 10^{-2}$, $+8.3 \times 10^{-2}$ and
+$+1.05 \times 10^{-1}$ against $+6.3 \times 10^{-2}$,
+$+7.8 \times 10^{-2}$ and $+9.6 \times 10^{-2}$, at $\max |R|$ of
+$1.0003$ to $1.0004$ and energy ratios $0.988$, $0.999$ and $1.016$; the
+jump-aware operator at $+4.7 \times 10^{-2}$ and $1.0002$. The rotation of
+every seed stencil into its own frame, the tilted normals and the curved
+rows change the rightmost eigenvalues by at most $10\%$ and the RK4
+amplification not at all: the answer of Section~\ref{sec:stability2d}
+carries over to the curved edge unchanged, with the $30$-node $\Delta^3$
+footprint on the seed rows.
+
+\begin{table}
+  \caption{The acceptance run of Table~\ref{tab:spectra2500} on the
+  curved geometry ($2500$ nodes, amplitude $0.02$): rebuilt rows, the
+  spectrum's largest real part with the hyperviscosity in, the largest
+  RK4 amplification and the energy ratio of the run to $t = 1$.}
+  \label{tab:spectra2500curved}
+  \centering
+  \tablesetup
+  % figures/tab_spectra_n2500_curved.tex: scripts/paper_figures.py (#54)
+  % from paper/data/wave2d_stiff_eigenvalues_n2500_a0.02.json; never
+  % hand-edited.
+  \input{figures/tab_spectra_n2500_curved.tex}
+\end{table}
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_eigenvalues_n2500_curved.pdf:
+  % scripts/wave2d_stiff_eigenvalues.py --n 2500 --amplitude 0.02 --style
+  % print --format pdf, through scripts/paper_figures.py --all (#54);
+  % never hand-edited.
+  \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{wave2d_stiff_eigenvalues_n2500_curved}
+  \caption{Spectra of the naive (top) and seed (bottom) operators on the
+  $2500$-node curved set through edges of width $\delta = h / 8$,
+  $h / 2$ and $2h$, as in Figure~\ref{fig:spectra2500}.}
+  \label{fig:spectra2500curved}
+\end{figure}
+
+\para{The picture}
+Figure~\ref{fig:curvedsnapshot} is the run on $10{,}000$ nodes through
+curved edges of width $\delta = 0.005 = h / 2$ at $t = 1$: the
+reference's $|v|$ from the product grid, its curl, which maps the S waves
+the curved edges make out of the incident P pulse, and the two error
+maps in $v$ on one colour scale. The errors in $v$ and $u$ are $0.63\%$
+and $2.0\%$ for the naive scheme and $0.20\%$ and $0.93\%$ for the
+seeds. At $t = 0.25$ they are $0.37\%$ and $1.6\%$ against $0.04\%$ and
+$0.5\%$, and the naive map is then the picture of the problem: a streak
+that follows the sine of the upper edge, darkest where the pulse has
+just arrived at the trough, with the transmitted pulse's error below it,
+while the seeds' map has no streak, only the resolution speckle above
+the band, ten times lower in norm. By $t = 1$ both maps are the
+propagated pulse's own resolution error, and the seeds' is a third of
+the naive one, which is the tables' $3.1\times$.
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_snapshot_curved.pdf: scripts/wave2d_stiff.py
+  % --amplitude 0.02 --snapshot-only --style print --format pdf, through
+  % scripts/paper_figures.py --all (#54); never hand-edited.
+  \includegraphics[width=\textwidth]{wave2d_stiff_snapshot_curved}
+  \caption{The pulse on $10{,}000$ nodes through curved edges of width
+  $\delta = h / 2$ at $t = 1$ (the interfaces dashed): the reference
+  $|v|$, its curl $|u_y - v_x|$ (the S waves made at the curved edges),
+  and the error in $v$ of the naive scheme and of the seeds on one colour
+  scale, with each map's relative errors in $v$ and $u$.}
+  \label{fig:curvedsnapshot}
+\end{figure}
+
+\para{The route (b) decision, and cost}
+On this evidence route (b) of Section~\ref{sec:curved2d}, the
+boundary-value problem per stencil, is not needed on these node sets:
+through $\delta = 0.005$ and $0.01$ the route (a) seeds sit at the seed
+operator's own floor at every $n$, their rows' truncation error on the
+true curved solution converges at the bulk rate, through $\delta = 0.0025$
+the geometry first shows as $1.4$ to $1.5\times$ the flat seeds' error
+at $10{,}000$ and $19{,}600$ nodes, a contribution level with the seed
+floor and half the naive floor, and the curved sweep reproduces the flat
+one. The floor route (a) does impose is the geometric one,
+$\kappa r^2 / 2$ against $\delta$, and it is below the resolution floor
+of these node sets at every width run. What would make (b) necessary is
+a radius of curvature comparable to the stencil, or a $\delta$ so small
+that $\kappa r^2 / 2\delta$ is of order one at a resolution the node set
+can still afford; neither is this geometry, and if either arises the
+cheaper first step is the curvilinear evaluation of the same marched
+seeds (Sections~\ref{sec:curved2d} and~\ref{sec:discussion}). Two things
+were not done: the oblique train on the curved geometry, which the
+product-grid reference could take as it takes any initial state, and
+the tuning of the seeded width. The costs, for the record: the flat
+sweep takes $636$\,s on $12$ workers with the seed operators to build
+(the largest, $19{,}600$ nodes at $\delta = 0.04$, in $94$\,s) and about
+$4$ minutes once they are cached; the oblique sweep $500$\,s with the
+operators cached, $260$\,s of it the two references; on the curved
+geometry the references took $45$ minutes plus $3.6$ hours for the
+$2048 \times 4096$ grid, the $24$ seed operators about an hour on $6$ to
+$12$ workers (the two $19{,}600$-node operators $330$ and $475$\,s on
+six), the sweep $12$ minutes from the caches and the spectra $23$
+minutes. A curved march costs $3.6\times$ a flat one
+(Section~\ref{sec:curved2d}), and none of this is tuned.
 
 % ===========================================================================
 \section{Discussion}

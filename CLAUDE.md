@@ -86,9 +86,11 @@ only novelty wording the manuscript may use; 66 verified bib entries, no
 unverified citation ships), #54 results cache `paper/data/` with the
 print-style figures and `tab_*.tex` fragments from
 `scripts/paper_figures.py` (`--check` gates byte identity), #55 §1–2,
-#56 §3; #57 §4 and #58 §5 drafted. Open, in dependency order: #59 §6, #69
-(stretch: the naive operator on pre-processed coefficients, after #59 and
-before #61), #60 §7, #61 assembly, #62 arXiv packaging.
+#56 §3, #57 §4, #58 §5; #59 §6 drafted (all 14 `tab_2d_*` / `tab_spectra_*`
+fragments and the eight 2-D figures placed; the ledger's caveat sits under
+the rule in §6.4). Open, in dependency order: #69 (stretch: the naive
+operator on pre-processed coefficients, before #61), #60 §7, #61 assembly,
+#62 arXiv packaging.
 `docs/stiff-features.md` stays canonical: the manuscript quotes it, every
 number traces to a notes section or the results cache, and a `% TRACE`
 comment per section names the source. Figures and tables come from
