@@ -1,0 +1,261 @@
+% Manuscript for Part 3 (epic #51): the seed stencils of docs/stiff-features.md,
+% written up for arXiv. Scaffold from #52; each section is drafted by the
+% sub-issue named in its TRACE block.
+%
+% SOURCE-OF-TRUTH RULE: docs/stiff-features.md (the notes) stays canonical.
+% This manuscript QUOTES the notes; it never becomes a second source of truth.
+% Every number in this file must trace to a notes section or to the results
+% cache of #54, and the assembly pass (#61) re-checks all of them. A TRACE
+% comment names the notes section and the #27 sub-issue each part quotes.
+%
+% Section map (structure decided in the #51 grooming, 2026-09-20):
+%   §1  Introduction              notes §1.1, §1.5, §3 (via #53)            #55
+%   §2  Setting                   notes §1.1; dissertation / JCP 2017        #55
+%   §3  Seeds in one dimension    notes §1.2–1.5 (#28, #31)                  #56
+%   §4  1-D results               notes §2 (#32)                             #57
+%   §5  Seeds in two dimensions   notes §4.1–4.2, §5.3 operator half         #58
+%                                 (#34, #38, #39)
+%   §6  2-D results               notes §5.2–5.6 (#37, #39–#42)              #59
+%   §7  Discussion                #27 comments, notes §5.3, §5.6.1–5.6.2     #60
+%   Figures and tables #54 · Literature #53 · Assembly #61 · arXiv #62
+%
+% Build: tectonic main.tex   (see paper/README.md)
+\documentclass[11pt]{amsart}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+\graphicspath{{figures/}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Recurring quantities. Only macros the current text uses are defined; the
+% section drafts add their own as they need them.
+\newcommand{\Lu}{L_u}
+\newcommand{\Lf}{L_f}
+\newcommand{\px}{\partial_x}
+\newcommand{\pt}{\partial_t}
+% Scientific notation for quoted measurements: $\sci{6.2}{-8}$.
+\newcommand{\sci}[2]{#1 \times 10^{#2}}
+% Draft stubs, visible in the PDF until the owning sub-issue replaces them.
+\newcommand{\stub}[1]{\par\noindent\textit{[Stub, #1.]}\par}
+
+% Working title; final wording is #61's call.
+\title[Seed stencils for sub-grid material edges]{Seed stencils: high-order
+finite differences and RBF-FD through material edges too steep for the grid}
+\author{Bradley P. Martin}
+\email{1bradley.martin1@gmail.com}
+% Fixed revision date, updated deliberately with content changes. \today would
+% make the committed main.pdf non-reproducible from the committed source.
+\date{September 20, 2026}
+
+\begin{document}
+
+% ---------------------------------------------------------------------------
+% ABSTRACT. Stub from the notes' summaries (README of the notes, CLAUDE.md);
+% #55 revises it, #61 fixes the wording. Every claim below is in the notes:
+%   knee at h = delta, seeds fourth order at every n     notes §2
+%   ECT well-posedness, jump limit                        notes §1.3–1.4
+%   straight edge -> triangular ODE systems               notes §4.1–4.2
+%   stable at the standard gamma; rule "seed when         notes §5.3, §5.4
+%     delta <= h"; 20x / 67x at 19,600 nodes
+%   curved seeds = flat seeds at their own floor          notes §5.6
+% ---------------------------------------------------------------------------
+\begin{abstract}
+Between a material whose parameters vary smoothly on the scale of the grid
+and one with a jump lies the case of an edge that is smooth but changes over
+a distance $\delta$ far smaller than the grid spacing $h$. Standard
+high-order finite differences sample the coefficients at the nodes and lose
+their order there until $h \lesssim \delta$, and the interface-aware
+stencils built for a jump do not apply, since there is no jump. We build
+stencils on the same equispaced (1-D) or scattered (2-D) nodes whose basis
+functions are not monomials but \emph{seeds}: the $t = 0$ profiles of
+solutions of the wave equation that are polynomial in time, continued
+through the edge by ordinary differential equations in the coordinate normal
+to it. The seeds form an extended complete Chebyshev system for every
+$\delta$, so the stencil solve is nonsingular, and as $\delta \to 0$ they
+reduce to the translated polynomial basis of the interface-aware stencils,
+so one construction covers the jump, the sub-grid edge and the resolved
+edge. In one dimension, standard fourth-order finite differences have a
+knee at $h = \delta$ while the seed stencils are fourth order at every
+resolution with the errors of the jump case. In two dimensions, for the
+elastic wave equation discretised with radial basis function-generated
+finite differences (RBF-FD) on scattered nodes, the seeds of a straight
+edge reduce to triangular systems of ordinary differential equations in the
+normal coordinate; the seed-augmented stencils are stable at the standard
+hyperviscosity, cut the error through an unresolved edge by up to an order
+of magnitude or more on the node sets tested, and lead to the rule: seed
+when $\delta \le h$. The same seeds marched along the true normal handle a
+curved edge at the same accuracy on those node sets.
+\end{abstract}
+
+\maketitle
+
+% ===========================================================================
+\section{Introduction}
+\label{sec:intro}
+% TRACE: notes §1.1 (the setting and the "twilight zone"), §1.5 (why the
+% Taylor route fails), §3 (related work, upgraded by #53 into LITERATURE.md).
+% Drafted by #55. Relation to prior work quotes #53's paragraph: cite, don't
+% claim, until the ledger buckets the claim.
+\stub{\#55: the sub-grid smooth edge between ``smooth'' and ``jump''; what
+standard high-order FD does there (the knee at $h = \delta$); the thesis:
+one construction from the jump (algebra) through the ODE march to the
+resolved edge (Fornberg); contributions; relation to prior work from
+\texttt{LITERATURE.md} (\#53); outline}
+
+\subsection{Relation to prior work}
+\label{sec:priorwork}
+\stub{\#53 supplies this paragraph; \#55 places it}
+
+% ===========================================================================
+\section{Setting}
+\label{sec:setting}
+% TRACE: notes §1.1; the dissertation (§2.1–2.2, §3.3; page map in
+% docs/paper-index.md) and JCP 2017 for the interface-aware stencils, quoted
+% not re-derived; CLAUDE.md's port notes for what the code implements and
+% leaves out. Drafted by #55.
+\stub{\#55: the 1-D first-order system $\rho u_t = f_x$, $f_t = K u_x$; the
+2-D elastic system in five fields; equispaced and scattered node sets;
+RBF-FD with polynomial augmentation, hyperviscosity, RK4; the
+interface-aware stencils of the jump as background (translated basis,
+continuity matrices, the two straddling rows, curvature by local expansion);
+what the implementation leaves out (triple stencils, variable Lam\'e
+parameters, the FD/RBF hybrid), stated as scope}
+
+% ===========================================================================
+\section{Seeds in one dimension}
+\label{sec:seeds1d}
+% TRACE: notes §1.2 (seeds as profiles of time-polynomial solutions, the
+% chain), §1.3 (nested kernels, the jump limit), §1.4 (ECT well-posedness),
+% §1.5 (the Taylor route); code wave1d/stiff.py (#28, #31). Drafted by #56.
+% Figure: the 1-D seed basis (#54; today docs/figures/wave1d_stiff_seeds.png).
+\subsection{Seeds as the profiles of solutions polynomial in time}
+\stub{\#56: $u_{tt} = \Lu u$ with $\Lu = \rho^{-1} \px K \px$; the chain
+$\phi_0 = 1$, $K \phi_1' = K(x_e)$, $\Lu \phi_k = k(k-1) c_e^2 \phi_{k-2}$
+with $\phi_k(x_e) = \phi_k'(x_e) = 0$; the even/odd ($u$/$f$) alternation;
+first-order form so that $K$ is never differentiated}
+\subsection{Nested kernels and the jump as the limit}
+\stub{\#56: $\{1\} \subset \ker \Lu \subset \{\Lu g = \mathrm{const}\}
+\subset \ker \Lu^2 \subset \cdots$; the seed weights converge to the
+interface-aware weights at first order in $\delta$}
+\subsection{Well-posedness}
+\stub{\#56: the seeds are an extended complete Chebyshev system (P\'olya,
+Karlin--Studden), so the per-stencil solve is nonsingular on any distinct
+nodes for every $\delta$}
+\subsection{Why the Taylor route does not reach a sub-grid edge}
+\stub{\#56: notes §1.5; the quasi-Trefftz comparison}
+\subsection{Stencil assembly and cost}
+\stub{\#56: the Fornberg-style solve on the seeds; one ODE march per
+stencil}
+
+% ===========================================================================
+\section{One-dimensional results}
+\label{sec:results1d}
+% TRACE: notes §2 (#32), scripts/wave1d_stiff.py; numbers from #54's cache.
+% Drafted by #57. Figures: knee (convergence), snapshot; table: the knee.
+\stub{\#57: test problem (medium, contrast, pulse, $\delta \in \{0, 0.0025,
+0.01\}$); the Fourier pseudo-spectral reference; the knee of standard FD4 at
+$h = \delta$; seeds fourth order at every $n$ with the jump case's errors;
+condition numbers $20$--$60$ from $\delta = 10^{-5}$ to $1$}
+
+% ===========================================================================
+\section{Seeds in two dimensions}
+\label{sec:seeds2d}
+% TRACE: notes §4.1 (design, #34), §4.2 (the elastic seeds of a straight
+% feature, #38), the operator half of §5.3 (#39), §5.6 for route (a);
+% code wave2d/seeds.py, wave2d/operators.py. Drafted by #58. Figure: 2-D seed
+% cross-sections (#54, new).
+\subsection{Design: a straight edge}
+\stub{\#58: the $x'$-polynomial ansatz turns the 2-D chain into triangular
+systems of 1-D ODEs in the normal coordinate; tangential dependence stays
+polynomial; tractions as flux variables}
+\subsection{The elastic seeds}
+\stub{\#58: all 30 seeds of one stencil marched as one 600-state system
+anchored at the evaluation node; constant-material, jump-limit, residual and
+conditioning checks}
+\subsection{Stencil assembly}
+\stub{\#58: 19-node seed rows for the elastic operator; $\Delta^3$ rows on
+the naive 30-node footprint with the seeds annihilated; the seeded region
+($19\delta$) and its trim}
+\subsection{Curved edges}
+\stub{\#58: route (a), the seeds marched along the true normal through the
+foot point, zeroth order in curvature, the same approximation as the jump
+stencils; what route (b) would be}
+
+% ===========================================================================
+\section{Two-dimensional results}
+\label{sec:results2d}
+% TRACE: notes §5.2 (#37), §5.3 (#39), §5.4 (#40), §5.5 (#41), §5.6 (#42);
+% scripts/wave2d_stiff.py, scripts/wave2d_stiff_eigenvalues.py; numbers from
+% #54's cache. Drafted by #59.
+\subsection{Test problems and references}
+\stub{\#59: 1-D spectral at normal incidence; Fourier-in-$x$ for oblique;
+product-grid for the curved $\delta > 0$; the $122{,}500$-node jump-aware
+run for the curved $\delta = 0$}
+\subsection{Naive baseline}
+\stub{\#59: the resolution floor hides the edge error in $v$; the spurious
+$u$ separates unresolved from resolved edges $10\times$ more sharply}
+\subsection{Stability}
+\stub{\#59: spectra at $n = 900$ and $2500$, standard $\gamma$, every
+$\delta$, flat and curved}
+\subsection{The flat sweep and the rule}
+\stub{\#59: seeds fourth order through $\delta = 0.0025$ at every $n$,
+$20\times$ below naive in $v$ and $67\times$ in spurious $u$ at $19{,}600$
+nodes; crossover at $h \approx \delta$; a resolved edge $1.4$--$2\times$
+worse seeded; the rule: seed when $\delta \le h$}
+\subsection{Oblique incidence}
+\stub{\#59: seeds $1.4$--$1.9\times$ over naive at $26.6^\circ$, the
+ablation worse than naive, every scheme about $2.5$ from the converted-S
+floor, reported as it is}
+\subsection{The curved edge}
+\stub{\#59: jump stencils at the resolution floor at every $n$; seeds equal
+the flat seeds at their own floor, $2.2$--$7\times$ ($\delta = 0.005$) and
+$3$--$12\times$ ($\delta = 0.0025$) below naive; where route (a)'s geometry
+first shows; the fine-end rate and the trim; costs}
+
+% ===========================================================================
+\section{Discussion}
+\label{sec:discussion}
+% TRACE: #27's comments (2026-09-19, 2026-09-20), notes §5.3 (the true
+% Delta^3 of the seeds), §5.6.1 (seeded width), §5.6.2 (route (b), the
+% curvilinear evaluation). Drafted by #60.
+\subsection{Limitations}
+\stub{\#60: FD4 / degree 3 only, one contrast, at most $19{,}600$ nodes, the
+flat translation symmetry unexploited, one march per stencil, the port's
+exclusions}
+\subsection{Future work}
+\stub{\#60: curvilinear evaluation of the marched seeds; seeded-width tuning;
+the seeds' true $\Delta^3$ as hyperviscosity right-hand sides; M\"uhlbach's
+recurrence in place of the dense solve; higher order; other contrasts; thin
+bands; variable Lam\'e parameters; 3-D; the oblique train on the curved
+geometry}
+\subsection{Conclusions}
+\stub{\#60: the rule and the one-construction claim, in \#53's wording}
+
+% ===========================================================================
+\section*{Acknowledgments}
+% Decisions of 2026-09-20 (#51, recorded in #62): sole human author;
+% acknowledgment to Bengt Fornberg for the 2016-era work this extends; explicit
+% credit to Claude (Fable 5.1) in the form arXiv's policy on generative-AI
+% tools asks for, checked at packaging time. #62 fixes the wording.
+\stub{\#62: Bengt Fornberg, for the 2016-era work this construction extends
+(the dissertation and the interface treatment of \cite{MartinFornberg2017});
+the AI-assistance statement crediting Claude (Fable 5.1) for the
+re-derivation, the code and the drafting}
+
+% Skeleton only: render every seeded entry so the bibliography is known to
+% compile. #53 verifies the entries; #61 removes \nocite{*}.
+\nocite{*}
+\bibliographystyle{amsalpha}
+\bibliography{references}
+
+\end{document}
