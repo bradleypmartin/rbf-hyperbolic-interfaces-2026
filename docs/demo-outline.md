@@ -422,3 +422,23 @@ for the deck. It landed in two working days.
   serial weights) and the driver caches seed operators under `outputs/`,
   which turns an hour of marches into ten minutes once and four from
   then on.
+- 2026-09-19: Oblique incidence (#41). The pulse is the doubly periodic
+  plane-wave train along a lattice direction ((1, 2), 26.6°), because a
+  tilted plane pulse on the periodic square cannot avoid the band; it
+  carries the background eigenvector everywhere, after the local
+  eigenvector proved to inject a sub-grid traction jump that every
+  scheme then measured instead of the edge. The reference is option (i),
+  Fourier in x with one complex pseudo-spectral system per mode
+  (`wave2d/spectral.py`), cheaper than the 4× finer seed run the issue
+  suggested first and reusable for #42. Result: the seeds beat naive by
+  1.4–1.9× and the x'-dependent seeds are essential through a sharp
+  edge (without them the seeds are worse than naive), but the order is
+  2.5, not 4, and that is the resolution floor of the mode-converted S
+  waves (1.73× finer than the incident pulse, pre-asymptotic on these
+  node sets), which the jump-aware stencils of Part 2 share (2.4 at
+  oblique incidence, never measured before) and which the P train's own
+  floor does not see (§5.5). Six diagnostics in the notes; the S pulse
+  at normal incidence is fourth order at half the floor, so the
+  u-component seeds are fine. Forecast for #42: measure the jump-aware
+  operator's order at curved interfaces against a floor that contains
+  the converted waves before judging the curved seeds.
