@@ -80,6 +80,7 @@ from pdes_demo.plotting import (
     INK_SECONDARY,
     use_demo_style,
 )
+from pdes_demo.results_cache import ResultsCache
 from pdes_demo.wave1d import periodic_grid
 from pdes_demo.wave1d.spectral import reference_size
 from pdes_demo.wave2d import (
@@ -197,6 +198,12 @@ def parse_args() -> argparse.Namespace:
         "--snapshot-only", action="store_true", help="skip the sweep, write the still"
     )
     parser.add_argument("--out-dir", type=Path, default=Path("outputs"))
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        help="also write the results JSON here (paper/data for the committed copy)",
+    )
     args = parser.parse_args()
     args.direction = tuple(args.direction)
     args.oblique = args.direction != (0, 1)
@@ -232,6 +239,20 @@ def direction_tag(args: argparse.Namespace) -> str:
 
 def angle_deg(args: argparse.Namespace) -> float:
     return float(np.degrees(np.arctan2(*args.direction)))
+
+
+def run_tag(args: argparse.Namespace) -> str:
+    """Suffix that names this configuration's figure and results files."""
+    tag = "_naive" if args.modes == ["naive"] else ""
+    tag += "" if args.sharpness == 15.0 else f"_s{args.sharpness:g}"
+    tag += direction_tag(args) + geometry_tag(args)
+    tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
+    return tag
+
+
+def u_field(args: argparse.Namespace) -> str:
+    """Cache field name of the u column: a relative error, or the spurious max."""
+    return "u" if args.u_error else "max_u"
 
 
 # --- references ---------------------------------------------------------------
@@ -648,7 +669,33 @@ def print_table(
         print(line)
 
 
-def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
+def record_errors(
+    cache: ResultsCache,
+    ns: np.ndarray,
+    results: dict[str, list[dict[str, float]]],
+    delta: float | None,
+    args: argparse.Namespace,
+) -> None:
+    """``error`` records for every (mode, field) of one edge width; ``delta``
+    is ``None`` for the floors, which do not depend on it."""
+    h = [1 / np.sqrt(n) for n in ns]
+    for mode, errs in results.items():
+        for f in "vhu":
+            values = [e[f] for e in errs]
+            cache.add_errors(
+                [int(n) for n in ns],
+                values,
+                list(rates(ns, values)),
+                h=h,
+                delta=delta,
+                mode=mode,
+                field=u_field(args) if f == "u" else f,
+            )
+
+
+def sweep(
+    args: argparse.Namespace, node_sets: dict[int, NodeSet], cache: ResultsCache
+) -> None:
     ns = np.array(args.ns, dtype=float)
     t0 = time.perf_counter()
     floor = [
@@ -662,6 +709,7 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         for n in args.ns
     ]
     print(f"resolution floor (uniform medium): {time.perf_counter() - t0:.1f}s")
+    record_errors(cache, ns, {"floor": floor}, None, args)
 
     fig, panels = plt.subplots(
         2,
@@ -699,6 +747,9 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             ]
         print(f"  ({time.perf_counter() - t0:.1f}s)")
         print_table(width, ns, results, floors, args)
+        record_errors(cache, ns, results, width, args)
+        if "sfloor" in floors:
+            record_errors(cache, ns, {"sfloor": floors["sfloor"]}, width, args)
         if args.truncation and args.curved and width > 0:
             print("  truncation error on the reference state, edge rows | bulk rows")
             for n in args.ns:
@@ -708,6 +759,17 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
                     for m, e in errs.items()
                 )
                 print(f"  {int(n):5d}  {cells}")
+                for m, e in errs.items():
+                    for group, err in e.items():
+                        cache.add(
+                            "truncation",
+                            n=int(n),
+                            h=1 / np.sqrt(n),
+                            delta=width,
+                            mode=m,
+                            group=group,
+                            error=err,
+                        )
 
         for mode in args.modes:
             ax.loglog(
@@ -796,11 +858,7 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
     if args.curved:
         title += f"\nsine interfaces of amplitude {args.amplitude:g} (curved case)"
     fig.suptitle(title, fontsize=12)
-    tag = "_naive" if args.modes == ["naive"] else ""
-    tag += "" if args.sharpness == 15.0 else f"_s{args.sharpness:g}"
-    tag += direction_tag(args) + geometry_tag(args)
-    tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
-    out = args.out_dir / f"wave2d_stiff{tag}.png"
+    out = args.out_dir / f"wave2d_stiff{run_tag(args)}.png"
     fig.savefig(out, dpi=160)
     print(f"\nwrote {out}")
 
@@ -823,7 +881,9 @@ def style_map(ax: plt.Axes, medium: LayeredMedium2D) -> None:
         ax.plot(xs, ifc.height(xs), ls="--", color=INK_SECONDARY, lw=1.0)
 
 
-def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
+def snapshot(
+    args: argparse.Namespace, node_sets: dict[int, NodeSet], cache: ResultsCache
+) -> None:
     n, width = args.snapshot_n, args.snapshot_width
     nodes = node_sets.get(n) or make_node_set(medium_for(0.0, args), n, seed=args.seed)
     medium = medium_for(width, args)
@@ -927,6 +987,17 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
                 **text_kw,
             )
             print(f"  t = {times[k]:.2f}  {mode:5s}  v {rel:.2e}  {u_print}")
+            u_value = rel_u if args.u_error else u_max
+            for field, value in (("v", rel), (u_field(args), u_value)):
+                cache.add(
+                    "snapshot",
+                    n=nodes.n,
+                    delta=width,
+                    t=float(times[k]),
+                    mode=mode,
+                    field=field,
+                    error=value,
+                )
             if r == 0:
                 ax_e.set_title(f"{TITLES[mode]}\nerror in v vs reference", fontsize=11)
         axes[r, 0].set_ylabel(f"t = {times[k]:.2f}\ny")
@@ -993,10 +1064,17 @@ def main() -> None:
     geometry = medium_for(0.0, args)
     node_sets = {n: make_node_set(geometry, n, seed=args.seed) for n in sorted(wanted)}
     print(f"node sets: {time.perf_counter() - t0:.1f}s")
+    cache = ResultsCache.new("scripts/wave2d_stiff.py", args)
     if not args.snapshot_only:
-        sweep(args, node_sets)
+        sweep(args, node_sets, cache)
     if not args.no_snapshot:
-        snapshot(args, node_sets)
+        snapshot(args, node_sets, cache)
+    name = f"wave2d_stiff{run_tag(args)}.json"
+    paths = [args.out_dir / name]
+    if args.data_dir is not None:
+        paths.append(args.data_dir / name)
+    cache.write(*paths)
+    print("results ->", ", ".join(str(p) for p in paths))
     print(f"total {time.perf_counter() - t_all:.0f}s")
 
 

@@ -30,6 +30,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from pdes_demo.plotting import AWARE, INK_MUTED, INK_SECONDARY, NAIVE, use_demo_style
+from pdes_demo.results_cache import ResultsCache
 from pdes_demo.wave1d import periodic_grid
 from pdes_demo.wave2d import (
     LayeredMedium2D,
@@ -92,6 +93,12 @@ def parse_args() -> argparse.Namespace:
         "--amplitude", type=float, default=0.0, help="sine amplitude of the interfaces"
     )
     parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        help="also write the results JSON here (paper/data for the committed copy)",
+    )
     parser.add_argument(
         "--workers",
         type=int,
@@ -221,14 +228,24 @@ def main() -> None:
             header += f" {'err v':>9s}"
     print(header)
     refs: dict[LayeredMedium2D, np.ndarray] = {}  # frozen, so hashable
+    cache = ResultsCache.new("scripts/wave2d_stiff_eigenvalues.py", args)
 
-    def report(label: str, ops: Operators, medium: LayeredMedium2D, built: float):
+    def report(
+        label: str,
+        ops: Operators,
+        medium: LayeredMedium2D,
+        built: float,
+        *,
+        width_label: str,
+        variant: str,
+    ):
         plain, hyper = spectrum(ops)
         line = (
             f"{label:44s} {ops.interface_nodes.size:5d} {built:6.1f}s"
             f" {plain.real.max():+10.2e} {hyper.real.max():+10.2e}"
             f" {hyper.real.min():+10.2e} {rk4_amplification(hyper, dt):8.5f}"
         )
+        measured: dict[str, float] = {}
         if args.run:
             snaps = run(
                 nodes,
@@ -242,24 +259,52 @@ def main() -> None:
             )
             e0 = energy(snaps.state[0], nodes, medium)
             e1 = energy(snaps.state[-1], nodes, medium)
+            measured["energy_ratio"] = e1 / e0
+            measured["max_u"] = float(np.abs(snaps.state[-1][0]).max())
             line += f" {e1 / e0:10.4f} {np.abs(snaps.state[-1][0]).max():9.1e}"
             if args.amplitude == 0.0:
                 if medium not in refs:
                     refs[medium] = reference(nodes, medium, args)
                 v, v_ref = snaps.state[-1][1], refs[medium][1]
                 err = np.linalg.norm(v - v_ref) / np.linalg.norm(v_ref)
+                measured["err_v"] = float(err)
                 line += f" {err:9.2e}"
         print(line, flush=True)
+        cache.add(
+            "spectrum",
+            n=nodes.n,
+            h=h,
+            delta=medium.edge_width,
+            width_label=width_label,
+            variant=variant,
+            rows=int(ops.interface_nodes.size),
+            dt=dt,
+            gamma=gamma,
+            max_re=float(plain.real.max()),
+            max_re_hyper=float(hyper.real.max()),
+            min_re_hyper=float(hyper.real.min()),
+            rk4_max=rk4_amplification(hyper, dt),
+            **measured,
+        )
         return hyper
 
     t0 = time.perf_counter()
-    report("jump, naive", build_operators(nodes, jump), jump, time.perf_counter() - t0)
+    report(
+        "jump, naive",
+        build_operators(nodes, jump),
+        jump,
+        time.perf_counter() - t0,
+        width_label="jump",
+        variant="naive",
+    )
     t0 = time.perf_counter()
     report(
         "jump, interface-aware (19/3)",
         build_operators(nodes, jump, mode="aware"),
         jump,
         time.perf_counter() - t0,
+        width_label="jump",
+        variant="aware",
     )
 
     if args.run and args.floor:
@@ -269,17 +314,23 @@ def main() -> None:
             build_operators(nodes, uniform),
             uniform,
             0.0,
+            width_label="uniform",
+            variant="floor",
         )
 
     spectra: dict[tuple[str, float], np.ndarray] = {}
     for width in widths:
         medium = medium_for(width, args)
+        ratio = h / width
+        width_label = f"h/{ratio:.3g}" if ratio >= 1 else f"{1 / ratio:.3g}h"
         for variant in variants:
             t0 = time.perf_counter()
             ops = build(variant, nodes, medium, args.seed_hyper_scale, args.workers)
             built = time.perf_counter() - t0
             label = f"delta = {width:.4f} = h/{h / width:.3g}, {variant}"
-            spectra[(variant, width)] = report(label, ops, medium, built)
+            spectra[(variant, width)] = report(
+                label, ops, medium, built, width_label=width_label, variant=variant
+            )
 
     boundary = rk4_boundary()
     fig, axes = plt.subplots(
@@ -327,6 +378,13 @@ def main() -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=160)
     print(f"wrote {out}")
+    vtag = "" if args.variants == ["seeds"] else "_variants"
+    name = f"wave2d_stiff_eigenvalues_n{args.n}{tag}{vtag}.json"
+    paths = [Path("outputs") / name]
+    if args.data_dir is not None:
+        paths.append(args.data_dir / name)
+    cache.write(*paths)
+    print("results ->", ", ".join(str(p) for p in paths))
 
 
 if __name__ == "__main__":

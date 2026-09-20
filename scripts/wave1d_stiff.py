@@ -31,6 +31,7 @@ from pdes_demo.plotting import (
     LAYER_FILL,
     use_demo_style,
 )
+from pdes_demo.results_cache import ResultsCache
 from pdes_demo.wave1d import LayeredMedium, exact_solution, periodic_grid, run
 from pdes_demo.wave1d.spectral import interpolate, reference_size, run_spectral
 from pdes_demo.wave1d.stiff import seed_basis
@@ -51,6 +52,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--snapshot-n", type=int, default=100)
     parser.add_argument("--snapshot-width", type=float, default=0.0025)
     parser.add_argument("--out-dir", type=Path, default=Path("outputs"))
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        help="also write the results JSON here (paper/data for the committed copy)",
+    )
     return parser.parse_args()
 
 
@@ -115,7 +122,7 @@ def rates(ns: np.ndarray, errors: list[float]) -> np.ndarray:
     return np.log(e[:-1] / e[1:]) / np.log(ns[1:] / ns[:-1])
 
 
-def convergence_figure(args: argparse.Namespace) -> None:
+def convergence_figure(args: argparse.Namespace, cache: ResultsCache) -> None:
     ns = np.array(args.ns, dtype=float)
     fig, axes = plt.subplots(
         1,
@@ -139,6 +146,16 @@ def convergence_figure(args: argparse.Namespace) -> None:
         print(f"  ({time.perf_counter() - t0:.1f}s)")
         print("      N   h/delta      naive   rate      aware   rate")
         r = {mode: rates(ns, errors[mode]) for mode in errors}
+        for mode in errors:
+            cache.add_errors(
+                args.ns,
+                errors[mode],
+                list(r[mode]),
+                h=[2 / n for n in args.ns],
+                delta=width,
+                mode=mode,
+                field="f",
+            )
         for i, n in enumerate(args.ns):
             h_over = f"{2 / n / width:8.2f}" if width else "     inf"
             rn = f"{r['naive'][i - 1]:5.1f}" if i else "     "
@@ -202,7 +219,7 @@ def convergence_figure(args: argparse.Namespace) -> None:
     print(f"\nwrote {out}")
 
 
-def snapshot_figure(args: argparse.Namespace) -> None:
+def snapshot_figure(args: argparse.Namespace, cache: ResultsCache) -> None:
     medium = LayeredMedium(edge_width=args.snapshot_width)
     grid = periodic_grid(args.snapshot_n)
     x_fine = np.linspace(-1, 1, 2001)
@@ -251,6 +268,16 @@ def snapshot_figure(args: argparse.Namespace) -> None:
     out = args.out_dir / "wave1d_stiff_snapshot.png"
     fig.savefig(out, dpi=160)
     errs = {m: np.abs(sols[m] - f_ref).max() for m in sols}
+    for mode, err in errs.items():
+        cache.add(
+            "snapshot",
+            n=grid.n,
+            delta=medium.edge_width,
+            t=args.t_end,
+            mode=mode,
+            field="max_abs_f",
+            error=err,
+        )
     print(
         f"wrote {out}  (max error naive {errs['naive']:.2e}, seeds {errs['aware']:.2e})"
     )
@@ -305,9 +332,15 @@ def main() -> None:
     args = parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
     use_demo_style()
-    convergence_figure(args)
-    snapshot_figure(args)
+    cache = ResultsCache.new("scripts/wave1d_stiff.py", args)
+    convergence_figure(args, cache)
+    snapshot_figure(args, cache)
     seeds_figure(args)
+    paths = [args.out_dir / "wave1d_stiff.json"]
+    if args.data_dir is not None:
+        paths.append(args.data_dir / "wave1d_stiff.json")
+    cache.write(*paths)
+    print("results ->", ", ".join(str(p) for p in paths))
 
 
 if __name__ == "__main__":
