@@ -23,14 +23,15 @@ is MIT (see the root [README](../README.md)).
 `docs/stiff-features.md` stays canonical. The manuscript **quotes** it and
 never becomes a second source of truth. Every number in `main.tex` traces to
 a notes section or to the results cache of #54 (a `% TRACE` comment names
-the source), and the assembly pass (#61) re-checks all of them.
+the source). The assembly pass (#61) re-checked all of them, and the ones
+the cache holds are asserted by `scripts/paper_numbers.py` (below).
 
 ## Files
 
 | File | What it is |
 |---|---|
 | `main.tex` | The manuscript (single source file; amsart). Section stubs are visible in the PDF as *[Stub, …]* until the owning sub-issue replaces them. |
-| `references.bib` | Bibliography, 66 entries. Every entry carries a dated `VERIFIED` comment naming the primary source fetched for it in #53 (Crossref record, arXiv record, archive.org / zbMATH record, or the PDF); fields no fetch confirmed are left out and the comment says so. No unverified citation ships; `LITERATURE.md` §2 P5 is the log. |
+| `references.bib` | Bibliography, 66 entries, 59 of them cited (the scaffold's `\nocite{*}` went in #61; the seven entries no `\cite` reaches stay in the file for `LITERATURE.md`). Every entry carries a dated `VERIFIED` comment naming the primary source fetched for it in #53 (Crossref record, arXiv record, archive.org / zbMATH record, or the PDF); fields no fetch confirmed are left out and the comment says so. No unverified citation ships; `LITERATURE.md` §2 P5 is the log. |
 | `main.pdf` | The built PDF (committed deliverable). |
 | `make_arxiv.py` | arXiv packaging (#62): stages `main.tex`, `main.bbl`, `references.bib` and the referenced figures into `arxiv/` and writes `arxiv.tar.gz`. |
 | `data/` | The results cache (#54): one JSON per driver run (errors, rates, truncation and snapshot numbers, spectra summaries, with the run's arguments, date and git SHA), written by the stiff drivers with `--data-dir paper/data`. Schema in `src/pdes_demo/results_cache.py`. |
@@ -47,11 +48,13 @@ tectonic --keep-intermediates main.tex  # keeps main.bbl (needed for packaging)
 
 Fallback (TeX Live / MiKTeX): `latexmk -pdf main.tex`.
 
-**Pitfall (#52).** tectonic 0.16.9's BibTeX hangs forever, at full CPU
+**Pitfall (#52, #61).** tectonic 0.16.9's BibTeX hangs forever, at full CPU
 with no log, on an `amsalpha` label whose three-letter prefix contains a
-braced accent in a single author's surname (`P{\'o}lya`). Write the accent
-unbraced (`P\'olya`) in single-author entries. If a build spins for more
-than a minute, bisect `references.bib`.
+braced accent in a single author's surname (`P{\'o}lya`), and the unbraced
+form (`P\'olya`) avoids the hang but prints the label as `[P\'22]`. The two
+single-author entries concerned carry the accented letter as UTF-8
+(`Pólya`, `Mühlbach`), which labels as `[Pó22]` and `[Mü73]`. If a build
+spins for more than a minute, bisect `references.bib`.
 
 Intermediates (`.aux`, `.bbl`, `.log`, …) are gitignored; `main.pdf` is
 committed on every change to `main.tex` or `references.bib`. The `\date` is
@@ -97,11 +100,20 @@ uv run python scripts/wave2d_stiff_eigenvalues.py --n 900 --widths 0.125 0.25 0.
     --variants seeds hyper19 naive-hyper seeds30 naive19 --data-dir paper/data
 ```
 
-Numbers in `main.tex` quote the notes; the assembly pass (#61) checks them
-against `data/` as well. The cache's rates are computed from its own errors,
-so where the notes' floor rows carry hand-derived rates the two can differ
-in the last digit (up to 0.2 on the floor and seed-floor rows of §5.4–5.6);
-the errors themselves agree to rounding.
+Numbers in `main.tex` quote the notes and, where the notes round, the
+cache's unrounded errors (each `% TRACE` comment says which). The
+scripted half of the assembly check is
+
+```bash
+uv run python scripts/paper_numbers.py        # every cache-backed number the text quotes
+```
+
+which recomputes each ratio, rate and factor the manuscript states from
+`data/` and fails on any that no longer rounds to the quoted value; add a
+line to its table whenever the text quotes a new one. The notes' floor and
+seed-floor rows of §5.4–5.6 carried hand-derived rates that differed from
+the cache's by up to 0.2; #61 corrected the notes from the cache, so the
+two agree.
 
 ## Work breakdown (epic #51)
 

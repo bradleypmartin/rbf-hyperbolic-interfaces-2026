@@ -22,14 +22,17 @@
 % pp. 376–379).
 %
 % Citation keys are stable: the section drafts (#55–#60) cite these keys.
-% ImbertGerardMoiolaStocker2024 kept its key when the preprint's published
-% form (IMA JNA 2025, with a fourth author) replaced its fields; #61 may
-% rename it.
+% ImbertGerardMoiolaPerinatiStocker2025 was ImbertGerardMoiolaStocker2024
+% until #61 renamed it for the published form (IMA JNA 2025, with a
+% fourth author) that replaced the preprint's fields in #53.
 %
 % BUILD PITFALL (found in #52): tectonic 0.16.9's BibTeX hangs forever on
 % amsalpha when a braced accent such as {\'o} falls inside the three-letter
-% label prefix of a single author's surname. Write P\'olya and M\"uhlbach
-% (unbraced) in single-author entries; braced accents elsewhere are fine.
+% label prefix of a single author's surname, and the unbraced P\'olya form
+% avoids the hang but yields the label [P\'22]. Since #61 the two
+% single-author entries carry the accented letter as UTF-8 (Pólya,
+% Mühlbach), which BibTeX labels [Pó22] and [Mü73] and XeTeX sets
+% correctly; braced accents elsewhere are fine.
 % =====================================================================
 
 % ---------------------------------------------------------------------
@@ -922,7 +925,7 @@
 % 2025-01-19, print 2025-12). The seeded entry had three authors and the
 % preprint year; both replaced. Key kept for the section drafts; #61 may
 % rename it.
-@article{ImbertGerardMoiolaStocker2024,
+@article{ImbertGerardMoiolaPerinatiStocker2025,
   author  = {Imbert-G{\'e}rard, Lise-Marie and Moiola, Andrea and Perinati,
              Chiara and Stocker, Paul},
   title   = {Polynomial quasi-{T}refftz {DG} for {PDEs} with smooth
@@ -955,7 +958,7 @@
 % 312–324, 1922). The AMS PDF was not fetched; the theorem is cited as the
 % notes state it.
 @article{Polya1922,
-  author  = {P\'olya, G.},
+  author  = {Pólya, G.},
   title   = {On the mean-value theorem corresponding to a given linear
              homogeneous differential equation},
   journal = {Transactions of the American Mathematical Society},
@@ -1000,7 +1003,7 @@
 % VERIFIED 2026-09-20: Crossref record of doi:10.1016/0021-9045(73)90104-4
 % (J. Approx. Theory 9(2), 165–172, 1973).
 @article{Muhlbach1973,
-  author  = {M\"uhlbach, G.},
+  author  = {Mühlbach, G.},
   title   = {A recurrence formula for generalized divided differences and
              some applications},
   journal = {Journal of Approximation Theory},

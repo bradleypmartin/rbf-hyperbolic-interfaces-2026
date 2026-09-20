@@ -393,7 +393,7 @@ two-cell mean at h = 8δ, 10× at 4δ, 37× at 2δ, 146× at δ and 580× at δ/
 the gap widens toward the knee, the opposite of the outcome #69 named as
 the one that would change the story (averaged FD4 matching the seeds near
 h ≈ δ). The widened edges are worse than naive wherever they act (widened
-h: 1.03×, 1.1×, 1.7× at h = 8δ, 4δ, 2δ; widened 2h: 2.2×, 2.6×, 5.3×, and
+h: 1.03×, 1.1×, 1.7× at h = 8δ, 4δ, 2δ; widened 2h: 2.2×, 2.6×, 5.1×, and
 350× at h = δ where the 2h edge is still twice the true one) and equal to
 it once mh ≤ δ.
 
@@ -947,11 +947,11 @@ Wider pulse, error in v and the largest spurious |u| (the exact u is 0):
   the jump's level: the straddling rows at h/2 see tanh(h/2δ) of the
   contrast, 0.9993 at 2500 nodes and 0.89 at 19,600.
 - *A resolved edge costs nothing.* At δ = 0.04 (h ≤ δ/2) the naive error is
-  the floor to within 6% at every n, with the floor's rates.
+  the floor to within 7% at every n, with the floor's rates.
 - *The knee is there but small in v.* At δ = 0.01 the naive error exceeds
-  the floor by 19%, 17%, 18% and 8% from h = 2δ to h = 0.71δ; taking the
+  the floor by 19%, 17%, 18% and 7% from h = 2δ to h = 0.71δ; taking the
   excess in quadrature, the edge's own contribution falls 3.3e-2, 1.1e-2,
-  3.0e-3, 5.2e-4, faster than second order and accelerating, which is the
+  3.0e-3, 5.1e-4, faster than second order and accelerating, which is the
   knee shape of section 2 seen through a high floor.
 - *The spurious u separates the cases far more sharply than v.* The
   naive stencils excite u where a field varies sharply in y, because d/dx
@@ -1235,11 +1235,11 @@ Error in v (rates in h between consecutive n):
 | 0 (jump) | interface-aware | 5.4e-2 | 1.8e-2 | 4.7e-3 | 1.2e-3 | 3.2, 3.8, 4.0 |
 | 0.0025 | naive | 8.9e-2 | 4.8e-2 | 2.7e-2 | 1.3e-2 | 1.9, 1.6, 2.2 |
 | 0.0025 | seeds | 3.0e-2 | 7.7e-3 | 2.1e-3 | 6.4e-4 | 4.1, 3.7, 3.5 |
-| 0.01 | naive | 6.2e-2 | 2.2e-2 | 5.7e-3 | 1.4e-3 | 3.1, 3.7, 4.2 |
+| 0.01 | naive | 6.2e-2 | 2.1e-2 | 5.7e-3 | 1.4e-3 | 3.1, 3.7, 4.2 |
 | 0.01 | seeds | 3.0e-2 | 1.1e-2 | 3.9e-3 | 1.6e-3 | 3.1, 2.8, 2.7 |
 | 0.04 | naive | 5.2e-2 | 1.9e-2 | 5.1e-3 | 1.4e-3 | 2.9, 3.7, 3.9 |
 | 0.04 | seeds | 7.5e-2 | 2.8e-2 | 7.7e-3 | 2.7e-3 | 2.9, 3.6, 3.1 |
-| floor | naive, uniform | 5.2e-2 | 1.8e-2 | 4.8e-3 | 1.3e-3 | 3.0, 3.8, 3.8 |
+| floor | naive, uniform | 5.2e-2 | 1.8e-2 | 4.8e-3 | 1.3e-3 | 3.1, 3.7, 3.9 |
 
 h/δ at the four n: 8, 5.7, 4, 2.9 for δ = 0.0025; 2, 1.4, 1, 0.71 for
 δ = 0.01; 0.5, 0.36, 0.25, 0.18 for δ = 0.04.
@@ -1303,7 +1303,7 @@ Largest spurious |u| (exact: 0), and the error in h:
   seed row): the seeds are 1.4–2.0× worse than naive in v and 4–5×
   worse in u, at rates of 2.9–3.6 against 2.9–3.9, as the 2500-node
   acceptance run of §5.3 found. The naive scheme is at its floor to
-  within 6% at every n, with the floor's rates; there is nothing left
+  within 7% at every n, with the floor's rates; there is nothing left
   for the seeds to remove and the 19/3 stencils through a resolved
   profile are the less accurate scheme.
 - *So the rule for a flat edge is: seed when δ ≤ h, run naive otherwise.*
@@ -1470,7 +1470,7 @@ Error in v at t = 1, direction (1, 2) (rates in h between consecutive n):
 | 0.01 | seeds | 7.4e-2 | 3.0e-2 | 1.16e-2 | 5.1e-3 | 2.7, 2.7, 2.4 |
 | 0.01 | ablation | 7.3e-2 | 3.0e-2 | 1.18e-2 | 5.3e-3 | 2.6, 2.7, 2.4 |
 | 0.01 | seed floor | 2.1e-2 | 7.2e-3 | 3.3e-3 | 1.46e-3 | 3.1, 2.1, 2.5 |
-| floor | naive, uniform | 4.7e-2 | 1.55e-2 | 4.3e-3 | 1.20e-3 | 3.2, 3.7, 3.7 |
+| floor | naive, uniform | 4.7e-2 | 1.55e-2 | 4.3e-3 | 1.20e-3 | 3.3, 3.6, 3.8 |
 
 Error in u and in h:
 
@@ -1482,7 +1482,7 @@ Error in u and in h:
 | 0.01 | naive | 1.4e-1, 7.6e-2, 3.7e-2, 1.5e-2 | 1.9, 2.0, 2.7 | 9.0e-2, 4.6e-2, 2.2e-2, 9.9e-3 | 1.9, 2.1, 2.4 |
 | 0.01 | seeds | 1.3e-1, 6.3e-2, 2.6e-2, 8.9e-3 | 2.2, 2.5, 3.2 | 7.8e-2, 3.4e-2, 1.31e-2, 6.3e-3 | 2.5, 2.6, 2.2 |
 | 0.01 | ablation | 1.4e-1, 6.4e-2, 2.6e-2, 9.1e-3 | 2.3, 2.5, 3.1 | 8.1e-2, 3.4e-2, 1.33e-2, 6.4e-3 | 2.6, 2.6, 2.2 |
-| floor | naive, uniform | 4.7e-2, 1.6e-2, 4.3e-3, 1.2e-3 | 3.2, 3.7, 3.7 | | |
+| floor | naive, uniform | 4.7e-2, 1.6e-2, 4.3e-3, 1.2e-3 | 3.3, 3.6, 3.8 | | |
 
 ![Naive RBF-FD vs seed stencils at oblique incidence: error in v and in u vs resolution](figures/wave2d_stiff_oblique_convergence.png)
 
@@ -1773,11 +1773,11 @@ operator through a 10⁻⁶ contrast):
 | 0 (jump) | interface-aware | 5.1e-2 | 1.69e-2 | 4.6e-3 | 1.39e-3 | 3.3, 3.6, 3.6 |
 | 0.005 | naive | 8.1e-2 | 3.2e-2 | 6.3e-3 | 1.90e-3 | 2.8, 4.5, 3.5 |
 | 0.005 | seeds | 2.6e-2 | 4.5e-3 | 2.0e-3 | 8.8e-4 | 5.2, 2.3, 2.5 |
-| 0.005 | seed floor | 3.3e-2 | 4.7e-3 | 1.68e-3 | 8.3e-4 | 5.8, 2.9, 2.0 |
+| 0.005 | seed floor | 3.3e-2 | 4.7e-3 | 1.68e-3 | 8.3e-4 | 5.8, 2.9, 2.1 |
 | 0.01 | naive | 5.8e-2 | 1.78e-2 | 5.2e-3 | 1.30e-3 | 3.5, 3.4, 4.1 |
 | 0.01 | seeds | 4.2e-2 | 1.04e-2 | 3.9e-3 | 1.62e-3 | 4.2, 2.8, 2.6 |
-| 0.01 | seed floor | 5.1e-2 | 1.20e-2 | 3.8e-3 | 1.57e-3 | 4.3, 3.4, 2.6 |
-| floor | naive, uniform | 5.3e-2 | 1.81e-2 | 4.8e-3 | 1.30e-3 | 3.2, 3.9, 3.8 |
+| 0.01 | seed floor | 5.1e-2 | 1.20e-2 | 3.8e-3 | 1.57e-3 | 4.3, 3.2, 2.6 |
+| floor | naive, uniform | 5.3e-2 | 1.81e-2 | 4.8e-3 | 1.30e-3 | 3.2, 3.7, 3.9 |
 
 h/δ at the four n: 4, 2.9, 2, 1.4 for δ = 0.005; 2, 1.4, 1, 0.71 for
 δ = 0.01.
@@ -1840,20 +1840,22 @@ Rates of the seeds' edge rows: 3.8, 4.1, 3.4 at δ = 0.005 and 3.6, 3.8,
   naive. Through δ = 0.01 the curved numbers are the flat ones of §5.4
   to two digits from 4900 nodes on (seeds 1.04e-2, 3.9e-3, 1.62e-3
   against 1.1e-2, 3.9e-3, 1.6e-3; naive 1.78e-2, 5.2e-3, 1.30e-3 against
-  2.2e-2, 5.7e-3, 1.4e-3), and the seed-when-δ ≤ h rule reads off the
+  2.1e-2, 5.7e-3, 1.4e-3), and the seed-when-δ ≤ h rule reads off the
   same column as before: at h = δ (10,000 nodes) the seeds win 1.35×, at
   h = 0.71δ the naive scheme wins 1.25×, exactly the flat crossover.
   Curvature, at amplitude 0.02, changed nothing that these node sets
   can see.
 - *The seeds' floor is the seed operator's, and at the fine end it is
   the degree-3 augmentation, not the edge.* The seed floor (the same
-  rows through no contrast) is below the naive floor at 4900 and 10,000
-  nodes (4.7e-3 against 1.81e-2, 1.68e-3 against 4.8e-3 at δ = 0.005)
-  and above it at 19,600 (8.3e-4 against 1.30e-3), with rates falling
-  to 2.0–2.6 there: 19-node degree-3 rows are third order in the first
+  rows through no contrast) is below the naive floor at every n, but by
+  less at the fine end: 3.8× at 4900 nodes and 2.9× at 10,000 (4.7e-3
+  against 1.81e-2, 1.68e-3 against 4.8e-3 at δ = 0.005), only 1.6× at
+  19,600 (8.3e-4 against 1.30e-3), its rates having fallen to 2.1–2.6
+  there against the naive floor's 3.7–3.9 (the #61 pass corrected this
+  sentence, which read "above it at 19,600", backwards): 19-node degree-3 rows are third order in the first
   derivatives with a small constant, and with rtol = 0 they cover the
   19δ tails on both sides of both edges, 44–72% of the nodes. That is
-  the mechanism behind the seeds' 2.3–2.6 rates at the fine end here
+  the mechanism behind the seeds' 2.4–2.7 rates at the fine end here
   and in §5.4–5.5, a resolution effect of the seeded region's stencils
   and not of the edge. §5.6.1 tests the obvious lever, trimming the
   seeded rows to the stencils that see more than 10⁻³ of the contrast
@@ -1958,10 +1960,10 @@ singled out: κr²/2 is 40%, 20%, 10%, 5% of δ at the four n.
 | --- | --- | --- | --- | --- | --- |
 | curved | naive | 9.2e-2, 4.6e-2, 2.4e-2, 1.19e-2 | 2.1, 1.9, 2.1 | 1.16e-2 | 2.0e-2 |
 | curved | seeds | 2.9e-2, 8.1e-3, 2.9e-3, 9.5e-4 | 3.8, 2.9, 3.3 | 8.0e-4 | 4.0e-3 |
-| curved | seed floor | 2.7e-2, 6.7e-3, 1.93e-3, 7.1e-4 | 4.0, 3.5, 3.0 | | |
+| curved | seed floor | 2.7e-2, 6.7e-3, 1.93e-3, 7.1e-4 | 4.2, 3.5, 3.0 | | |
 | flat (§5.4) | seeds | 3.0e-2, 7.7e-3, 2.1e-3, 6.4e-4 | 4.1, 3.7, 3.5 | 6.7e-4 | |
 | flat (§5.4) | naive | 8.9e-2, 4.8e-2, 2.7e-2, 1.3e-2 | 1.9, 1.6, 2.2 | 1.2e-2 | |
-| | floor | 5.3e-2, 1.81e-2, 4.8e-3, 1.30e-3 | 3.2, 3.9, 3.8 | | |
+| | floor | 5.3e-2, 1.81e-2, 4.8e-3, 1.30e-3 | 3.2, 3.7, 3.9 | | |
 
 Truncation on the reference state, seeds' edge rows 1.08e-2, 3.6e-3,
 1.07e-3, 3.3e-4 (rates 3.2, 3.6, 3.4) against bulk rows 2.5e-3, 8.3e-4,
@@ -2000,7 +2002,7 @@ contrast seeds no row).
 | tails to 19δ | seeds | 2.6e-2, 4.5e-3, 2.0e-3, 8.8e-4 | 5.2, 2.3, 2.5 | 6.1e-4 | 2.6e-3 |
 | tails to 3.8δ | seeds, trimmed | 3.2e-2, 1.00e-2, 3.2e-3, 9.4e-4 | 3.4, 3.2, 3.6 | 8.6e-4 | 3.9e-3 |
 | | naive | 8.1e-2, 3.2e-2, 6.3e-3, 1.90e-3 | 2.8, 4.5, 3.5 | 1.79e-3 | 6.0e-3 |
-| | floor | 5.3e-2, 1.81e-2, 4.8e-3, 1.30e-3 | 3.2, 3.9, 3.8 | | |
+| | floor | 5.3e-2, 1.81e-2, 4.8e-3, 1.30e-3 | 3.2, 3.7, 3.9 | | |
 
 The trim does what the floor bullet predicted for the *rate*: 3.4,
 3.2, 3.6 all the way, no fine-end decay, and the trimmed seeds' edge
