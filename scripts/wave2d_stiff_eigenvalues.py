@@ -337,10 +337,17 @@ def main() -> None:
         )
 
     spectra: dict[tuple[str, float], np.ndarray] = {}
+    width_labels: dict[float, str] = {}
     for width in widths:
         medium = medium_for(width, args)
         ratio = h / width
-        width_label = f"h/{ratio:.3g}" if ratio >= 1 else f"{1 / ratio:.3g}h"
+        if abs(ratio - 1) < 1e-9:
+            width_label = "h"
+        elif ratio > 1:
+            width_label = f"h/{ratio:.3g}"
+        else:
+            width_label = f"{1 / ratio:.2g}h"
+        width_labels[width] = width_label
         for variant in variants:
             t0 = time.perf_counter()
             ops = build(variant, nodes, medium, args.seed_hyper_scale, args.workers)
@@ -392,9 +399,9 @@ def main() -> None:
                 ax.set_xticks([-3, -2, -1, 0, 1])
             if i == 0:
                 ax.set_title(
-                    rf"$\delta = h/{h / width:.3g}$"
+                    rf"$\delta = {width_labels[width]}$"
                     if print_mode
-                    else f"edge width $\\delta$ = h/{h / width:.3g}",
+                    else f"edge width $\\delta$ = {width_labels[width]}",
                     fontsize=None if print_mode else 11,
                 )
             if i == len(variants) - 1:

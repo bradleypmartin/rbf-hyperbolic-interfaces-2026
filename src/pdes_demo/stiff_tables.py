@@ -187,7 +187,7 @@ def table_truncation(cache: ResultsCache, source: str) -> str:
 def width_label_tex(label: str) -> str:
     if label in ("jump", "uniform"):
         return "jump" if label == "jump" else "(floor)"
-    return f"${label}$"
+    return "$h$" if label == "h/1" else f"${label}$"
 
 
 def table_spectra(cache: ResultsCache, source: str) -> str:
@@ -199,6 +199,10 @@ def table_spectra(cache: ResultsCache, source: str) -> str:
         for k in ("energy_ratio", "max_u", "err_v")
         if any(r[k] is not None for r in recs)
     ]
+    # On the curved geometry the true u is not zero, so max |u| measures
+    # nothing about the scheme; the notes leave that column out there too.
+    if cache.args.get("amplitude", 0.0):
+        measured = [k for k in measured if k != "max_u"]
     names = {
         "energy_ratio": "$E(1)/E(0)$",
         "max_u": r"max $|u|$",
@@ -213,7 +217,7 @@ def table_spectra(cache: ResultsCache, source: str) -> str:
             sci(r["max_re_hyper"]).replace(r"\sci{", r"\sci{+")
             if r["max_re_hyper"] > 0
             else sci(r["max_re_hyper"]),
-            f"{r['rk4_max']:.4f}",
+            f"{r['rk4_max']:.5f}",
         ]
         for k in measured:
             v = r[k]

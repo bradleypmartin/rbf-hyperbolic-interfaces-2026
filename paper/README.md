@@ -65,7 +65,8 @@ Everything under `figures/` regenerates from committed sources:
 ```bash
 uv run python scripts/paper_figures.py            # from data/: ~10 s
 uv run python scripts/paper_figures.py --all      # + stills and spectra through the
-                                                  # drivers (needs outputs/ caches): ~25 min
+                                                  # drivers (needs outputs/ caches): ~50 min,
+                                                  # the two n = 2500 spectra most of it
 uv run python scripts/paper_figures.py --check    # regenerate the cached set elsewhere,
                                                   # fail on any byte that differs
 ```

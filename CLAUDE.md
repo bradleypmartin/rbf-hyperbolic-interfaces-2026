@@ -141,7 +141,7 @@ src/pdes_demo/   library code
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py; paper_figures.py (the manuscript's
                  figures and tables from paper/data/, #54)
-tests/           pytest, 182 tests; every numerical routine has one
+tests/           pytest, 208 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
@@ -188,8 +188,9 @@ uv run python scripts/wave1d_stiff.py --data-dir paper/data   # any stiff driver
                                               # manuscript's look
 uv run python scripts/paper_figures.py        # paper/figures/ from paper/data/: ~10 s;
                                               # --all adds the stills and spectra through the
-                                              # drivers (~25 min from the outputs/ caches);
-                                              # --check verifies byte identity
+                                              # drivers (~50 min from the outputs/ caches, the
+                                              # two n = 2500 spectra most of it); --check
+                                              # verifies byte identity of the cached set
 ./slides/build.sh                             # copy figures and clips from outputs/,
                                               # crop, tectonic → slides/talk.pdf
 uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the notes

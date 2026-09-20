@@ -105,7 +105,7 @@ from pdes_demo.wave2d.exact import plane_wave_from_1d, spectral_plane_wave_1d
 
 MODE_SHORT = {"naive": "naive", "aware": "seeds", "ablate": "ablat"}
 TITLES = {"naive": "Standard RBF-FD (naive)", "aware": "Seed stencils"}
-PRINT_TITLES = {"naive": "naive RBF-FD", "aware": "seed stencils"}
+PRINT_TITLES = {"naive": "naive", "aware": "seeds"}
 BUILD_MODE = {"naive": "naive", "aware": "aware", "ablate": "aware"}
 UNIFORM = LayeredMedium2D(layer=ElasticMaterial(lam=1.0, mu=1.0, rho=1.0))
 # A band the exact uniform solution cannot tell from the background, on
@@ -866,9 +866,7 @@ def snapshot(
         style_map(ax_v, medium)
         if r == 0:
             ax_v.set_title(
-                f"the wave ({ref_name}), $|v|$"
-                if print_mode
-                else f"The wave ({ref_name})\n|v|",
+                "$|v|$, reference" if print_mode else f"The wave ({ref_name})\n|v|",
                 fontsize=fs,
             )
         if show_curl:
@@ -880,7 +878,7 @@ def snapshot(
             style_map(ax_c, medium)
             if r == 0:
                 ax_c.set_title(
-                    r"S waves, $|u_y - v_x|$"
+                    r"$|u_y - v_x|$, S waves"
                     if print_mode
                     else "S waves: |u_y - v_x|\n(zero for a P wave)",
                     fontsize=fs,
@@ -893,13 +891,17 @@ def snapshot(
             if args.u_error:
                 rel_u = rel_error(runs[mode].state[k][0], refs[k][0])
                 u_line, u_print = f"rel. error in u {rel_u:.1%}", f"u {rel_u:.2e}"
+                u_short = f"$u$: {rel_u:.1%}"
             else:
                 u_max = np.abs(runs[mode].state[k][0]).max()
                 u_line, u_print = f"max |u| {u_max:.1e}", f"max|u| {u_max:.1e}"
+                u_short = f"max $|u|$: {u_max:.1e}"
             ax_e.text(
                 0.03,
                 0.97,
-                f"rel. error in v {rel:.1%}\n{u_line}",
+                f"$v$: {rel:.1%}\n{u_short}"
+                if print_mode
+                else f"rel. error in v {rel:.1%}\n{u_line}",
                 transform=ax_e.transAxes,
                 **text_kw,
             )
@@ -917,7 +919,7 @@ def snapshot(
                 )
             if r == 0:
                 ax_e.set_title(
-                    f"{titles[mode]}, error in $v$"
+                    f"error in $v$, {titles[mode]}"
                     if print_mode
                     else f"{titles[mode]}\nerror in v vs reference",
                     fontsize=fs,
@@ -1000,7 +1002,9 @@ def main() -> None:
         sweep(args, node_sets, cache)
     if not args.no_snapshot:
         snapshot(args, node_sets, cache)
-    name = f"wave2d_stiff{run_tag(args)}.json"
+    # A still-only run must not overwrite the sweep's cache of the same tag.
+    kind = "_snapshot" if args.snapshot_only else ""
+    name = f"wave2d_stiff{run_tag(args)}{kind}.json"
     paths = [args.out_dir / name]
     if args.data_dir is not None:
         paths.append(args.data_dir / name)

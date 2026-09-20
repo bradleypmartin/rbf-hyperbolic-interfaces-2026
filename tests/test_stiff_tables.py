@@ -149,7 +149,7 @@ def test_table_spectra_adds_run_columns_only_when_measured() -> None:
     )
     text = table_spectra(cache, "src.json")
     assert "$E(1)/E(0)$" not in text
-    assert r"jump & naive & $0$ & \sci{+3.5}{-3} & 1.0000 \\" in text
+    assert r"jump & naive & $0$ & \sci{+3.5}{-3} & 1.00001 \\" in text
     cache.add(
         "spectrum",
         delta=0.0025,
@@ -165,6 +165,6 @@ def test_table_spectra_adds_run_columns_only_when_measured() -> None:
     )
     text = table_spectra(cache, "src.json")
     assert "$E(1)/E(0)$" in text and r"max $|u|$" in text
-    row = r"$h/8$ & seeds & $985$ & \sci{+6.3}{-2} & 1.0003 & 0.995 & "
+    row = r"$h/8$ & seeds & $985$ & \sci{+6.3}{-2} & 1.00030 & 0.995 & "
     assert row + r"\sci{1.70}{-3} & \sci{3.0}{-2} \\" in text
-    assert r"jump & naive & $0$ & \sci{+3.5}{-3} & 1.0000 & -- & -- & -- \\" in text
+    assert r"jump & naive & $0$ & \sci{+3.5}{-3} & 1.00001 & -- & -- & -- \\" in text

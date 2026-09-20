@@ -12,8 +12,8 @@ byte-identical to the committed one; ``--check`` regenerates the cached
 set into a temporary directory and fails on any difference, the gate the
 assembly pass (#61) can script.
 
-    uv run python scripts/paper_figures.py            # from paper/data, ~15 s
-    uv run python scripts/paper_figures.py --all      # + stills and spectra, ~25 min
+    uv run python scripts/paper_figures.py            # from paper/data, ~10 s
+    uv run python scripts/paper_figures.py --all      # + stills and spectra, ~50 min
     uv run python scripts/paper_figures.py --check    # byte identity with paper/figures
 """
 
