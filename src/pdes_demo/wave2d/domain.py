@@ -418,3 +418,78 @@ def plane_p_wave(
     state[4] = mat.p_impedance * v
     state[2] = mat.lam / (mat.lam + 2 * mat.mu) * state[4]
     return state
+
+
+Direction = tuple[int, int]
+
+
+def pulse_train(
+    phase: np.ndarray, center: float, sharpness: float, images: int = 3
+) -> np.ndarray:
+    """``sum_k exp(-sharpness**2 (phase - center - k)**2)``: a Gaussian train of
+    period 1 in ``phase``, summed over ``2 images + 1`` periodic images (the
+    omitted ones are below ``exp(-sharpness**2 (images - 1/2)**2)``)."""
+    d = np.asarray(phase, dtype=float) - center
+    d -= np.round(d)
+    out = np.zeros_like(d)
+    for k in range(-images, images + 1):
+        out += np.exp(-(sharpness**2) * (d - k) ** 2)
+    return out
+
+
+def oblique_p_wave(
+    nodes: NodeSet | np.ndarray,
+    medium: LayeredMedium2D,
+    direction: Direction = (0, 1),
+    center: float = 0.75,
+    sharpness: float = 23.0,
+    t: float = 0.0,
+) -> np.ndarray:
+    """State ``(5, n)`` of a plane P-wave train at an oblique angle (issue #41).
+
+    ``direction = (m_x, m_y)`` is the wave vector's direction on the integer
+    lattice: the crests are the lines ``m_x x - m_y y = const``, the train
+    travels towards ``+x`` and ``-y`` at the angle ``atan(m_x / m_y)`` to the
+    edge normal, and the crest through ``(0, center)`` at ``t = 0`` repeats
+    every ``1 / sqrt(m_x**2 + m_y**2)`` along the direction of travel. That
+    is what doubly periodic and plane allow: a single tilted crest sweeps
+    every y as x goes round, so an oblique plane pulse cannot be kept out of
+    the band the way :func:`plane_p_wave` (the ``(0, 1)`` member of this
+    family, up to images below 1e-24) keeps its horizontal crest in the
+    background. The profile along the direction of travel is the Gaussian
+    ``exp(-sharpness**2 xi**2)`` periodised.
+
+    Every point carries the *background* material's P eigenvector, as
+    :func:`plane_p_wave` does: with the propagation direction ``d``,
+    ``(u, v) = -d G``, ``f = [(lam + 2 mu) d_x**2 + lam d_y**2] G / c_p``,
+    ``g = 2 mu d_x d_y G / c_p``, ``h = [lam d_x**2 + (lam + 2 mu) d_y**2]
+    G / c_p``, ``G = G(d . x - c_p t)``. So every field is the one smooth
+    profile everywhere, and the part of a strip inside the band is a
+    smooth superposition of the band's own waves. The alternative, the
+    eigenvector of the local material, would make the strips exact P waves
+    inside the band too, but the tractions g and h would then jump across
+    each edge crossing by the impedance ratio over the width delta; the
+    true dynamics resolve that into waves with delta-sharp fronts that no
+    node set with h > delta can carry, and the error of every scheme is
+    then that, not the edge (docs/stiff-features.md §5.5). ``t`` shifts the
+    train by ``c_p t`` along ``d`` with the background speed: the exact
+    solution at time ``t`` in a uniform medium, and meaningless otherwise.
+    """
+    xy = nodes.xy if isinstance(nodes, NodeSet) else np.asarray(nodes, dtype=float)
+    m_x, m_y = (int(v) for v in direction)
+    if m_y < 1 or m_x < 0:
+        raise ValueError("direction must be (m_x >= 0, m_y >= 1)")
+    scale = math.hypot(m_x, m_y)
+    d_x, d_y = m_x / scale, -m_y / scale
+    mat = medium.background
+    # G(d . x - c_p t) with d . x = phase / scale, phase = m_x x - m_y y.
+    phase = m_x * xy[:, 0] - m_y * xy[:, 1] - scale * mat.c_p * t
+    g = pulse_train(phase, -m_y * center, sharpness / scale)
+    lam, mu, c_p = mat.lam, mat.mu, mat.c_p
+    state = np.zeros((len(FIELDS), xy.shape[0]))
+    state[0] = -d_x * g
+    state[1] = -d_y * g
+    state[2] = ((lam + 2 * mu) * d_x**2 + lam * d_y**2) / c_p * g
+    state[3] = 2 * mu * d_x * d_y / c_p * g
+    state[4] = (lam * d_x**2 + (lam + 2 * mu) * d_y**2) / c_p * g
+    return state

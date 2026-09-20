@@ -97,6 +97,7 @@ def build_operators(
     interface_band: float = 4.0,
     seed_rtol: float = 0.0,
     seed_hyper_stencil: int | None = None,
+    seed_tangential: bool = True,
     workers: int | None = None,
 ) -> Operators:
     """Operators on ``nodes``; ``mode="aware"`` rebuilds the rows of nodes within
@@ -116,6 +117,8 @@ def build_operators(
     (``docs/stiff-features.md`` §5.3). Two ODE marches per stencil, about
     50 ms; ``workers`` > 1 spreads them over that many processes (the march
     is Python-bound, so it scales with the cores), same weights to rounding.
+    ``seed_tangential=False`` keeps the marched seeds for the pure normal
+    monomials only (:func:`~.seeds.seed_basis`, the #41 ablation).
     """
     if mode not in ("naive", "aware"):
         raise ValueError(f"unknown mode {mode!r}")
@@ -143,6 +146,7 @@ def build_operators(
             hyper_stencil=seed_hyper_stencil or stencil_size,
             degree=interface_degree,
             rtol=seed_rtol,
+            tangential=seed_tangential,
             shape=shape,
             hyper_power=hyper_power,
             workers=workers,
@@ -275,6 +279,7 @@ def _apply_seed_rows(
     hyper_stencil: int,
     degree: int,
     rtol: float,
+    tangential: bool,
     shape: float,
     hyper_power: int,
     workers: int | None = None,
@@ -308,14 +313,15 @@ def _apply_seed_rows(
             stencil_size=stencil_size,
             hyper_stencil=hyper_stencil,
             degree=degree,
+            tangential=tangential,
             shape=shape,
             hyper_power=hyper_power,
         )
 
 
-def _seed_basis_task(task: tuple[np.ndarray, NormalProfile, int]) -> SeedBasis:
-    local, profile, degree = task
-    return seed_basis(local, profile, degree)
+def _seed_basis_task(task: tuple[np.ndarray, NormalProfile, int, bool]) -> SeedBasis:
+    local, profile, degree, tangential = task
+    return seed_basis(local, profile, degree, tangential=tangential)
 
 
 def _seed_bases(
@@ -323,11 +329,12 @@ def _seed_bases(
     local: np.ndarray,
     profiles: list[NormalProfile],
     degree: int,
+    tangential: bool,
 ) -> list[SeedBasis]:
     """One :func:`seed_basis` per stencil, serially or on the pool (each task
     carries its 19 or 30 local coordinates and the profile, a few hundred
     bytes, and returns about 20 KB of seed values)."""
-    tasks = [(local[s], profiles[s], degree) for s in range(len(profiles))]
+    tasks = [(local[s], profiles[s], degree, tangential) for s in range(len(profiles))]
     if pool is None:
         return [_seed_basis_task(t) for t in tasks]
     return list(pool.map(_seed_basis_task, tasks, chunksize=8))
@@ -344,6 +351,7 @@ def _seed_rows_with(
     stencil_size: int,
     hyper_stencil: int,
     degree: int,
+    tangential: bool,
     shape: float,
     hyper_power: int,
 ) -> tuple[sp.csr_array, sp.csr_array, np.ndarray]:
@@ -367,7 +375,7 @@ def _seed_rows_with(
                 continue
             idx, _ = periodic_knn(nodes.xy, k, query=nodes.xy[centre])
             local, _, theta = _local_frames(nodes, ifc, centre, idx)
-            bases = _seed_bases(pool, local, profiles, degree)
+            bases = _seed_bases(pool, local, profiles, degree, tangential)
             w = seed_weights(local, theta, bases, shape=shape, hyper_power=hyper_power)
             groups.append((centre, idx, w))
     return _merge_coupled_rows(

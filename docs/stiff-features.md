@@ -1218,3 +1218,255 @@ the rates fall towards the crossover at δ = 0.01 and the seeds lose
 beyond it, hence the rule. (2) The naive knee: at h = δ, in spurious u;
 in v the floor hides it as §5.2 predicted. (3) Figures under
 `docs/figures/`, this section, the regression test, runtime above.
+
+### 5.5 Oblique incidence: the x'-dependent seeds act (#41, `scripts/wave2d_stiff.py --direction 1 2`)
+
+At normal incidence the solution is independent of x', u ≡ 0, and the
+seeds of x'ᵃ y'ᵇ with a ≥ 1 could only show through the weights, never
+through the solution (`test_seed_weights_are_exact_on_the_seed_space`
+checks them at the weight level). This section sends the pulse in at an
+angle, where u ≠ 0, the x'-strain of the incident P wave meets the edge,
+and P-to-S conversion appears.
+
+**The pulse.** A plane pulse that is periodic on the unit square and
+tilted cannot be kept out of the band: a single crest line tilted by θ
+sweeps every y as x goes round. What the periodicity allows is the
+doubly periodic *train* along a lattice direction, `wave2d/domain.py:
+oblique_p_wave(direction=(m_x, m_y))`: crests m_x x − m_y y = const,
+angle θ = atan(m_x / m_y) to the edge normal, travelling towards +x and
+−y, one crest through (0, 0.875) repeated every 1/√(m_x² + m_y²) along
+the direction of travel, the Gaussian profile of sharpness 15
+periodised. The normal pulse of §5.2–5.4 is the (0, 1) member of the
+same family (to 10⁻²⁴, the periodic images). A quarter of the strip
+length starts inside the band by area, whichever direction and phase
+are chosen. The direction is (1, 2), θ = 26.6°: the largest crest
+spacing of any sub-critical lattice direction (P → P transmission into
+the band turns critical at 45°, the (1, 1) direction; at 26.6° the
+transmitted P, transmitted S and reflected S leave at 39°, 21° and
+15°, all propagating). The train's period is 0.447 along the direction
+of travel, so neighbouring crests overlap at 1.3·10⁻⁵, and its
+x-content is 13 Fourier modes to 10⁻¹⁴.
+
+Every point carries the *background* material's P eigenvector, as
+`plane_p_wave` does: (u, v) = −d G, f = [K d_x² + λ d_y²] G / c_p,
+g = 2μ d_x d_y G / c_p, h = [λ d_x² + K d_y²] G / c_p. So every field is
+one smooth profile everywhere, and the in-band part of a strip is a
+smooth superposition of the band's own four waves (for the default
+materials, with λ = μ on both sides, its strain is compatible and it
+has no static component). The first attempt used the *local*
+material's eigenvector, which makes the in-band strips exact band P
+waves but makes the tractions g and h jump by the impedance ratio, 2.8×,
+across every edge crossing over the width δ, which no solution can do.
+The true dynamics resolve that into O(1) waves with δ-sharp fronts: at
+δ = 0.01 the reference's v carried 33× the power below wavelength 2h of
+the background construction, with a traction gradient 6× steeper at
+t = 0, and on the node sets both schemes sat 50× above the resolution
+floor at first-order rates (seeds 1.25e-1 down to 5.5e-2 in v at
+δ = 0.0025, naive 1.66e-1 to 6.7e-2), whatever the stencils did at the
+edge. Initial data must respect the interface conditions at the
+sub-grid scale or every scheme measures the initial data.
+
+**The reference** is option (i) of the issue, `wave2d/spectral.py:
+run_fourier`: on a flat medium the coefficients depend on y only, so the
+x-modes of the state never mix, and each mode is a 1-D system in y with
+∂ₓ → 2πik, complex coefficients, Fourier pseudo-spectral in y and RK4,
+all modes marched as one array. It is exact in x, shares nothing with
+the stencils, and costs minutes (13 modes at n_y = 4096 for δ = 0.0025,
+20,000 steps at Δt = 5·10⁻⁵, 220 s; 40 s at δ = 0.01), less than one
+78,400-node seed run, so option (ii), the 4× finer seed run, was not
+needed; its y-direction machinery is what the product-grid reference of
+#42 will build on. Checks (`tests/test_wave2d_oblique.py`): the train
+is the exact translate in a uniform medium to 10⁻¹⁰ and has zero curl
+(a P wave); at normal incidence the solver agrees with the mapped 1-D
+reference of §5.1 to 10⁻¹⁰, two independent code paths; through an
+edge at oblique incidence the elastic energy is conserved to 10⁻¹² and
+doubling the grid while halving the step moves the answer by 10⁻⁸, so
+the RK4 step sets the accuracy and it is far below anything measured.
+`ModeState` evaluates the fields at any point by trigonometric
+interpolation in both directions, and their curl u_y − v_x, which is
+zero for a P wave and so maps the S waves alone.
+
+**What is measured.** As §5.4 (same node sets, the same seed operators
+from the cache since they are pulse-independent, the MATLAB γ, CFL 0.5,
+t = 1): relative l2 errors in v, h and now u against the Fourier
+reference (the spurious u of §5.4 is no longer evidence because u ≠ 0
+exactly). Two floors: the train in the uniform medium against its exact
+translate (the resolution floor of §5.4), and the seed rows built
+through a 10⁻⁶ contrast against the same translate (the seed operator's
+own floor, §5.4's measurement made a driver flag, `--seed-floor`). And
+the ablation of the issue, `--modes ablate`
+(`build_operators(seed_tangential=False)`): the seeds of the pure y'ᵇ
+monomials are kept and every x'ᵃ y'ᵇ with a ≥ 1 is the plain monomial
+with the anchor material's stress, from a second chain on the material
+frozen at the anchor (a frozen column must see frozen lower seeds on its
+right-hand side, or x'² y'² would still be driven by the marched y'²);
+same span dimension, same jets. What the ablation removes is, for
+instance, the v-component that the seed of u = x' acquires across the
+edge (0.5 at δ = h/4 on a 400-node stencil): continuity of the normal
+stress λ u_x + K v_y with λ changing forces a kink in v_y, the Poisson
+coupling of the edge, which a monomial cannot carry.
+
+Error in v at t = 1, direction (1, 2) (rates in h between consecutive n):
+
+| δ | operator | n = 2500 | 4900 | 10000 | 19600 | rates |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.0025 | naive | 1.17e-1 | 6.0e-2 | 3.0e-2 | 1.40e-2 | 2.0, 2.0, 2.2 |
+| 0.0025 | seeds | 8.2e-2 | 3.6e-2 | 1.56e-2 | 8.3e-3 | 2.5, 2.3, 1.9 |
+| 0.0025 | ablation | 9.9e-2 | 5.7e-2 | 3.5e-2 | 1.91e-2 | 1.7, 1.4, 1.8 |
+| 0.0025 | seed floor | 3.6e-2 | 1.26e-2 | 3.6e-3 | 1.06e-3 | 3.1, 3.5, 3.6 |
+| 0.01 | naive | 1.01e-1 | 4.9e-2 | 2.0e-2 | 8.2e-3 | 2.2, 2.5, 2.7 |
+| 0.01 | seeds | 7.4e-2 | 3.0e-2 | 1.16e-2 | 5.1e-3 | 2.7, 2.7, 2.4 |
+| 0.01 | ablation | 7.3e-2 | 3.0e-2 | 1.18e-2 | 5.3e-3 | 2.6, 2.7, 2.4 |
+| 0.01 | seed floor | 2.1e-2 | 7.2e-3 | 3.3e-3 | 1.46e-3 | 3.1, 2.1, 2.5 |
+| floor | naive, uniform | 4.7e-2 | 1.55e-2 | 4.3e-3 | 1.20e-3 | 3.2, 3.7, 3.7 |
+
+Error in u and in h:
+
+| δ | operator | u at 2500 … 19600 | rates | h at 2500 … 19600 | rates |
+| --- | --- | --- | --- | --- | --- |
+| 0.0025 | naive | 1.7e-1, 1.1e-1, 5.5e-2, 2.6e-2 | 1.4, 1.8, 2.2 | 1.10e-1, 6.2e-2, 3.1e-2, 1.58e-2 | 1.7, 1.9, 2.0 |
+| 0.0025 | seeds | 1.4e-1, 7.9e-2, 3.6e-2, 1.6e-2 | 1.8, 2.2, 2.5 | 7.0e-2, 4.2e-2, 2.6e-2, 1.62e-2 | 1.5, 1.3, 1.4 |
+| 0.0025 | ablation | 1.9e-1, 1.3e-1, 8.7e-2, 4.3e-2 | 1.0, 1.2, 2.1 | 9.4e-2, 6.3e-2, 4.0e-2, 2.4e-2 | 1.2, 1.2, 1.6 |
+| 0.01 | naive | 1.4e-1, 7.6e-2, 3.7e-2, 1.5e-2 | 1.9, 2.0, 2.7 | 9.0e-2, 4.6e-2, 2.2e-2, 9.9e-3 | 1.9, 2.1, 2.4 |
+| 0.01 | seeds | 1.3e-1, 6.3e-2, 2.6e-2, 8.9e-3 | 2.2, 2.5, 3.2 | 7.8e-2, 3.4e-2, 1.31e-2, 6.3e-3 | 2.5, 2.6, 2.2 |
+| 0.01 | ablation | 1.4e-1, 6.4e-2, 2.6e-2, 9.1e-3 | 2.3, 2.5, 3.1 | 8.1e-2, 3.4e-2, 1.33e-2, 6.4e-3 | 2.6, 2.6, 2.2 |
+| floor | naive, uniform | 4.7e-2, 1.6e-2, 4.3e-3, 1.2e-3 | 3.2, 3.7, 3.7 | | |
+
+![Naive RBF-FD vs seed stencils at oblique incidence: error in v and in u vs resolution](figures/wave2d_stiff_oblique_convergence.png)
+
+**What the table says, and what it does not.**
+
+- *The seeds win at every (n, δ), by less than at normal incidence*:
+  1.4×, 1.7×, 1.9×, 1.7× in v and 1.2×, 1.4×, 1.5×, 1.6× in u at
+  δ = 0.0025; 1.4–1.7× in v and 1.1–1.7× in u at δ = 0.01. At δ = 0.01
+  the naive scheme has h ≤ 2δ and is resolving the edge; the seeds still
+  lead everywhere, and at h = 0.71δ by 1.6×, so the "seed when δ ≤ h"
+  rule of §5.4 is safe on the seeded side here (it was set on v at
+  normal incidence; this pulse does not reach below h = 0.71δ).
+- *The x'-dependent seeds matter, and they matter where the edge is
+  sharp.* At δ = 0.0025 the ablation is worse than the full seeds by
+  1.2×, 1.6×, 2.2×, 2.3× in v and 1.4×, 1.7×, 2.4×, 2.7× in u, and from
+  4900 nodes on it is worse than the *naive* scheme (1.91e-2 against
+  1.40e-2 in v at 19,600, 4.3e-2 against 2.6e-2 in u): the normal-only
+  seeds bend v across the edge for the y'ᵇ columns and leave u = x'
+  straight, an inconsistent pair that costs more than doing nothing. At
+  δ = 0.01 the ablation and the full seeds agree to three digits at
+  every n: with h ≤ 2δ the kink of the x'-columns is spread over half a
+  stencil radius or more and a cubic in y' carries it. So the answer to
+  the issue's question is yes, they mattered, and the same crossover
+  h ≈ δ that decides whether to seed decides whether the tangential
+  columns are worth their march.
+- *The order is not four.* The seeds converge at 2.5, 2.3, 1.9 in v
+  through δ = 0.0025 (the naive scheme at 2.0, 2.0, 2.2) and sit 7× above
+  the train's resolution floor at 19,600 nodes, against half the floor
+  at normal incidence; in h they are no better than naive at 19,600
+  (1.62e-2 against 1.58e-2, rates 1.4). Six measurements (all scratch
+  runs of 2026-09-19, numbers in this section only) located where that
+  comes from:
+  1. *Not the hyperviscosity.* At γ/4 the seeds' v moves by under 15%
+     where the run stays stable (9.6e-2, 3.6e-2, 1.4e-2 against 8.2e-2,
+     3.6e-2, 1.56e-2; unstable at 19,600 nodes), and γ = 0 blows up for
+     every scheme at every n.
+  2. *Not the angle.* The (1, 3) train at 18.4° gives seeds 6.7e-2,
+     3.2e-2, 1.44e-2, 7.5e-3 (2.2, 2.2, 1.9), naive 1.09e-1, 6.1e-2,
+     3.2e-2, 1.55e-2, floor 4.9e-2 to 1.23e-3: the same picture at a
+     smaller angle. Down to the curved case's range, (1, 4) at 14.0°
+     and (1, 6) at 9.5°: seeds 5.7e-2, 2.7e-2, 1.26e-2, 6.5e-3 (2.2, 2.1,
+     2.0) and 7.0e-2, 2.7e-2, 9.7e-3, 4.8e-3 (2.9, 2.8, 2.1), naive
+     1.12e-1 to 1.50e-2 and 1.20e-1 to 9.5e-3, floors 4.5e-2 and 6.1e-2
+     down to 1.2e-3. The seeds' constant falls with the angle (8.3e-3,
+     7.5e-3, 6.5e-3, 4.8e-3 at 19,600 nodes from 26.6° to 9.5°) and the
+     rates do not move, which is what a floor made of converted waves
+     whose share shrinks with the angle looks like (item 6).
+  3. *Not the u-component seeds.* An S pulse at normal incidence
+     (u = G(y), g = Z_s u, no x-dependence, no conversion) through
+     δ = 0.0025: seeds 2.2e-2, 4.9e-3, 1.22e-3, 4.1e-4 in u at rates
+     4.4, 3.9, 3.2, at half the naive floor (4.0e-2, 1.26e-2, 3.1e-3,
+     8.1e-4) and with the spurious v (exact: 0) at 2.7e-5 against the
+     naive scheme's 6.2e-4 at 19,600 nodes; naive 3.0e-2, 1.30e-2,
+     7.9e-3, 3.7e-3 at 2.5, 1.4, 2.2. The normal-incidence result of
+     §5.4 in the other polarisation.
+  4. *The jump-aware stencils do the same.* Part 2's interface-aware
+     operator at δ = 0 with the (1, 2) train, measured against a
+     78,400-node run of itself resampled one-sided (as Part 2's curved
+     study was): 1.08e-1, 4.8e-2, 1.97e-2, 8.9e-3 in v at rates 2.4, 2.5,
+     2.4 (naive 1.34e-1 to 2.17e-2 at 1.8, 1.9, 1.6). The seeds through
+     δ = 0.0025 (8.3e-3 at 19,600) are where their δ → 0 limit is
+     (8.9e-3): they keep the order of the stencils they generalise. That
+     order was never measured at oblique incidence in Part 2: the flat
+     study is at normal incidence and the curved one (tilt ≤ 7.2°,
+     t = 0.3) was floor-dominated at its coarse end.
+  5. *The stencils at the edge are not the bottleneck.* The truncation
+     error of the elastic operator on the exact reference state at
+     t = 1, per row group, relative to the exact rate: at normal
+     incidence the bulk 30-node rows are fourth order (1.8e-3, 6.3e-4,
+     1.7e-4, 4.7e-5) and the seed rows too (5.4e-3, 1.7e-3, 4.3e-4,
+     1.05e-4). At oblique incidence the *bulk* rows, nowhere near an
+     edge, sit at 5.8e-2, 4.7e-2, 3.8e-2, 2.2e-2, first order, and the
+     seed rows are below them (4.1e-2, 2.5e-2, 7.9e-3, 3.7e-3; the naive
+     edge rows 8.2e-2 to 1.8e-2). The exact oblique solution carries
+     content the node sets barely resolve, and it lives everywhere.
+  6. *It is the converted S waves.* They keep the P pulse's temporal
+     spectrum at wavelengths shorter by c_p/c_s = 1.73 in the
+     background and 2.45/1.41 = 1.73 in the band: the spatial profile of
+     an S pulse of sharpness 26. That pulse's resolution floor in the
+     uniform medium is 2.1e-1, 1.07e-1, 3.9e-2, 1.19e-2 at rates 2.0,
+     2.8, 3.5 (the sharpness-15 S pulse: 4.0e-2 to 8.1e-4 at 3.4, 3.9,
+     4.0; the (1, 2) P train at sharpness 26: 2.3e-1 to 1.65e-2 at 1.9,
+     2.5, 3.2): pre-asymptotic on every node set here, and at 19,600
+     nodes above the seeds' whole error. Weighted by the S waves' share
+     of the solution it is the seeds' error, rates included.
+
+  So at oblique incidence the seeds keep the order of the jump-aware
+  stencils and land at the resolution floor of the mode-converted S
+  waves, which the train's own floor, a P wave, does not see. The right
+  yardstick for an oblique run is a floor with the converted content
+  in it; the P train's is off by an order of magnitude at 19,600 nodes.
+  Fourth-order behaviour of any scheme on this problem needs h below
+  about 1/300 (the sharpness-26 floor reaches its asymptotic rate only
+  at the fine end of this sweep), which is the next node set up.
+
+**The still** (`docs/figures/wave2d_stiff_oblique_snapshot.png`, 10,000
+nodes, δ = 0.0025 = h/4, direction (1, 2)): the reference's |v|, its
+|u_y − v_x| (zero for the incident P; the S waves it makes at the edges,
+absent above the band at t = 0.25 and everywhere by t = 1), and the two
+error maps in v on one colour scale, at t = 0.25 and t = 1. Errors in v
+and u: naive 1.2%, 2.0% at t = 0.25 and 3.0%, 5.5% at t = 1; seeds 0.9%,
+1.5% and 1.6%, 3.7%. At t = 0.25 both error maps show the edge's
+horizontal streaks, the seeds' fainter; by t = 1 the seeds' map is about
+half the naive one everywhere, which is the ratio of the tables.
+
+![P train at 26.6 degrees through a band with smooth edges at 10,000 nodes: the reference, its curl, and the two error maps](figures/wave2d_stiff_oblique_snapshot.png)
+
+**For the curved case (#42).** A downward plane pulse on the sine
+interface of amplitude 0.02 meets it at up to 7.2° from the normal, so
+"normal incidence" there is locally oblique and the x'-dependent seeds
+act; mode conversion is weak at 7° and the converted S content, hence
+the pre-asymptotic floor above, small. Two consequences for the plan:
+measure the jump-aware operator's own order at curved interfaces with a
+resolved reference before judging the curved seeds against it (Part 2's
+3.2–3.7 at t = 0.3 was floor-dominated at 2500 and 4900 nodes), and
+compare every oblique or curved run against a floor that contains the
+converted waves, not the incident pulse's. The JCP 2017 preprint reports
+that its flat-interface approximation at curved interfaces holds fourth
+order to about 40,000 nodes and falters to second beyond, and that
+curvature terms in the stencils keep fourth order throughout; that is a
+curvature effect and separate from the S-wave resolution found here.
+
+**Acceptance.** (1) The seeds keep their order at oblique incidence:
+yes, the order of the stencils they generalise (2.4–2.5 for the coupled
+19-node degree-3 construction on this pulse and these node sets, seeds
+8.3e-3 against jump-aware 8.9e-3 at 19,600 nodes), with the loss from
+four traced to the resolution of the converted S waves and not to the
+edge treatment; mode conversion is visible in the curl map and
+consistent between reference and seeds (the u error tracks v at every
+n). (2) Reference: Fourier in x, for the reasons above. The
+x'-dependent seeds mattered: without them the seeds are worse than
+naive through a sharp edge and no different through a resolved one.
+Tests: the pulse, the reference (four checks) and the ablation
+(`tests/test_wave2d_oblique.py`, 6 tests, 40 s). No regression test at
+the sweep's scale: at 900 and 1600 nodes every oblique or S-pulse run is
+floor-dominated, and the smallest informative configuration (4900
+nodes) costs a minute of reference and marches; the driver is the
+record. Runtime of the default oblique sweep: 500 s with the operators
+cached, of which 260 s are the two references (cached thereafter).

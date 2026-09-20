@@ -47,7 +47,15 @@ an edge the nodes never resolve (δ = 0.0025) the seeds are fourth order
 at every n, 20× below naive in v and 67× in spurious u at 19,600 nodes,
 at their own floor, half the naive one; the crossover is at h ≈ δ and a
 resolved edge (δ = 0.04) is 1.4–2× worse seeded, so the rule is seed
-when δ ≤ h. Next #41 (oblique incidence).
+when δ ≤ h. #41 sent a plane-wave train in at 26.6° (`oblique_p_wave`,
+`--direction 1 2`) against a Fourier-in-x reference (`wave2d/spectral.py`,
+one complex pseudo-spectral system per x-mode): seeds beat naive 1.4–1.9×
+and the x'-dependent seeds are essential through a sharp edge (the
+ablation, `seed_tangential=False`, is worse than naive), but every scheme
+converges at about 2.5 there, the jump-aware stencils included, because
+the mode-converted S waves are 1.73× finer than the pulse and sit at a
+pre-asymptotic floor on these node sets; compare oblique runs against a
+floor with the converted waves in it. Next #42 (curved).
 Derivation in `docs/stiff-features.md` §4, results in §5.
 
 Audience: bright tech workers with no assumed PDE background. **No live
@@ -87,10 +95,11 @@ src/pdes_demo/   library code
                    solver for smooth edges) / resample.py (one-sided
                    interpolation to pixel grids and other node sets) /
                    seeds.py (elastic seed bases marched in the normal
-                   coordinate, Part 3)
+                   coordinate, Part 3) / spectral.py (Fourier-in-x
+                   reference for oblique incidence on flat media, Part 3)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 164 tests; every numerical routine has one
+tests/           pytest, 170 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
@@ -115,6 +124,8 @@ uv run python scripts/wave1d_stiff.py         # Part 3 figures, ~50 s (reference
 uv run python scripts/wave2d_stiff.py         # Part 3 2-D flat δ sweep, naive vs seeds,
                                               # and a still: ~11 min on 12 workers, ~4 min
                                               # once the seed operators are cached in outputs/
+uv run python scripts/wave2d_stiff.py --direction 1 2 --widths 0.0025 0.01 \
+    --modes naive aware ablate --seed-floor   # #41 oblique sweep, ~8 min from the cache
 uv run python scripts/wave2d_stiff_eigenvalues.py   # Part 3 2-D spectra, seed vs naive,
                                               # ~10 min at n = 900; --n 2500 --run ~25 min
 ./slides/build.sh                             # copy figures and clips from outputs/,
