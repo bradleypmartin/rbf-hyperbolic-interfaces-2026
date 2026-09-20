@@ -10,8 +10,12 @@ continued through the edge by what the elastic operator allows. They are the
 
 Everything happens in the local frame of :mod:`.interface`: origin at the
 closest edge-centre point, ``x'`` tangential, ``y'`` normal, rotated fields
-obeying eq. 32 unchanged, and the material depending on ``y'`` only (exact
-for a flat edge). Eliminating the stresses gives the second-order operator
+obeying eq. 32 unchanged, and the material depending on ``y'`` only: exact
+for a flat edge, and for a curved one (#42, route (a)) the material along
+the normal through the foot point, which the ansatz then extends
+unchanged along ``x'``, zeroth order in the curvature like the jump
+stencils of :mod:`.interface`. Eliminating the stresses gives the
+second-order operator
 ``L`` on ``(u, v)``,
 
     rho u_tt = d/dx [(lam + 2 mu) u_x + lam v_y] + d/dy [mu (u_y + v_x)]
@@ -127,20 +131,49 @@ def _shift(arr: np.ndarray, s: int) -> np.ndarray:
 
 @dataclass(frozen=True)
 class NormalProfile:
-    """``lam, mu, rho`` along the normal through a foot point of a flat interface.
+    """``lam, mu, rho`` along the normal through a foot point of an interface.
 
     ``y'`` is the normal coordinate with origin at the foot point
-    ``(x0, y0)``, positive towards ``+y``, exactly the frame of
-    :func:`.interface.closest_point` for a flat interface.
+    ``(x0, y0)`` and ``theta`` the tangent angle there, exactly the frame
+    of :func:`.interface.closest_point`: the point at ``y'`` is
+    ``(x0 - y' sin theta, y0 + y' cos theta)``, the vertical line through
+    the foot point for a flat interface (``theta = 0``, bit for bit the
+    #38 profile). With the medium's blend a function of the signed normal
+    distance, the material along this line is exactly the medium's own
+    edge profile in ``y'`` for the interface the line is normal to, out
+    to its radius of curvature; the other interface's edge is crossed
+    obliquely and enters through its true distance (route (a) of #42).
     """
 
     medium: LayeredMedium2D
     x0: float
     y0: float
+    theta: float = 0.0
+
+    def points(self, yp: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        yp = np.asarray(yp, dtype=float)
+        return self.x0 - yp * np.sin(self.theta), self.y0 + yp * np.cos(self.theta)
 
     def material(self, yp: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        yp = np.asarray(yp, dtype=float)
-        return self.medium.material_at(np.full_like(yp, self.x0), self.y0 + yp)
+        return self.medium.material_at(*self.points(yp))
+
+    def crossings(self, interface: SineInterface) -> np.ndarray:
+        """``y'`` where the normal line meets ``interface`` and its images
+        ``m = -1, 0, 1``: the root of ``y0 + y' cos theta = height(x0 - y'
+        sin theta) + m`` by Newton from the vertical estimate (the closed
+        form for a flat interface; five steps converge the curved case to
+        rounding since the line is within 8 degrees of the vertical)."""
+        c, s = np.cos(self.theta), np.sin(self.theta)
+        m = np.arange(-1.0, 2.0)
+        if self.theta == 0.0:
+            return interface.y0 - self.y0 + m
+        yp = (interface.height(self.x0) + m - self.y0) / c
+        for _ in range(5):
+            x = self.x0 - yp * s
+            yp = yp - (self.y0 + yp * c - interface.height(x) - m) / (
+                c + interface.slope(x) * s
+            )
+        return yp
 
     def stops(self, lo: float, hi: float) -> np.ndarray:
         """Edge centres and their ``+-_EDGE_REACH * edge_width`` flanks inside
@@ -148,8 +181,7 @@ class NormalProfile:
         reach = _EDGE_REACH * self.medium.edge_width
         out = []
         for ifc in self.medium.interfaces:
-            for m in (-1, 0, 1):
-                centre = ifc.y0 - self.y0 + m
+            for centre in self.crossings(ifc):
                 for s in (centre - reach, centre, centre + reach):
                     if lo < s < hi:
                         out.append(s)
@@ -159,19 +191,20 @@ class NormalProfile:
 def normal_profile(
     medium: LayeredMedium2D, interface: SineInterface, x0: float
 ) -> NormalProfile:
-    """The profile through the foot point ``(x0, interface.y0)``.
+    """The profile along the normal through the foot point ``(x0,
+    interface.height(x0))``.
 
     Smooth media only: a jump is :func:`.interface.interface_basis`'s job
-    (and the ``delta -> 0`` limit of these seeds), and a curved interface
-    needs the true normal line (#42).
+    (and the ``delta -> 0`` limit of these seeds).
     """
     if not medium.is_smooth:
         raise ValueError("seeds need edge_width > 0; a jump uses interface_basis")
-    if not medium.is_flat:
-        raise NotImplementedError("seeds along a curved normal are issue #42")
     if interface not in medium.interfaces:
         raise ValueError("interface is not one of the medium's")
-    return NormalProfile(medium, float(x0), float(interface.y0))
+    x0 = float(x0)
+    return NormalProfile(
+        medium, x0, float(interface.height(x0)), float(interface.angle(x0))
+    )
 
 
 # --- the ODE chain -----------------------------------------------------------------
@@ -374,7 +407,7 @@ def frozen_profile(profile: NormalProfile, y_e: float) -> NormalProfile:
         upper=medium.upper,
         edge_width=medium.edge_width,
     )
-    return NormalProfile(uniform, profile.x0, profile.y0)
+    return NormalProfile(uniform, profile.x0, profile.y0, profile.theta)
 
 
 def seed_basis(
