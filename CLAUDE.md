@@ -80,14 +80,23 @@ Derivation in `docs/stiff-features.md` §4, results in §5 (§5.6 curved).
 **Manuscript (#51, sub-issues #52–#62).** `paper/` holds the arXiv-ready
 write-up of Part 3 (amsart, tectonic, `references.bib`, `make_arxiv.py`;
 the `paper/` pattern of Brad's weil-positivity-lab, bolza-bending and
-dirichlet-bridge repos). `docs/stiff-features.md` stays canonical: the
-manuscript quotes it, every number traces to a notes section or the
-results cache (#54), and a `% TRACE` comment per section names the source.
-Figures and tables come from committed scripts, never hand-edited (#54).
-Bibliography entries enter flagged `TODO(verify)` and are cited only after
-the literature pass (#53) verifies them; novelty is cited, not claimed,
-until `LITERATURE.md` buckets it. One sub-issue per PR, in the dependency
-order on #51.
+dirichlet-bridge repos). Merged 2026-09-20: #52 scaffold, #53 literature
+pass (`LITERATURE.md` buckets the novelty claim and §6 there holds the
+only novelty wording the manuscript may use; 66 verified bib entries, no
+unverified citation ships), #54 results cache `paper/data/` with the
+print-style figures and `tab_*.tex` fragments from
+`scripts/paper_figures.py` (`--check` gates byte identity), #55 §1–2,
+#56 §3; #57 §4 drafted. Open, in dependency order: #58 §5, #59 §6, #69
+(stretch: the naive operator on pre-processed coefficients, after #59 and
+before #61), #60 §7, #61 assembly, #62 arXiv packaging.
+`docs/stiff-features.md` stays canonical: the manuscript quotes it, every
+number traces to a notes section or the results cache, and a `% TRACE`
+comment per section names the source. Figures and tables come from
+committed scripts, never hand-edited; `\sci{m}{e}` and `\tablesetup` in
+`main.tex` are what the fragments assume. Notation fixed in §2 (the
+`% NOTATION` comment): 2-D stresses are σ_xx, σ_xy, σ_yy (the code's f, g,
+h; h stays the spacing), K = λ + 2μ, local frame (x′, y′) with y′ normal,
+anchor x_e. One sub-issue per PR, in the dependency order on #51.
 
 Audience: bright tech workers with no assumed PDE background. **No live
 coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
