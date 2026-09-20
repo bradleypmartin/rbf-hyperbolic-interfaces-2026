@@ -86,7 +86,7 @@ only novelty wording the manuscript may use; 66 verified bib entries, no
 unverified citation ships), #54 results cache `paper/data/` with the
 print-style figures and `tab_*.tex` fragments from
 `scripts/paper_figures.py` (`--check` gates byte identity), #55 §1–2,
-#56 §3; #57 §4 drafted. Open, in dependency order: #58 §5, #59 §6, #69
+#56 §3; #57 §4 and #58 §5 drafted. Open, in dependency order: #59 §6, #69
 (stretch: the naive operator on pre-processed coefficients, after #59 and
 before #61), #60 §7, #61 assembly, #62 arXiv packaging.
 `docs/stiff-features.md` stays canonical: the manuscript quotes it, every
