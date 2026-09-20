@@ -47,8 +47,12 @@
 % Run-in headings inside a subsection (amsart's \paragraph adds its own
 % period and no space above).
 \newcommand{\para}[1]{\par\smallskip\noindent\textit{#1}.\enspace}
-% Scientific notation for quoted measurements: $\sci{6.2}{-8}$.
-\newcommand{\sci}[2]{#1 \times 10^{#2}}
+% Scientific notation for quoted measurements, in text or in math (the
+% table fragments of #54 use it in text cells): \sci{6.2}{-8}.
+\newcommand{\sci}[2]{\ensuremath{#1 \times 10^{#2}}}
+% The table fragments of #54 (five or six numeric columns plus rates) are
+% wider than the text block at \small; every table sets this first.
+\newcommand{\tablesetup}{\footnotesize\setlength{\tabcolsep}{3pt}}
 % Draft stubs, visible in the PDF until the owning sub-issue replaces them.
 \newcommand{\stub}[1]{\par\noindent\textit{[Stub, #1.]}\par}
 
@@ -866,12 +870,186 @@ dimensions in Section~\ref{sec:results2d}, applies here too.
 % ===========================================================================
 \section{One-dimensional results}
 \label{sec:results1d}
-% TRACE: notes §2 (#32), scripts/wave1d_stiff.py; numbers from #54's cache.
-% Drafted by #57. Figures: knee (convergence), snapshot; table: the knee.
-\stub{\#57: test problem (medium, contrast, pulse, $\delta \in \{0, 0.0025,
-0.01\}$); the Fourier pseudo-spectral reference; the knee of standard FD4 at
-$h = \delta$; seeds fourth order at every $n$ with the jump case's errors;
-condition numbers $20$--$60$ from $\delta = 10^{-5}$ to $1$}
+% TRACE: notes §2 (#32), scripts/wave1d_stiff.py. Errors, rates and the
+% snapshot maxima are #54's cache, paper/data/wave1d_stiff.json; the table
+% is figures/tab_1d_knee.tex from it. Two numbers are read from the cache's
+% unrounded errors rather than the notes' rounded table: the seed-to-jump
+% agreement (three digits at delta = 0.0025, within 2% at delta = 0.01;
+% the notes say "three digits at every n"), and the factor 850 / average
+% rate 4.9 over the two doublings past the knee (the notes say
+% "fourth-order-ish after"). The pulse width (e^-1 width 2 / sqrt 60, 13
+% spacings at n = 100) is wave1d/domain.py: gaussian, exp(-60 (x + 0.6)^2);
+% the notes' "about 7 nodes across" is a looser count of the same pulse.
+% Reference sizes 8192 / 2048 / 1024 are wave1d/spectral.py: reference_size
+% at tol 1e-14 (the outputs/ cache names carry them); dt = 5e-5 and "about
+% 1e-10" are notes §2. The truncation-error numbers (sharpness-600 profile)
+% are notes §2 ONLY and not in the cache (the breadcrumb on #57 allowed
+% either; a `truncation` record in scripts/wave1d_stiff.py is the follow-up
+% if #61 wants them scriptable). The spectrum numbers (8e-8 at delta =
+% 0.005, n = 400; about 1e-13 otherwise) are notes §2's caveats paragraph;
+% tests/test_wave1d_stiff.py: test_semi_discrete_operator_has_no_growing_modes
+% keeps the delta = 0.005 case. Drafted by #57.
+
+The experiment of this section is the one-dimensional test of the
+prediction that closes Section~\ref{sec:ect}: standard FD4 loses its order
+through an edge it does not resolve and recovers it at $h \approx
+\delta$, while the seed stencils on the same grid are fourth order at
+every resolution with a constant that does not depend on $\delta$.
+
+\para{Test problem}
+The medium is that of Section~\ref{sec:setting1d}, the layer $[0,
+\tfrac12)$ with $c$ from $1$ to $2$ at $\rho = 1$, so that $K$ quadruples
+and the impedance doubles across each edge, with edges of width $\delta
+\in \{0, 0.0025, 0.01, 0.04\}$. The initial condition is a right-going
+Gaussian stress pulse, $f = \exp(-60 (x + 0.6)^2)$ and $u = -f / \rho c$,
+started in the background far enough from the layer that the tails of
+the reference below are clean. Its $e^{-1}$ width is $2 / \sqrt{60}
+\approx 0.26$, thirteen spacings on the coarsest grid, so the pulse is
+resolved on every grid and the edges are the only thing under test. The
+grids have $n = 100$, $200$, $400$, $800$ and $1600$ nodes, $h = 0.02$
+down to $0.00125$; for $\delta = 0.0025$ the ratio $h / \delta$ runs from
+$8$ to $\tfrac12$, for $\delta = 0.01$ from $2$ to $\tfrac18$, and for
+$\delta = 0.04$ every grid resolves the edge, $h / \delta \le \tfrac12$.
+Both schemes step with RK4 at $\Delta t = 0.4\, h / c_{\max}$ to $t = 1$,
+by which time the pulse has crossed the layer: the transmitted pulse is
+in the background beyond the layer, the reflection from the lower edge
+is on its way back, and the reflection from the upper edge is still
+inside the layer (Figure~\ref{fig:snapshot1d}). The error is the relative
+$\ell^2$ error in $f$ over the whole grid at $t = 1$.
+
+\para{References}
+For the jump the reference is the exact solution, a ray sum over the
+reflections and transmissions at the two interfaces.
+For $\delta > 0$ the coefficients are smooth and periodic and the
+reference is a Fourier pseudo-spectral discretisation of
+\eqref{eq:sys1d}: derivatives in Fourier space, the coefficients applied
+pointwise, the same RK4 loop. It shares nothing with the finite-difference
+stencils under test, and the semi-discretisation conserves the energy
+$\int (f^2 / K + \rho u^2)\, \mathrm{d}x$ exactly, the Fourier derivative
+being skew-symmetric. Its resolution is set by the edge: on the interval
+of period $2$, $\tanh(x / \delta)$ has poles at $\pm i \pi \delta / 2$,
+so its Fourier coefficients decay like $e^{-\pi^2 \delta m / 2}$ in the
+mode number $m$, and the grid is the power of two that carries every mode
+down to $10^{-14}$: $8192$ nodes for $\delta = 0.0025$, $2048$ for
+$0.01$, and the floor of $1024$ for $0.04$. With $\Delta t = 5 \times
+10^{-5}$ the reference is accurate to about $10^{-10}$, below every error
+in Table~\ref{tab:knee1d} by more than two orders of magnitude, and is
+interpolated to the test grids trigonometrically.
+
+\para{The knee}
+Table~\ref{tab:knee1d} and Figure~\ref{fig:knee1d} give the errors and
+the rates between successive grids. For the jump the picture is the known
+one \cite{Martin2016,MartinFornberg2017}: standard FD4 is first order and
+the interface-aware stencils are fourth order, $3.9 \times 10^{-3}$ down
+to $6.2 \times 10^{-8}$. Through the edge of width $\delta = 0.0025$
+standard FD4 converges at rates $1.3$ and $2.2$ while $h > \delta$, then
+drops by a factor $200$ between $n = 400$ and $n = 800$, from $h =
+2\delta$ to $h = \delta$: the knee. Over the two doublings past $h =
+2\delta$ its error falls by a factor $850$, an average rate of $4.9$,
+unevenly ($7.7$, then $2.0$), because the nodes sample the $\tanh$ at
+positions that move with $n$ and so does the jump the stencil
+effectively sees; this is also why the rates before the knee are not the
+clean $1.0$ of the jump. For $\delta = 0.01$ the knee sits between
+$n = 100$ and $200$, again at $h \approx \delta$, and the rates after it
+are $4.0$, $5.0$ and $4.0$. For $\delta = 0.04$, which every grid
+resolves, there is no knee and standard FD4 is fourth order throughout.
+
+\begin{table}
+  \caption{Relative $\ell^2$ error in $f$ at $t = 1$ against the
+  reference, and the convergence rates between successive grids, for
+  standard FD4 and the seed stencils (the interface-aware stencils at
+  $\delta = 0$) on the same grids.}
+  \label{tab:knee1d}
+  \centering
+  \tablesetup
+  % figures/tab_1d_knee.tex: scripts/paper_figures.py (#54) from
+  % paper/data/wave1d_stiff.json; never hand-edited.
+  \input{figures/tab_1d_knee.tex}
+\end{table}
+
+\begin{figure}
+  \centering
+  % figures/wave1d_stiff_convergence.pdf: scripts/paper_figures.py (#54),
+  % from pdes_demo.stiff_figures.convergence_1d and the cache; never
+  % hand-edited.
+  \includegraphics[width=\textwidth]{wave1d_stiff_convergence}
+  \caption{The errors of Table~\ref{tab:knee1d} against $n$ for the four
+  edge widths, with first- and fourth-order guides and, for $\delta > 0$,
+  the grid at which $h = \delta$. Standard FD4 has its knee there; the
+  seed stencils lie on one fourth-order line in every panel.}
+  \label{fig:knee1d}
+\end{figure}
+
+The seed stencils are fourth order at every $n$ in every panel. Their
+errors through $\delta = 0.0025$ agree with the interface-aware errors of
+the jump case to three digits at every $n$, and through $\delta = 0.01$
+to within $2\%$: the constant is the one of the jump construction, which
+is what Section~\ref{sec:ect} predicted, since the truncation error
+$O(h^4 \px \pt^4 u)$ does not see the edge width. At $h = 8\delta$ the
+seeds are $18\times$ more accurate than standard FD4, at $h = 2\delta$
+$400\times$, and at $h = \delta / 2$, the end of the sweep for
+$\delta = 0.0025$, still $120\times$. Through the resolved edge $\delta =
+0.04$ the two schemes agree to three digits at every $n$ although their
+weights differ at first order in $h / \delta$ (Section~\ref{sec:taylor}):
+both are exact on a five-dimensional space that approximates the
+solution to fourth order, and on a resolved edge it does not matter which.
+
+\para{Truncation error}
+The same story is told without the time stepping by the local truncation
+error of the two differentiation matrices on the reference solution's
+profile at $t = 1$, here for the narrower pulse of the dissertation
+(sharpness $600$), as the largest error in $u_x$ over the rebuilt rows
+relative to $\max |u_x|$. Through $\delta = 0.0025$ the seed rows have
+errors $9.9 \times 10^{-3}$, $1.2 \times 10^{-3}$, $9.1 \times 10^{-5}$,
+$5.8 \times 10^{-6}$ and $3.6 \times 10^{-7}$ at $h = 8\delta$, $4\delta$,
+$2\delta$, $\delta$ and $\delta / 2$, successive ratios $8.5$, $13$, $16$
+and $16$, fourth order from $h = 8\delta$ on; standard FD4 on the same
+rows falls only from $1.5 \times 10^{-2}$ to $2.2 \times 10^{-4}$ over
+the same five grids, and not monotonically. Through
+$\delta = 0.01$ the seed rows give $2.2 \times 10^{-2}$ down to $2.3
+\times 10^{-7}$ on the same five grids: the same constant.
+
+\para{The coarse-grid picture}
+Figure~\ref{fig:snapshot1d} is the run at $n = 100$ through edges of
+width $\delta = 0.0025 = h / 8$, so that both edges of the layer fall
+between nodes. Standard FD4 trails a grid-scale sawtooth of about $4\%$
+of the pulse height over the whole interval, ahead of the pulses as well
+as behind them: the highest modes of the FD4 stencil have negative group
+velocity, so the noise born at the edges outruns the physical waves. The
+seed stencils sit on the reference with a maximum error of $0.3\%$ of
+the pulse height, which is the dispersion error of interior FD4 on the
+pulse itself.
+
+\begin{figure}
+  \centering
+  % figures/wave1d_stiff_snapshot.pdf: scripts/wave1d_stiff.py --style
+  % print --format pdf, through scripts/paper_figures.py --all (#54);
+  % never hand-edited.
+  \includegraphics[width=\textwidth]{wave1d_stiff_snapshot}
+  \caption{Stress $f$ at $t = 1$ on $100$ nodes through edges of width
+  $\delta = h / 8$ (the layer shaded), against the spectral reference,
+  and the pointwise errors of the two schemes. The transmitted pulse has
+  left the layer, the reflection from the lower edge is travelling back
+  and the reflection from the upper edge is still inside; standard FD4
+  carries a grid-scale sawtooth everywhere, the seed stencils only the
+  interior dispersion error.}
+  \label{fig:snapshot1d}
+\end{figure}
+
+\para{Conditioning and stability}
+The $5 \times 5$ interpolation matrices of the rebuilt rows are the
+perturbed Vandermonde matrices of Section~\ref{sec:chain}, with condition
+numbers between $20$ and $60$ for $\delta$ from $10^{-5}$ to $1$; nothing
+in the sweep approaches the range of $\delta$ where the interface-aware
+weights should be used directly. The semi-discrete operator of the seed scheme has no growing
+modes to speak of: the largest real part of its spectrum is
+$8 \times 10^{-8}$ at $\delta = 0.005$ on $400$ nodes and about
+$10^{-13}$ in the other cases examined, and RK4 at $\Delta t = 0.4\, h /
+c_{\max}$ was stable in every run of the sweep. The runs cost seconds
+(Section~\ref{sec:assembly1d}). Nothing was tried at sharper contrasts,
+for layers thinner than the $19\delta$ tails of an edge, or at orders
+above four; the construction does not change for any of them, and
+Section~\ref{sec:discussion} lists them among the limitations.
 
 % ===========================================================================
 \section{Seeds in two dimensions}
