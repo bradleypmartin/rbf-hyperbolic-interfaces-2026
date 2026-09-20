@@ -17,9 +17,9 @@ With ``edge_width > 0`` the two interfaces are smooth tanh transitions of
 that scale in the normal distance instead of jumps (issue #27, 2-D chain
 from #36): lam, mu and rho are blended between the background and the band
 material, so the Lame parameters vary smoothly and ``c_p``, ``c_s`` follow.
-``edge_width = 0`` is the jump, bit for bit. Only flat interfaces take a
-smooth edge for now; the curved case switches the vertical offset for the
-true signed normal distance (#42).
+``edge_width = 0`` is the jump, bit for bit. The normal distance is the
+vertical offset for a flat interface and the true signed distance to the
+curve, through its foot point, for a curved one (#42).
 
 Node sets follow ``EWE2DRbfPrep.m``: fixed hex-staggered rows that straddle
 each interface orthogonally (Brad's empirical stability requirement), with
@@ -83,6 +83,48 @@ class SineInterface:
         """Signed vertical distance ``y - height(x)`` wrapped to [-1/2, 1/2]."""
         return minimal_image(np.asarray(y) - self.height(x))
 
+    def foot_point(
+        self, x: np.ndarray, y: np.ndarray, iterations: int = 20
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Foot point ``x0`` on the curve nearest ``(x, y)`` and the tangent
+        angle there (``interface.closest_point``; the iteration lives here so
+        the medium can use it without a circular import).
+
+        Same fixed-point scheme as ``pointFinder1/2``: project onto the
+        tangent line at the current guess and move the guess to the
+        projection. It contracts at the rate ``kappa * distance`` (0.4 at
+        half a period from the amplitude-0.02 curve), so the foot point is
+        exact to rounding within a few stencil radii and to about 1e-8 half
+        a period away; the *distance* is stationary at the foot point, so
+        it is exact to rounding everywhere. Exact immediately for a flat
+        interface.
+        """
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+        x0 = x.copy()
+        for _ in range(iterations):
+            y0 = self.height(x0)
+            th = self.angle(x0)
+            # Distance along the tangent from the current foot point.
+            t = np.cos(th) * (x - x0) + np.sin(th) * (y - y0)
+            x0 = x0 + t * np.cos(th)
+        return x0, self.angle(x0)
+
+    def signed_distance(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """Signed normal distance from ``(x, y)`` to this copy of the curve,
+        positive on the ``+y`` side, no periodic images (the medium's
+        :meth:`LayeredMedium2D.normal_distances` picks the image): ``y - y0``
+        for a flat interface, otherwise ``(p - foot) . n`` with the foot
+        point of :meth:`foot_point`. The tangential part of ``p - foot`` is
+        the foot point's error, and its contribution here is that error
+        squared.
+        """
+        x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+        if self.amplitude == 0.0:
+            return y - self.y0
+        x0, th = self.foot_point(x, y)
+        return -(x - x0) * np.sin(th) + (y - self.height(x0)) * np.cos(th)
+
 
 @dataclass(frozen=True)
 class LayeredMedium2D:
@@ -106,11 +148,6 @@ class LayeredMedium2D:
             raise ValueError(
                 f"edge_width {self.edge_width:g} is too wide for a band of "
                 f"width {gap - amp:g}: the two edges would merge (need 4 d <= width)"
-            )
-        if self.edge_width > 0 and not self.is_flat:
-            raise NotImplementedError(
-                "a smooth edge on a curved interface needs the signed normal "
-                "distance (issue #42); only flat interfaces take edge_width > 0"
             )
 
     @property
@@ -141,9 +178,10 @@ class LayeredMedium2D:
         """Blend weight of the band material: 1 inside, 0 outside.
 
         For ``edge_width > 0`` each edge is a tanh step of that scale in the
-        signed normal distance to the interface, which for a flat interface
-        is the vertical offset ``y - y0`` (the curved case, #42, will use
-        the true signed distance). The band profile, a step up at the lower
+        signed normal distance to the interface: the vertical offset
+        ``y - y0`` for a flat interface (this branch, unchanged since #36),
+        :meth:`SineInterface.signed_distance` through :meth:`band_fraction`
+        for a curved one. The band profile, a step up at the lower
         interface and down at the upper, is summed over its periodic images
         in y so the result is smooth and periodic to rounding: the first
         omitted image has both edges more than ``n_images`` from any point
@@ -155,6 +193,8 @@ class LayeredMedium2D:
         x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
         if not self.is_smooth:
             return self.in_layer(x, y).astype(float)
+        if not self.is_flat:
+            return self.band_fraction(*self.normal_distances(x, y))
         d = self.edge_width
         n_images = 1 + int(19 * d)
         y0 = np.mod(y, 1.0)
@@ -162,6 +202,41 @@ class LayeredMedium2D:
         s = np.zeros(np.broadcast_shapes(x.shape, y.shape))
         for m in range(-n_images, n_images + 1):
             s += 0.5 * (np.tanh((y0 + m - lower) / d) - np.tanh((y0 + m - upper) / d))
+        return s
+
+    def normal_distances(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Signed normal distances ``(d_lower, d_upper)`` to the two edges
+        of one periodic image of the band, the image whose centre line is
+        nearest, so the pair always refers to the same band (taking each
+        edge's own nearest image would pair the lower edge of one band
+        with the upper edge of the next near ``y = 0.75`` and read a
+        weight of -1). Both are vertical offsets for a flat medium.
+        """
+        x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+        centre = 0.5 * (self.lower.height(x) + self.upper.height(x))
+        y_s = y - np.round(y - centre)
+        return self.lower.signed_distance(x, y_s), self.upper.signed_distance(x, y_s)
+
+    def band_fraction(self, d_lower: np.ndarray, d_upper: np.ndarray) -> np.ndarray:
+        """The smooth band profile from the signed normal distances to the
+        two edges of the nearest band image (:meth:`normal_distances`),
+        summed over the neighbouring images as :meth:`layer_fraction` does.
+
+        The images ``m = +-1, ...`` are taken at ``d + m``, the flat image
+        rule; for a curved interface the true distance to an image curve
+        differs from that by up to a percent, but those edges are at least
+        0.375 away (a point is within an eighth of a period of the nearest
+        band centre), where the tails are below 1e-16 for ``d <= 0.01``
+        and the rule's error below 1e-7 at the widest edge the band allows.
+        """
+        d = self.edge_width
+        n_images = 1 + int(19 * d)
+        d_lower, d_upper = np.asarray(d_lower, float), np.asarray(d_upper, float)
+        s = np.zeros(np.broadcast_shapes(d_lower.shape, d_upper.shape))
+        for m in range(-n_images, n_images + 1):
+            s += 0.5 * (np.tanh((d_lower + m) / d) - np.tanh((d_upper + m) / d))
         return s
 
     def _blend(self, x: np.ndarray, y: np.ndarray, attr: str) -> np.ndarray:

@@ -55,8 +55,27 @@ ablation, `seed_tangential=False`, is worse than naive), but every scheme
 converges at about 2.5 there, the jump-aware stencils included, because
 the mode-converted S waves are 1.73× finer than the pulse and sit at a
 pre-asymptotic floor on these node sets; compare oblique runs against a
-floor with the converted waves in it. Next #42 (curved).
-Derivation in `docs/stiff-features.md` §4, results in §5.
+floor with the converted waves in it. #42 (curved, the last of the
+chain): the medium blends in the true signed normal distance
+(`SineInterface.signed_distance`, one band image per point), the seeds
+march along the true normal through the stencil's foot point (route (a),
+zeroth order in curvature, the same approximation as the jump stencils),
+and a product-grid Fourier solver (`wave2d/spectral.py: run_fourier_2d`,
+`GridState`) is the reference for δ > 0, a 122,500-node jump-aware run
+for δ = 0 (`scripts/wave2d_stiff.py --amplitude 0.02`, both cached under
+`outputs/`). Results: the curved jump stencils sit at the resolution
+floor at every n (3.6th order to 19,600 nodes); through δ = 0.005 the
+curved seeds sit at the seed operator's own floor at every n, 2.2–7×
+below naive, and through δ = 0.01 the curved numbers equal the flat ones,
+crossover at h = δ as before; the seed rows' truncation error on the
+true curved solution converges at the bulk rate; through δ = 0.0025 the
+seeds are 3–12× below naive and route (a)'s geometry first shows (1.5×
+the flat seeds at 19,600 nodes, level with the seed floor), so route
+(b) is not needed on these node sets and would start to be beyond
+them at δ ≤ h/3; the spectra at 2500 nodes are the flat ones.
+The fine-end rate of the seeds (2.3–2.6) is the 19-node degree-3 rows
+covering the 19δ tails, not the edge (`--seed-rtol` trims them).
+Derivation in `docs/stiff-features.md` §4, results in §5 (§5.6 curved).
 
 Audience: bright tech workers with no assumed PDE background. **No live
 coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
@@ -85,7 +104,8 @@ src/pdes_demo/   library code
                    edges) / stiff.py (ODE-continued seed stencils, Part 3)
   wave2d/          domain.py (materials, sine interfaces with optional tanh
                    edges for flat interfaces, interface-straddling node sets
-                   by repulsion) / neighbors.py (periodic kNN via
+                   by repulsion; signed normal distance for curved smooth
+                   edges) / neighbors.py (periodic kNN via
                    cKDTree boxsize) / rbf.py (Gaussian RBF-FD weights with
                    polynomial augmentation, batched) / interface.py
                    (interface-aware stencils, dissertation §3.3) /
@@ -95,11 +115,13 @@ src/pdes_demo/   library code
                    solver for smooth edges) / resample.py (one-sided
                    interpolation to pixel grids and other node sets) /
                    seeds.py (elastic seed bases marched in the normal
-                   coordinate, Part 3) / spectral.py (Fourier-in-x
-                   reference for oblique incidence on flat media, Part 3)
+                   coordinate, along the true normal for a curved edge,
+                   Part 3) / spectral.py (Fourier-in-x reference for
+                   oblique incidence on flat media; product-grid reference
+                   for curved smooth media, Part 3)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py
-tests/           pytest, 170 tests; every numerical routine has one
+tests/           pytest, 182 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
@@ -126,8 +148,15 @@ uv run python scripts/wave2d_stiff.py         # Part 3 2-D flat δ sweep, naive 
                                               # once the seed operators are cached in outputs/
 uv run python scripts/wave2d_stiff.py --direction 1 2 --widths 0.0025 0.01 \
     --modes naive aware ablate --seed-floor   # #41 oblique sweep, ~8 min from the cache
+uv run python scripts/wave2d_stiff.py --amplitude 0.02 --widths 0 0.005 0.01 \
+    --seed-floor --truncation --snapshot-width 0.005   # #42 curved sweep: ~12 min from
+                                              # the caches, ~2 h to build them (references
+                                              # 4–35 min each, seed operators 1–8 min each)
 uv run python scripts/wave2d_stiff_eigenvalues.py   # Part 3 2-D spectra, seed vs naive,
-                                              # ~10 min at n = 900; --n 2500 --run ~25 min
+                                              # ~10 min at n = 900; --n 2500 --run ~25 min;
+                                              # --amplitude 0.02 for the curved geometry
+uv run python scripts/wave2d_demo.py --amplitude 0.02 --edge-width 0.005   # #42 curved
+                                              # smooth-edge clip vs the product-grid reference
 ./slides/build.sh                             # copy figures and clips from outputs/,
                                               # crop, tectonic → slides/talk.pdf
 uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the notes

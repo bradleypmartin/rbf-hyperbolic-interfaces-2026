@@ -227,23 +227,10 @@ def rotation_matrices(theta: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 def closest_point(
     interface: SineInterface, x: np.ndarray, y: np.ndarray, iterations: int = 20
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Foot point ``x0`` on the curve nearest ``(x, y)`` and the tangent angle there.
-
-    Same fixed-point scheme as ``pointFinder1/2``: project onto the tangent
-    line at the current guess and move the guess to the projection.
-    Converges in a few steps for the mild curves used here; exact
-    immediately for a flat interface.
-    """
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
-    x0 = x.copy()
-    for _ in range(iterations):
-        y0 = interface.height(x0)
-        th = interface.angle(x0)
-        # Distance along the tangent from the current foot point.
-        t = np.cos(th) * (x - x0) + np.sin(th) * (y - y0)
-        x0 = x0 + t * np.cos(th)
-    return x0, interface.angle(x0)
+    """Foot point ``x0`` on the curve nearest ``(x, y)`` and the tangent angle
+    there: :meth:`SineInterface.foot_point`, the fixed-point scheme of
+    ``pointFinder1/2``, kept under this name for the stencil code."""
+    return interface.foot_point(x, y, iterations)
 
 
 # --- stencil weights ---------------------------------------------------------------

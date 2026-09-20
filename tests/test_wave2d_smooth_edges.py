@@ -153,12 +153,10 @@ def test_rejections_and_guards() -> None:
             upper=SineInterface(0.5, 0.02),
             edge_width=0.06,
         )
-    with pytest.raises(NotImplementedError, match="#42"):
-        LayeredMedium2D(
-            lower=SineInterface(0.25, 0.02),
-            upper=SineInterface(0.5, 0.02),
-            edge_width=0.01,
-        )
+    # A curved band takes a smooth edge since #42 (tests/test_wave2d_curved_edges.py).
+    LayeredMedium2D(
+        lower=SineInterface(0.25, 0.02), upper=SineInterface(0.5, 0.02), edge_width=0.01
+    )
     nodes = make_node_set(FLAT, 400, repulsion_steps=5)
     smooth = LayeredMedium2D(edge_width=0.01)
     build_operators(nodes, smooth, mode="naive")

@@ -31,10 +31,23 @@ keyed on (n, seed, delta, band material, ablation); they are pulse
 independent, so the oblique runs reuse the normal-incidence ones. Delete
 the ``wave2d_stiff_ops_*`` files after any change to the seed construction.
 
+``--amplitude 0.02`` bends both interfaces into the sine curves of Part 2's
+curved case (#42): the seeds of every row are the straight-feature seeds
+along the true normal through the stencil's foot point, route (a) of the
+issue. References: for delta > 0 the product-grid Fourier solver of
+``wave2d/spectral.py: run_fourier_2d`` (``--ref-nx``, ``--ref-ny``, cached
+under ``outputs/`` per snapshot time; ``--ref-cfl`` halves the step for a
+self-convergence check), for delta = 0 the jump-aware operator on a
+``--ref-n``-node set of its own, resampled one-sided onto the sweep's nodes
+as ``wave2d_convergence.py`` does. ``--truncation`` adds the probe of #41:
+the elastic operator applied to the reference state at t_end on the nodes
+against the exact rate from the reference's derivatives, per row group.
+Normal incidence only.
+
 Also writes a still at the clip resolution (``--snapshot-n``) through an edge
 that sits between the straddling rows (``--snapshot-width``): the reference
-wave (and, at oblique incidence, its curl, which maps the S waves), then each
-method's error map, at ``--snapshot-times``.
+wave (and, at oblique incidence or on a curved edge, its curl, which maps
+the S waves), then each method's error map, at ``--snapshot-times``.
 
     uv run python scripts/wave2d_stiff.py                      # both modes, 4 widths
     uv run python scripts/wave2d_stiff.py --modes naive        # the #37 baseline
@@ -42,6 +55,8 @@ method's error map, at ``--snapshot-times``.
     uv run python scripts/wave2d_stiff.py --snapshot-only
     uv run python scripts/wave2d_stiff.py --direction 1 2 --widths 0.0025 0.01 \\
         --modes naive aware ablate --seed-floor           # the #41 oblique sweep
+    uv run python scripts/wave2d_stiff.py --amplitude 0.02 --widths 0 0.005 0.01 \\
+        --seed-floor --truncation --snapshot-width 0.005  # the #42 curved sweep
 """
 
 import argparse
@@ -66,12 +81,15 @@ from pdes_demo.plotting import (
     use_demo_style,
 )
 from pdes_demo.wave1d import periodic_grid
+from pdes_demo.wave1d.spectral import reference_size
 from pdes_demo.wave2d import (
     ElasticMaterial,
+    GridState,
     LayeredMedium2D,
     ModeState,
     NodeSet,
     Operators,
+    SineInterface,
     build_operators,
     exact_plane_wave,
     make_node_set,
@@ -80,6 +98,7 @@ from pdes_demo.wave2d import (
     resample_matrix,
     run,
     run_fourier,
+    run_fourier_2d,
 )
 from pdes_demo.wave2d.exact import plane_wave_from_1d, spectral_plane_wave_1d
 
@@ -128,6 +147,37 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="also measure the seed operator's own floor (1e-6 contrast)",
     )
+    parser.add_argument(
+        "--amplitude",
+        type=float,
+        default=0.0,
+        help="sine amplitude of both interfaces (0.02 is Part 2's curved case)",
+    )
+    parser.add_argument(
+        "--ref-nx", type=int, default=None, help="product-grid reference n_x"
+    )
+    parser.add_argument(
+        "--ref-ny", type=int, default=None, help="product-grid reference n_y"
+    )
+    parser.add_argument("--ref-cfl", type=float, default=0.5)
+    parser.add_argument(
+        "--ref-n",
+        type=int,
+        default=122500,
+        help="nodes of the jump-aware reference run for a curved jump (delta = 0)",
+    )
+    parser.add_argument(
+        "--truncation",
+        action="store_true",
+        help="truncation error of the operators on the reference state, per row group",
+    )
+    parser.add_argument(
+        "--seed-rtol",
+        type=float,
+        default=0.0,
+        help="seed only the rows whose stencil sees a relative material spread "
+        "above this (0: any spread, tails to 19 delta; 1e-3 trims to 3.8 delta)",
+    )
     parser.add_argument("--t-end", type=float, default=1.0)
     parser.add_argument("--sharpness", type=float, default=15.0)
     parser.add_argument("--center", type=float, default=0.875)
@@ -150,9 +200,30 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     args.direction = tuple(args.direction)
     args.oblique = args.direction != (0, 1)
+    args.curved = args.amplitude != 0.0
+    # u is exactly 0 only for the flat pulse at normal incidence; otherwise
+    # the u column is the relative error in u.
+    args.u_error = args.oblique or args.curved
     if args.oblique and 0.0 in args.widths:
         parser.error("oblique incidence has no jump reference; use widths > 0")
+    if args.oblique and args.curved:
+        parser.error("the curved case runs at normal incidence")
     return args
+
+
+def medium_for(
+    width: float, args: argparse.Namespace, layer: ElasticMaterial | None = None
+) -> LayeredMedium2D:
+    """The band with edges of ``width`` on the sweep's geometry."""
+    kw = {} if layer is None else {"layer": layer}
+    if args.curved:
+        kw["lower"] = SineInterface(0.25, args.amplitude)
+        kw["upper"] = SineInterface(0.5, args.amplitude)
+    return LayeredMedium2D(edge_width=width, **kw)
+
+
+def geometry_tag(args: argparse.Namespace) -> str:
+    return f"_a{args.amplitude:g}" if args.curved else ""
 
 
 def direction_tag(args: argparse.Namespace) -> str:
@@ -238,6 +309,97 @@ def reference_modes(
     return next(s for s in states if s.t == t)
 
 
+def _grid_path(medium: LayeredMedium2D, args: argparse.Namespace, t: float) -> Path:
+    n_x, n_y = grid_size(medium, args)
+    cfl = "" if args.ref_cfl == 0.5 else f"_cfl{args.ref_cfl:g}"
+    return args.out_dir / (
+        f"wave2d_stiff_refgrid_w{medium.edge_width:g}{geometry_tag(args)}"
+        f"_s{args.sharpness:g}_c{args.center:g}_t{t:g}_{n_x}x{n_y}{cfl}.npz"
+    )
+
+
+def grid_size(medium: LayeredMedium2D, args: argparse.Namespace) -> tuple[int, int]:
+    n_y = args.ref_ny or reference_size(2 * medium.edge_width)
+    return args.ref_nx or max(64, n_y // 2), n_y
+
+
+def reference_grid(
+    medium: LayeredMedium2D, args: argparse.Namespace, t: float
+) -> GridState:
+    """Cached product-grid snapshot at ``t`` (curved smooth media); the
+    sweep's ``t_end`` and the still's times come from one run."""
+    path = _grid_path(medium, args, t)
+    if path.exists():
+        data = np.load(path)
+        return GridState(
+            x=data["x"], y=data["y"], t=float(data["t"]), fields=data["fields"]
+        )
+    wanted = {args.t_end}
+    if not args.no_snapshot and medium.edge_width == args.snapshot_width:
+        wanted.update(args.snapshot_times)
+    missing = sorted(
+        s for s in wanted | {t} if not _grid_path(medium, args, s).exists()
+    )
+    n_x, n_y = grid_size(medium, args)
+    t0 = time.perf_counter()
+    states = run_fourier_2d(
+        medium,
+        lambda xy: oblique_p_wave(
+            xy, medium, args.direction, args.center, args.sharpness
+        ),
+        max(missing),
+        snapshot_times=missing,
+        n_x=n_x,
+        n_y=n_y,
+        cfl=args.ref_cfl,
+    )
+    for state in states:
+        np.savez(
+            _grid_path(medium, args, state.t),
+            x=state.x,
+            y=state.y,
+            t=state.t,
+            fields=state.fields,
+        )
+    print(
+        f"  product-grid reference {n_x} x {n_y}, t = {missing} in "
+        f"{time.perf_counter() - t0:.0f}s -> {path.parent}"
+    )
+    return next(s for s in states if s.t == t)
+
+
+def reference_curved_jump(
+    medium: LayeredMedium2D, args: argparse.Namespace, t: float
+) -> tuple[NodeSet, np.ndarray]:
+    """Cached jump-aware run on ``--ref-n`` nodes at ``t`` (curved jump)."""
+    path = args.out_dir / (
+        f"wave2d_stiff_refjump{geometry_tag(args)}_n{args.ref_n}_seed{args.seed}"
+        f"_s{args.sharpness:g}_c{args.center:g}_t{t:g}.npz"
+    )
+    if path.exists():
+        data = np.load(path)
+        fine = NodeSet(xy=data["xy"], h=float(data["h"]), fixed=data["fixed"])
+        return fine, data["state"]
+    t0 = time.perf_counter()
+    fine = make_node_set(medium, args.ref_n, seed=args.seed)
+    snaps = run(
+        fine,
+        medium,
+        mode="aware",
+        t_end=t,
+        n_snapshots=1,
+        pulse_center=args.center,
+        pulse_sharpness=args.sharpness,
+    )
+    state = snaps.state[-1]
+    np.savez(path, xy=fine.xy, h=fine.h, fixed=fine.fixed, state=state)
+    print(
+        f"  jump-aware reference on {fine.n} nodes, t = {t:g} in "
+        f"{time.perf_counter() - t0:.0f}s -> {path}"
+    )
+    return fine, state
+
+
 _REFERENCE_CACHE: dict[tuple[int, float, float], np.ndarray] = {}
 
 
@@ -245,7 +407,7 @@ def reference_at(
     nodes: NodeSet, medium: LayeredMedium2D, args: argparse.Namespace, t: float
 ) -> np.ndarray:
     """Reference state ``(5, n)`` at ``t`` on the nodes."""
-    if not args.oblique:
+    if not args.oblique and not args.curved:
         if not medium.is_smooth:
             return exact_plane_wave(nodes, t, medium, args.center, args.sharpness)
         grid, u, f = reference_1d(medium, args, t)
@@ -254,7 +416,14 @@ def reference_at(
         )
     key = (nodes.n, medium.edge_width, t)
     if key not in _REFERENCE_CACHE:
-        _REFERENCE_CACHE[key] = reference_modes(medium, args, t).evaluate(nodes.xy)
+        if args.oblique:
+            _REFERENCE_CACHE[key] = reference_modes(medium, args, t).evaluate(nodes.xy)
+        elif medium.is_smooth:
+            _REFERENCE_CACHE[key] = reference_grid(medium, args, t).evaluate(nodes.xy)
+        else:
+            fine, state = reference_curved_jump(medium, args, t)
+            to_nodes = resample_matrix(fine, nodes.xy, medium)
+            _REFERENCE_CACHE[key] = np.stack([to_nodes @ s for s in state])
     return _REFERENCE_CACHE[key]
 
 
@@ -295,6 +464,8 @@ def _ops_path(
         else f"_L{layer.lam:g}-{layer.mu:g}-{layer.rho:g}"
     )
     tag += "_abl" if mode == "ablate" else ""
+    tag += geometry_tag(args)
+    tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
     return args.out_dir / (
         f"wave2d_stiff_ops_n{nodes.n}_seed{args.seed}_w{medium.edge_width:g}{tag}.npz"
     )
@@ -327,6 +498,7 @@ def operators_for(
         medium,
         mode="aware",
         seed_tangential=mode != "ablate",
+        seed_rtol=args.seed_rtol,
         workers=args.workers,
     )
     np.savez(
@@ -383,12 +555,57 @@ def errors_for(
     ref = reference
     if ref is None:
         ref = reference_at(nodes, medium, args, args.t_end)
-    u = rel_error(state[0], ref[0]) if args.oblique else float(np.abs(state[0]).max())
+    # A reference without u (the floors' uniform-medium pulse) gets the
+    # largest spurious |u| instead of a relative error.
+    if args.u_error and np.linalg.norm(ref[0]) > 0:
+        u = rel_error(state[0], ref[0])
+    else:
+        u = float(np.abs(state[0]).max())
     return {"v": rel_error(state[1], ref[1]), "h": rel_error(state[4], ref[4]), "u": u}
 
 
 def u_label(args: argparse.Namespace) -> str:
-    return "u err" if args.oblique else "max|u|"
+    return "u err" if args.u_error else "max|u|"
+
+
+def truncation_errors(
+    medium: LayeredMedium2D, nodes: NodeSet, args: argparse.Namespace
+) -> dict[str, dict[str, float]]:
+    """Relative l2 truncation error of each operator on the reference state
+    at ``t_end``, per row group (the rebuilt rows and the rest): the exact
+    rate is eq. 32 with the reference's own derivatives at the nodes and
+    the material there. Curved smooth media only (the grid reference has
+    derivatives)."""
+    grid = reference_grid(medium, args, args.t_end)
+    state = grid.evaluate(nodes.xy)
+    d_x = grid.evaluate(nodes.xy, dx=1)
+    d_y = grid.evaluate(nodes.xy, dy=1)
+    lam, mu, rho = medium.material_at(nodes.x, nodes.y)
+    exact = np.stack(
+        [
+            (d_x[2] + d_y[3]) / rho,
+            (d_x[3] + d_y[4]) / rho,
+            (lam + 2 * mu) * d_x[0] + lam * d_y[1],
+            mu * (d_y[0] + d_x[1]),
+            lam * d_x[0] + (lam + 2 * mu) * d_y[1],
+        ]
+    )
+    out = {}
+    for mode in args.modes:
+        ops = operators_for(nodes, medium, mode, args)
+        rate = (ops.elastic @ state.ravel()).reshape(5, -1)
+        rebuilt = np.zeros(nodes.n, dtype=bool)
+        rebuilt[ops.interface_nodes] = True
+        groups = {"edge": rebuilt, "bulk": ~rebuilt}
+        if mode == "naive":
+            aware = operators_for(nodes, medium, "aware", args)
+            rebuilt = np.zeros(nodes.n, dtype=bool)
+            rebuilt[aware.interface_nodes] = True
+            groups = {"edge": rebuilt, "bulk": ~rebuilt}
+        out[mode] = {
+            name: rel_error(rate[:, sel], exact[:, sel]) for name, sel in groups.items()
+        }
+    return out
 
 
 def print_table(
@@ -399,13 +616,13 @@ def print_table(
     args: argparse.Namespace,
 ) -> None:
     modes = list(results)
-    rated = "vhu" if args.oblique else "vh"
+    rated = "vhu" if args.u_error else "vh"
     head = "      N  h/delta"
     for mode in modes:
         m = MODE_SHORT[mode]
         for f in "vh":
             head += f" | {m + ' ' + f:>9s} {'rate':>4s}"
-        head += f" {u_label(args):>7s}" + (" rate" if args.oblique else "")
+        head += f" {u_label(args):>7s}" + (" rate" if args.u_error else "")
     for name in floors:
         head += f" | {name + ' v':>8s} {name + ' u':>9s}"
     print(head)
@@ -423,7 +640,7 @@ def print_table(
                 rate = f"{r[(mode, f)][i - 1]:4.1f}" if i else "    "
                 cells += f" | {results[mode][i][f]:9.2e} {rate}"
             cells += f" {results[mode][i]['u']:7.1e}"
-            if args.oblique:
+            if args.u_error:
                 cells += f" {r[(mode, 'u')][i - 1]:4.1f}" if i else "     "
             line += cells
         for name in floors:
@@ -457,7 +674,7 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
     )
     axes, axes_u = panels
     for ax, ax_u, width in zip(axes, axes_u, args.widths, strict=True):
-        medium = LayeredMedium2D(edge_width=width)
+        medium = medium_for(width, args)
         title = (
             "jump edges (delta = 0)" if width == 0 else f"edge width delta = {width:g}"
         )
@@ -469,7 +686,7 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         }
         floors = {"floor": floor}
         if args.seed_floor and width > 0:
-            seed_medium = LayeredMedium2D(layer=SEED_FLOOR_LAYER, edge_width=width)
+            seed_medium = medium_for(width, args, layer=SEED_FLOOR_LAYER)
             floors["sfloor"] = [
                 errors_for(
                     seed_medium,
@@ -482,6 +699,15 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             ]
         print(f"  ({time.perf_counter() - t0:.1f}s)")
         print_table(width, ns, results, floors, args)
+        if args.truncation and args.curved and width > 0:
+            print("  truncation error on the reference state, edge rows | bulk rows")
+            for n in args.ns:
+                errs = truncation_errors(medium, node_sets[n], args)
+                cells = "  ".join(
+                    f"{MODE_SHORT[m]} {e['edge']:8.2e} | {e['bulk']:8.2e}"
+                    for m, e in errs.items()
+                )
+                print(f"  {int(n):5d}  {cells}")
 
         for mode in args.modes:
             ax.loglog(
@@ -501,9 +727,10 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             ms=5,
             lw=1.4,
         )
-        ax_u.loglog(
-            ns, [e["u"] for e in floor], "s--", color=INK_SECONDARY, ms=5, lw=1.4
-        )
+        if not args.curved:  # the curved floors' u is spurious, not an error
+            ax_u.loglog(
+                ns, [e["u"] for e in floor], "s--", color=INK_SECONDARY, ms=5, lw=1.4
+            )
         if "sfloor" in floors:
             kw = dict(color=AWARE, ms=5, lw=1.4, ls=":", marker="s", mfc="none")
             ax.loglog(
@@ -512,7 +739,8 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
                 label="seed operator, no contrast (seed floor)",
                 **kw,
             )
-            ax_u.loglog(ns, [e["u"] for e in floors["sfloor"]], **kw)
+            if not args.curved:
+                ax_u.loglog(ns, [e["u"] for e in floors["sfloor"]], **kw)
         guides = [("naive", 2, "2nd order")]
         if "aware" in args.modes:
             guides.append(("aware", 4, "4th order"))
@@ -556,7 +784,7 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         fig.legend(handles, labels, loc="outside lower center", ncol=2, fontsize=9)
     axes_u[0].set_ylabel(
         f"relative error in u at t = {args.t_end:g}"
-        if args.oblique
+        if args.u_error
         else "max |u| (exact: 0)"
     )
     title = "Same nodes, same time step: the edge is only as sharp as delta"
@@ -565,10 +793,13 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             f"\nP train at {angle_deg(args):.1f} deg to the normal, direction "
             f"{args.direction}"
         )
+    if args.curved:
+        title += f"\nsine interfaces of amplitude {args.amplitude:g} (curved case)"
     fig.suptitle(title, fontsize=12)
     tag = "_naive" if args.modes == ["naive"] else ""
     tag += "" if args.sharpness == 15.0 else f"_s{args.sharpness:g}"
-    tag += direction_tag(args)
+    tag += direction_tag(args) + geometry_tag(args)
+    tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
     out = args.out_dir / f"wave2d_stiff{tag}.png"
     fig.savefig(out, dpi=160)
     print(f"\nwrote {out}")
@@ -587,14 +818,15 @@ def style_map(ax: plt.Axes, medium: LayeredMedium2D) -> None:
     for spine in ax.spines.values():
         spine.set_visible(True)
         spine.set_color(INK_MUTED)
+    xs = np.linspace(0, 1, 201)
     for ifc in medium.interfaces:
-        ax.axhline(ifc.y0, ls="--", color=INK_SECONDARY, lw=1.0)
+        ax.plot(xs, ifc.height(xs), ls="--", color=INK_SECONDARY, lw=1.0)
 
 
 def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
     n, width = args.snapshot_n, args.snapshot_width
-    nodes = node_sets.get(n) or make_node_set(LayeredMedium2D(), n, seed=args.seed)
-    medium = LayeredMedium2D(edge_width=width)
+    nodes = node_sets.get(n) or make_node_set(medium_for(0.0, args), n, seed=args.seed)
+    medium = medium_for(width, args)
     modes = [m for m in args.modes if m != "ablate"]
     t0 = time.perf_counter()
     n_frames = 40
@@ -629,23 +861,27 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         return np.abs(values).reshape(args.pixels, args.pixels)
 
     # The reference itself is drawn from its own representation: resampled
-    # from the nodes at normal incidence, evaluated on the pixels (and its
-    # curl, the S waves) from the Fourier modes at oblique incidence.
+    # from the nodes at flat normal incidence, evaluated on the pixels (and
+    # its curl, the S waves) from the Fourier modes or the product grid.
     wave, curl = {}, {}
+    show_curl = args.oblique or args.curved
     for k in frames:
         if args.oblique:
             state = reference_modes(medium, args, float(times[k]))
-            wave[k] = image(state.evaluate(grid)[1])
-            curl[k] = image(state.curl(grid))
+        elif args.curved:
+            state = reference_grid(medium, args, float(times[k]))
         else:
             wave[k] = image(to_grid @ refs[k][1])
+            continue
+        wave[k] = image(state.evaluate(grid)[1])
+        curl[k] = image(state.curl(grid))
     err_lim = 0.75 * max(np.abs(d).max() for d in diff[modes[0]].values())
     imshow_kw = dict(origin="lower", extent=(0, 1, 0, 1), interpolation="bilinear")
     field_kw = dict(cmap=FIELD_CMAP, vmin=0, vmax=1, **imshow_kw)
     error_kw = dict(cmap=ERROR_CMAP, vmin=0, vmax=err_lim, **imshow_kw)
     text_kw = dict(fontsize=10, color=INK, va="top", ha="left")
 
-    n_ref = 2 if args.oblique else 1
+    n_ref = 2 if show_curl else 1
     n_rows, n_cols = len(frames), n_ref + len(modes)
     fig, axes = plt.subplots(
         n_rows,
@@ -654,14 +890,16 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         constrained_layout=True,
     )
     axes = np.atleast_2d(axes)
-    ref_name = "Fourier reference" if args.oblique else "spectral reference"
+    ref_name = (
+        "Fourier reference" if (args.oblique or args.curved) else "spectral reference"
+    )
     for r, k in enumerate(frames):
         ax_v = axes[r, 0]
         im_v = ax_v.imshow(wave[k], **field_kw)
         style_map(ax_v, medium)
         if r == 0:
             ax_v.set_title(f"The wave ({ref_name})\n|v|", fontsize=11)
-        if args.oblique:
+        if show_curl:
             ax_c = axes[r, 1]
             curl_kw = dict(
                 cmap=FIELD_CMAP, vmin=0, vmax=max(c.max() for c in curl.values())
@@ -675,7 +913,7 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             im_e = ax_e.imshow(image(to_grid @ diff[mode][k]), **error_kw)
             style_map(ax_e, medium)
             rel = rel_error(runs[mode].state[k][1], refs[k][1])
-            if args.oblique:
+            if args.u_error:
                 rel_u = rel_error(runs[mode].state[k][0], refs[k][0])
                 u_line, u_print = f"rel. error in u {rel_u:.1%}", f"u {rel_u:.2e}"
             else:
@@ -702,7 +940,7 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         pad=0.02,
         label="|v|, vertical particle velocity",
     )
-    if args.oblique:
+    if show_curl:
         fig.colorbar(
             im_c,
             ax=axes[:, 1].tolist(),
@@ -724,13 +962,21 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         if args.oblique
         else "Pressure pulse"
     )
+    band = (
+        f"a band with curved edges (amplitude {args.amplitude:g}), 4x stiffness and "
+        "2x density"
+        if args.curved
+        else "a band with 4x stiffness and 2x density"
+    )
     fig.suptitle(
-        f"{incidence} through a band with 4x stiffness and 2x density, "
+        f"{incidence} through {band}, "
         f"edges of width delta = {width:g} = h/{nodes.h / width:.3g}\n"
         f"{nodes.n} scattered nodes, RBF-FD, RK4",
         fontsize=11,
     )
-    out = args.out_dir / f"wave2d_stiff_snapshot{direction_tag(args)}.png"
+    out = args.out_dir / (
+        f"wave2d_stiff_snapshot{direction_tag(args)}{geometry_tag(args)}.png"
+    )
     fig.savefig(out, dpi=160)
     print(f"wrote {out}")
 
@@ -744,9 +990,8 @@ def main() -> None:
     wanted = set() if args.snapshot_only else set(args.ns)
     if not args.no_snapshot:
         wanted.add(args.snapshot_n)
-    node_sets = {
-        n: make_node_set(LayeredMedium2D(), n, seed=args.seed) for n in sorted(wanted)
-    }
+    geometry = medium_for(0.0, args)
+    node_sets = {n: make_node_set(geometry, n, seed=args.seed) for n in sorted(wanted)}
     print(f"node sets: {time.perf_counter() - t0:.1f}s")
     if not args.snapshot_only:
         sweep(args, node_sets)
