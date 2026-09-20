@@ -117,7 +117,7 @@ curved edge at the same accuracy on those node sets.
 % resolved edge; the rule), §5.5 (1.4–1.9x at 26.6°; the ablation worse than
 % naive; rates 2.5, 2.3, 1.9), §5.6 (curved: jump stencils at the floor,
 % seeds 2.2–7x and 3–12x below naive). Drafted by #55. The prior-work
-% paragraph is #53's (LITERATURE.md): cite, don't claim.
+% paragraph is #53's (LITERATURE.md §6a, placed 2026-09-20): cite, don't claim.
 
 High-order finite differences for wave propagation are in good shape at
 both ends of the range of media. When the material parameters vary
@@ -147,8 +147,9 @@ Section~\ref{sec:seeds1d} shows, but their weights are off at first order
 in $\delta / h$, by $10\%$ of the largest weight at $\delta = h/10$ and
 $1\%$ at $\delta = h/100$ in the example of Section~\ref{sec:jumplimit}.
 The other route expands the coefficients in Taylor series about the
-edge, as the dissertation's construction can for smoothly varying
-coefficients \cite{Martin2016} and as polynomial quasi-Trefftz spaces do
+edge, as the interface-aware construction can for a wave speed that
+varies smoothly up to an interface \cite{Martin2016,MartinFornberg2017}
+and as polynomial quasi-Trefftz spaces do
 in general \cite{ImbertGerardMoiolaStocker2023}; but a profile such as
 $\tanh(x / \delta)$ has poles at $\pm i \pi \delta / 2$, so the expansion
 converges only within $\pi \delta / 2$ of the edge while the stencil
@@ -239,7 +240,54 @@ already make.
 
 \subsection{Relation to prior work}
 \label{sec:priorwork}
-\stub{\#53 supplies this paragraph; \#55 places it}
+% Placed from LITERATURE.md §6a (#53), trimmed as that section allows: the
+% Chebyshev-systems sentence is dropped (Section 3.3 cites them) and the two
+% jump-method sentences are merged; the last three sentences are verbatim,
+% they carry the obligations of LITERATURE.md §1a K6 and §1b O1. Any change
+% to the novelty language re-opens the ledger first.
+Three lines of prior work meet here, and the construction adds nothing to
+any of them taken alone. Stencils and elements built from local solutions
+of the operator are the fitted operators of the 1950s and 60s
+\cite{AllenSouthwell1955,Ilin1969,ScharfetterGummel1969,RoosStynesTobiska2008}
+and the exact schemes that followed \cite{Mickens1993,VizvariEtAl2020};
+the constant-flux seed in particular is the harmonic mean of Tikhonov and
+Samarskii \cite{TikhonovSamarskii1962,Samarskii2001}, the special elements
+of Babu\v{s}ka and Osborn \cite{BabuskaOsborn1983,BabuskaCalozOsborn1994},
+the multiscale elements of Hou and Wu \cite{HouWu1997} and the harmonic
+coordinates of Owhadi and Zhang \cite{OwhadiZhang2007}, whose extension to
+the acoustic wave equation \cite{OwhadiZhang2008} is the closest
+two-dimensional relative of what follows. Basis functions that are
+polynomial-in-time solutions of the wave equation are the Trefftz spaces
+of space--time discontinuous Galerkin methods
+\cite{KretzschmarMoiolaPerugiaSchnepp2016,BanjaiGeorgoulisLijoka2017,MoiolaPerugia2018};
+their quasi-Trefftz extension to variable coefficients
+\cite{ImbertGerardMoiolaStocker2023,ImbertGerardMoiolaStocker2024,ImbertGerard2025local}
+builds them by Taylor expansion at a point, the route
+Section~\ref{sec:seeds1d} shows cannot reach an edge thinner than the
+stencil. For a jump, the interface-aware stencils this work generalises
+\cite{Martin2016,MartinFornbergStCyr2015,MartinFornberg2017} stand beside
+the immersed interface \cite{LeVequeLi1994,ZhangLeVeque1997,SabatiniEtAl2023},
+explicit simplified interface \cite{PirauxLombard2001,LombardPiraux2004}
+and summation-by-parts \cite{MattssonNordstrom2006,DuruVirta2014,GranathWang2025}
+treatments, all of which take the jump as given, where standard schemes
+are first order \cite{Brown1984,SymesVdovina2009,VishnevskyEtAl2014}.
+The standing alternative in seismic and electromagnetic finite differences
+changes the medium rather than the stencil: coefficients averaged over a
+cell \cite{Backus1962,MuirEtAl1992,MoczoEtAl2002,KristekEtAl2017,JiangZhang2024,FarjadpourEtAl2006},
+thin structure homogenised
+\cite{CapdevilleGuillotMarigo2010a,CapdevilleGuillotMarigo2010b}, or the
+jump smoothed over a few cells
+\cite{TornbergEngquist2003,TornbergEngquist2006,KoeneWittstenRobertsson2022}.
+Those methods choose the smoothing width from the grid and accept a
+second-order error component at the interface \cite{TornbergEngquist2006};
+here the width is a property of the medium, smaller than the grid, and
+the aim is the scheme's full order through it. We found no prior instance
+of stencils on an unchanged equispaced or scattered node set whose basis
+is continued through a sub-grid smooth edge by ordinary differential
+equations, nor of the observation that the construction reduces to the
+jump stencils as $\delta \to 0$; the search is logged in the repository's
+\texttt{LITERATURE.md}. We did not compare against the smoothing and
+averaging methods, and claim nothing relative to them.
 
 \subsection*{Outline}
 Section~\ref{sec:setting} fixes the equations, the discretisations and
@@ -524,7 +572,10 @@ sources and the Marmousi model are out of scope. In one dimension the
 implementation takes piecewise-constant materials, with the smooth edges
 of \eqref{eq:profile1d}, and not the dissertation's smoothly varying
 background, because the exact reference of the jump case, a ray sum,
-needs constant pieces. Everything is fourth order (FD4 in one dimension,
+needs constant pieces; the published treatment of a wave speed that
+varies smoothly up to an interface, a degree-four Taylor expansion of
+$c$ about the interface point \cite{Martin2016,MartinFornberg2017}, is
+the Taylor route of Section~\ref{sec:seeds1d} and is not ported. Everything is fourth order (FD4 in one dimension,
 degree four away from and degree three across the edges in two) at one
 material contrast; Section~\ref{sec:discussion} returns to both
 restrictions.
