@@ -106,7 +106,14 @@ Papers: `papers/README.md`. **Before reading a PDF, check
 src/pdes_demo/   library code
   fd_weights.py    Fornberg FD weights (shared)
   plotting.py      matplotlib style; blue = interface-aware, orange = naive;
-                   aqua / violet single-hue maps for 2-D fields / errors
+                   aqua / violet single-hue maps for 2-D fields / errors;
+                   use_print_style() for the manuscript (text width,
+                   SOURCE_DATE_EPOCH pinned so PDFs are byte-identical)
+  results_cache.py JSON results cache the stiff drivers write (#54): errors,
+                   rates, truncation, snapshot and spectra records + provenance
+  stiff_figures.py Part 3 figures drawn from cache records (1-D / 2-D
+                   convergence) and the seed-basis figures (1-D, 2-D sections)
+  stiff_tables.py  booktabs table fragments from the cache (\sci{m}{e})
   wave1d/          domain.py (periodic grid, piecewise-constant materials
                    with optional tanh edges, pulse) / operators.py (naive vs
                    interface-aware differentiation matrices, thin-layer
@@ -132,7 +139,8 @@ src/pdes_demo/   library code
                    oblique incidence on flat media; product-grid reference
                    for curved smooth media, Part 3)
 scripts/         drivers that write figures and clips to outputs/;
-                 check_slide_quotes.py
+                 check_slide_quotes.py; paper_figures.py (the manuscript's
+                 figures and tables from paper/data/, #54)
 tests/           pytest, 182 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
@@ -143,7 +151,9 @@ slides/          talk.tex → talk.pdf (committed), notes.md (speaker script wit
 papers/          reference PDFs (gitignored), fetch_papers.sh, README.md with
                  sources and checksums
 paper/           the Part 3 manuscript (#51): main.tex → main.pdf (committed),
-                 references.bib, figures/ (from #54's scripts), make_arxiv.py,
+                 references.bib, data/ (the results cache, one JSON per
+                 driver run), figures/ (PDFs and tab_*.tex fragments from
+                 scripts/paper_figures.py, never hand-edited), make_arxiv.py,
                  README.md, LICENSE (CC BY 4.0; code stays MIT)
 outputs/         generated artifacts (gitignored)
 index.html       GitHub Pages landing page (.nojekyll at the root)
@@ -172,6 +182,14 @@ uv run python scripts/wave2d_stiff_eigenvalues.py   # Part 3 2-D spectra, seed v
                                               # --amplitude 0.02 for the curved geometry
 uv run python scripts/wave2d_demo.py --amplitude 0.02 --edge-width 0.005   # #42 curved
                                               # smooth-edge clip vs the product-grid reference
+uv run python scripts/wave1d_stiff.py --data-dir paper/data   # any stiff driver: also write
+                                              # its results JSON to paper/data (the committed
+                                              # cache); --style print --format pdf for the
+                                              # manuscript's look
+uv run python scripts/paper_figures.py        # paper/figures/ from paper/data/: ~10 s;
+                                              # --all adds the stills and spectra through the
+                                              # drivers (~25 min from the outputs/ caches);
+                                              # --check verifies byte identity
 ./slides/build.sh                             # copy figures and clips from outputs/,
                                               # crop, tectonic → slides/talk.pdf
 uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the notes
