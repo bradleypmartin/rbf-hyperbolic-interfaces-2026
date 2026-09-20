@@ -30,8 +30,10 @@ steep for the grid to resolve is built from "seeds" continued through the
 edge by ODEs instead of monomials, on the same equispaced grid. Built and
 confirmed in 1-D on 2026-09-19, with a design note for 2-D:
 [`docs/stiff-features.md`](docs/stiff-features.md) (issue #27). The
-arXiv-ready write-up of Part 3 is under way in [`paper/`](paper/README.md)
-(issue #51); [`LITERATURE.md`](LITERATURE.md) is its novelty ledger, where
+arXiv write-up of Part 3 is in [`paper/`](paper/README.md) (issue #51:
+drafted, assembled and packaged for submission on 2026-09-20, with the
+pre-submission decisions and the AI-assistance disclosure recorded in its
+README); [`LITERATURE.md`](LITERATURE.md) is its novelty ledger, where
 the claim is itemised and every "not found" is tied to the search that
 produced it (#53).
 
@@ -145,6 +147,9 @@ lists what was ported and what was not.
 - [x] Part 3, not in the talk: smooth-edged layer, spectral reference,
       ODE-continued seed stencils, knee experiment, notes with verified
       related work and a 2-D design note (2026-09-19)
+- [x] Part 3 manuscript in `paper/`: drafted, assembled, packaged for arXiv
+      with the acknowledgments and the AI-assistance disclosure (2026-09-20)
+- [ ] Submit the manuscript to arXiv (math.NA) and tag `manuscript-v1`
 - [ ] Rehearsal on Sep 29, then freeze and tag `talk-2026-09-30`
 
 ## License

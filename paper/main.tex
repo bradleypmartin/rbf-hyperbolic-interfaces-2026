@@ -27,6 +27,13 @@
 \usepackage{booktabs}
 \usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
 \graphicspath{{figures/}}
+% arXiv builds with pdfTeX. The only non-ASCII input is the two accented
+% surnames of main.bbl (Pólya, Mühlbach, UTF-8 since #61), which TeX Live
+% >= 2018 reads natively; this makes the encoding explicit there. Tectonic
+% (XeTeX) takes the other branch and needs nothing. make_arxiv.py refuses
+% any character outside what pdfTeX's utf8 encoding maps.
+\usepackage{iftex}
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
 % Floats stay near the text that first cites them (#61): a \FloatBarrier
 % before each results subsection of Section 6 (a barrier at every
 % \section costs float-only pages), and the fractions let text share a
@@ -64,8 +71,6 @@
 % also drops the operator spacing around \times, within the table only).
 \newcommand{\tablesetup}{\footnotesize\setlength{\tabcolsep}{2.5pt}%
   \renewcommand{\sci}[2]{\ensuremath{##1{\times}10^{##2}}}}
-% Draft stubs, visible in the PDF until the owning sub-issue replaces them.
-\newcommand{\stub}[1]{\par\noindent\textit{[Stub, #1.]}\par}
 
 % Title fixed by #61.
 \title[Seed stencils for sub-grid material edges]{Seed stencils: high-order
@@ -258,10 +263,12 @@ already make.
   and are $3$ to $12\times$ below it at $\delta = 0.0025$ on node sets up
   to $19{,}600$ nodes, where the zeroth-order geometry shows as $1.4$ to
   $1.5\times$ the flat seeds' error on the two finest of them.
-\item An open implementation in Python with a test for every numerical
+\item An open implementation in Python, written with the AI tools
+  disclosed at the end of the paper, with a test for every numerical
   routine, in which every figure and table of this paper is regenerated
   by a committed script from a results cache
-  (\url{https://github.com/bradleypmartin/20260930-zd-ai-pdes-demo}).
+  (\url{https://github.com/bradleypmartin/20260930-zd-ai-pdes-demo/tree/manuscript-v1},
+  the tag of this version).
 \end{enumerate}
 
 \subsection{Relation to prior work}
@@ -3115,14 +3122,75 @@ below it on the scattered nodes.
 
 % ===========================================================================
 \section*{Acknowledgments}
-% Decisions of 2026-09-20 (#51, recorded in #62): sole human author;
-% acknowledgment to Bengt Fornberg for the 2016-era work this extends; explicit
-% credit to Claude (Fable 5.1) in the form arXiv's policy on generative-AI
-% tools asks for, checked at packaging time. #62 fixes the wording.
-\stub{\#62: Bengt Fornberg, for the 2016-era work this construction extends
-(the dissertation and the interface treatment of \cite{MartinFornberg2017});
-the AI-assistance statement crediting Claude (Fable 5.1) for the
-re-derivation, the code and the drafting}
+% Decisions of 2026-09-20 (#51, recorded in paper/README.md by #62): sole
+% human author; Bengt Fornberg acknowledged for the 2016-era work this
+% extends; the AI assistance stated plainly, in the section that follows.
+The author thanks Bengt Fornberg, with whom the 2016-era work this
+construction extends was done: the dissertation \cite{Martin2016} and the
+interface treatment of \cite{MartinFornberg2017}.
+
+% ===========================================================================
+\section*{Tool and computational resource disclosure}
+% Form (#62, checked 2026-09-20): arXiv's policy on generative-AI language
+% tools (info.arxiv.org/help/moderation: report any significant use; each
+% author takes full responsibility for all contents irrespective of how
+% they were generated; no tool is an author) and the "Tool and
+% computational resource disclosure" section that the Leiden Declaration
+% on Artificial Intelligence and Mathematics (2 June 2026, endorsed by the
+% IMU) asks authors to include. The headings follow the Declaration's items
+% as recent math.AP submissions apply them; the survey is in
+% paper/README.md. Every statement below is checked against the
+% repository's history (PRs #1–#76).
+Following arXiv's policy on generative AI language tools and the Leiden
+Declaration on Artificial Intelligence and Mathematics (2 June 2026), the
+author discloses the following.
+
+\para{Tools}
+Claude Fable~5.1 (Anthropic, \texttt{claude-fable-5-1}), run as the Claude
+Code agent on the repository in September 2026, in dialogue with the
+author. Reviews were a separate step: GPT-5.6~Sol and GPT-6~Astra (OpenAI)
+refereed the complete draft, and a Claude Sonnet model reviewed the code of
+pull requests against the repository; the author assessed their findings
+one by one and applied those the author agreed with.
+
+\para{Division of labour}
+The idea, the one-dimensional construction it rests on and the
+interface-aware stencils it extends are the author's, from 2016
+\cite{Martin2016,MartinFornberg2017}; the author framed the experiments
+and the test problems and decided every sentence that claims novelty
+(Section~\ref{sec:priorwork}). The model re-derived the one-dimensional
+construction with the author from the dissertation and the author's notes,
+worked out with the author the two-dimensional form of
+Section~\ref{sec:seeds2d}, ported the author's MATLAB solvers of
+\cite{Martin2016} to Python and wrote the seed stencils, the reference
+solvers, the drivers and the test suite on top of them, ran the
+experiments, and drafted every section of this manuscript from the notes
+kept in the repository, section by section, with the author editing the
+prose.
+
+\para{Verification}
+Every numerical routine has a test, a convergence order or a comparison
+with an analytic solution; every figure and table is regenerated by a
+committed script from a results cache; a further script recomputes every
+cache-backed number the text quotes and fails when one no longer rounds to
+the quoted figure. The assembly pass re-read the draft as one paper
+against the notes and the cache and corrected the text where the draft had
+it wrong. The author has read every result and the whole text.
+
+\para{Attribution}
+Automated tools are known to reproduce ideas without crediting their
+sources. The related work of Section~\ref{sec:priorwork} comes from a
+literature pass made for that reason, whose ledger, kept in the
+repository, ties each statement of novelty to the searches that produced
+it; every entry of the bibliography was checked against a primary source
+(a publisher's or arXiv's record, or the paper itself) before it was
+cited, the record named in the source file, and nothing is cited that was
+not.
+
+\para{Responsibility}
+Responsibility for the correctness of the arguments and results and for
+the accuracy of the citations rests with the author alone. No automated
+tool is an author.
 
 % #61 removed the scaffold's \nocite{*}: entries of references.bib that no
 % \cite reaches (kept for LITERATURE.md) do not print.
