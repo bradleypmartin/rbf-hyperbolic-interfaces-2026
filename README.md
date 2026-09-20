@@ -31,7 +31,9 @@ edge by ODEs instead of monomials, on the same equispaced grid. Built and
 confirmed in 1-D on 2026-09-19, with a design note for 2-D:
 [`docs/stiff-features.md`](docs/stiff-features.md) (issue #27). The
 arXiv-ready write-up of Part 3 is under way in [`paper/`](paper/README.md)
-(issue #51).
+(issue #51); [`LITERATURE.md`](LITERATURE.md) is its novelty ledger, where
+the claim is itemised and every "not found" is tied to the search that
+produced it (#53).
 
 ## Talk materials
 
