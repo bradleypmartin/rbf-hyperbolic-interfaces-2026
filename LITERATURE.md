@@ -15,8 +15,12 @@
 > unchanged equispaced FD or scattered-node RBF-FD scheme, together with the
 > identification of the jump stencils as its δ → 0 limit and the empirical
 > rule *seed when δ ≤ h*. The standing alternative, smoothing or averaging
-> the medium (§1a K6), was **not** run head to head; the manuscript must
-> say so and may not claim superiority over it.
+> the medium (§1a K6), **was run head to head** in #69 (notes §2.1 and
+> §5.7: cell means over one and two cells, band-limited coefficients and
+> the widened edge, in 1-D and on the scattered nodes), as our
+> implementation of each treatment on one problem at one contrast; §6b
+> words what that licenses, and the manuscript may not claim superiority
+> over those methods in general.
 
 **Maintenance rule** (house convention, mirrored from weil-positivity-lab,
 bolza-bending and dirichlet-bridge): update this file on **any** new
@@ -146,13 +150,20 @@ Marigo, GJI 181 (2010) [V] and 182 (2010) [V], non-periodic homogenization
 for the seismic wave equation), or by a *smoothed* one: the regularisation
 line of Tornberg & Engquist (JSC 19 (2003) [V]; *Regularization for
 accurate numerical wave propagation in discontinuous media*, MAA 13 (2006)
-247–274 [V, first page read: the Yee scheme "is improved from first to
-second order by modifying the material coefficients close to the material
-interface", and the fourth-order scheme keeps "a second order error
-component originating from the discontinuities"]; JCP 227 (2008) [V]),
+247–274 [V, fetched and read in full for #69, `papers/`: the Yee scheme "is
+improved from first to second order by modifying the material coefficients
+close to the material interface", and the fourth-order scheme keeps "a
+second order error component originating from the discontinuities"; §4.1
+eq. 18–22 fix the modification as 1/a and 1/b linear across one cell, i.e.
+cell means of compliance and density, and §5 reaches second order for
+their staggered fourth-order scheme only with its temporal correction
+terms masked within 3h/2 of the jump]; JCP 227 (2008) [V]),
 FDTD subpixel smoothing (Farjadpour et al. 2006), and the anti-aliased
-interfaces that Koene, Wittsten & Robertsson (GJI 229 (2022) [V, arXiv
-abstract read]) compare head to head with Schoenberg–Muir equivalent media:
+interfaces that Koene, Wittsten & Robertsson (GJI 229 (2022) [V;
+arXiv:2104.08206v2 fetched and §3.2–3.4 read for #69, `papers/`: density
+and compliance band-limited to the grid Nyquist, the anti-aliased step
+½ + Si(πz/h)/π, the windowed low-pass filter]) compare head to head with
+Schoenberg–Muir equivalent media:
 anti-aliasing wins in acoustic media, the equivalent medium in elastic
 media. *Framing the manuscript owes (the #53 issue's fourth sweep):* in all
 of these the smoothing width or averaging cell is a **numerical** choice
@@ -163,7 +174,32 @@ edge for every δ ≤ h. So (i) the "twilight zone" of notes §1.1 is
 precisely the medium these methods manufacture and then accept
 second-order error from; (ii) a seeded scheme applied to such a smoothed
 medium would remove that error component, which is a hypothesis, not a
-result; (iii) no head-to-head against any K6 method was run in #27–#42.
+result; (iii) **the head-to-head was run in #69** (notes §2.1 and §5.7,
+manuscript §4 and §6): Tornberg–Engquist's regularised coefficients as
+cell means of compliance and density over one cell (their eq. 18 and 22;
+on the 1-D cell-centred grid a jump sits on a cell boundary, so this
+changes nothing at δ = 0) and over two, the Mittet/Koene band-limited
+coefficients as a windowed sinc (cutoff 1.1π/h, half-width 2.5h), and the
+widened tanh edge (the "regularise a itself" case they warn about), all
+through the unchanged scheme against the true-δ reference; in 2-D the wave
+moduli harmonically and the density arithmetically over a square, isotropy
+kept, and the separable low-pass. *1-D:* at a jump only the two-cell mean
+lifts the order, to two; through an unresolved edge the one-cell mean and
+the band-limited medium gain 1.25–1.6× on sampling, the two-cell mean
+5.7–11×; on a resolved edge every treatment at its prescribed width is
+second order, 47–530× above the fourth-order sampled scheme at n = 1600;
+the seeds are 3.2× below the best treatment on the coarsest grid, 37× at
+h = 2δ and 146–730× at and past the knee, and no treatment reaches their
+order. *2-D, flat and curved:* the widened edge is 5–120× worse than
+sampling wherever it acts; through δ = 0.0025 the one-cell mean is level
+with sampling at 2500 nodes and 2.1–3.6× below it at 10,000–19,600, with
+the seeds 3.1–5.9× below the one-cell mean; the band-limited coefficients
+gain at most 1.7×, the two-cell mean is above sampling at every n; where
+the knee is inside the sweep every treatment crosses above sampling at
+h ≈ 1.4–2δ, before the seeds. The Schoenberg–Muir anisotropic medium (T3)
+was not built (no anisotropic operator in the port). Scope: one scheme per
+dimension, one contrast, one pulse, our implementation of each treatment;
+the sources analyse and run them on staggered Cartesian grids.
 
 ### 1b. Ours as scoped (survived the pass; framing obligations noted)
 
@@ -221,8 +257,10 @@ the naive footprint annihilating the seeds; stability at the standard γ
 at every δ; the flat δ sweep, the oblique train and the curved edge via
 the true normal (route (a)); the rule **seed when δ ≤ h**. Ours as scoped:
 degree 3, one contrast, ≤ 19,600 nodes, tanh edges, doubly periodic,
-compared against *naive coefficient sampling only* (§1a K6, obligation
-(iii)). The 2-D relative to name is Owhadi–Zhang 2008.
+compared against naive coefficient sampling and against our implementation
+of the cell-averaged and band-limited coefficients and the widened edge
+(§1a K6 (iii), discharged as scoped by #69). The 2-D relative to name is
+Owhadi–Zhang 2008.
 
 **O6. Diagnostics.** The spurious u at normal incidence as a 10× sharper
 indicator of edge error than v (notes §5.2), and the converted-S floor
@@ -448,8 +486,10 @@ WebSearch and fetches:
 
 **Verdict.** The alternative is real, current, and second-order-limited at
 the interface by construction where analysed (Tornberg–Engquist 2006). It
-was not compared against in #27–#42. §1a K6 records the framing the
-manuscript owes; §6 words it.
+was not compared against in #27–#42; **#69 (2026-09-20) ran the
+comparison** in 1-D (notes §2.1) and on the scattered nodes (notes §5.7),
+with both sources fetched and read (`papers/`, `docs/paper-index.md`). §1a
+K6 (iii) records the result and its scope; §6 words it.
 
 ### P5 — seed-bibliography verification
 
@@ -623,11 +663,18 @@ Bucket §1b, worded as "no prior instance found":
   are each classical. On the node sets tested the rule is: seed when
   $\delta \le h$."
 - *Required caveat wherever the rule is stated as a headline.* "The
-  comparison is against coefficient sampling on the same nodes; the
-  smoothing and averaging methods of seismic finite differences were not
-  run, and their second-order interface error is a proven property of a
-  different scheme, not a measurement made here."
+  comparison is against coefficient sampling on the same nodes and against
+  our implementation of the coefficient treatments of seismic finite
+  differences (cell means over one and two cells, band-limited
+  coefficients, a widened edge) on the same schemes, one contrast and one
+  test problem; their sources analyse and run them on staggered grids. On
+  these grids and node sets no coefficient treatment reaches the seeds'
+  order; the best of them is second order at a jump in one dimension, and
+  the seeds lie 3 to 700 times below it there and 3 to 6 times below it on
+  the scattered nodes." (Replaces the "not run" wording of 2026-09-20
+  morning; #69.)
 
 Not to be used: "novel", "new method", "first", "outperforms existing
-interface methods", "arbitrary contrast", "any order" (only FD4 / degree 3
-were run).
+interface methods", "beats smoothing / averaging methods" (only our
+implementations, one scheme per dimension, one contrast, one problem;
+#69), "arbitrary contrast", "any order" (only FD4 / degree 3 were run).

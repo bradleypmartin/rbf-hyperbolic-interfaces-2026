@@ -292,8 +292,13 @@ of stencils on an unchanged equispaced or scattered node set whose basis
 is continued through a sub-grid smooth edge by ordinary differential
 equations, nor of the observation that the construction reduces to the
 jump stencils as $\delta \to 0$; the search is logged in the repository's
-\texttt{LITERATURE.md}. We did not compare against the smoothing and
-averaging methods, and claim nothing relative to them.
+\texttt{LITERATURE.md}. We ran the smoothing and averaging treatments on
+both schemes, as our implementation of each on one problem at one
+contrast (Sections~\ref{sec:results1d} and~\ref{sec:results2d}): none
+reaches the seeds' order, the best of them is second order at a jump in
+one dimension, and the seeds lie $3$ to $700$ times below the best
+treatment there and $3$ to $6$ times below it on the scattered nodes. We
+claim nothing beyond that measurement.
 
 \subsection*{Outline}
 Section~\ref{sec:setting} fixes the equations, the discretisations and
@@ -1053,6 +1058,102 @@ c_{\max}$ was stable in every run of the sweep. The runs cost seconds
 for layers thinner than the $19\delta$ tails of an edge, or at orders
 above four; the construction does not change for any of them, and
 Section~\ref{sec:discussion} lists them among the limitations.
+
+\para{The standing alternative: the standard scheme on a changed medium}
+% TRACE: notes §2.1 (#69). Tornberg–Engquist 2006 §4.1, eq. 18–22 and §5,
+% eq. 37–39 (papers/ index); Koene et al. 2022 §3.2–3.3. Numbers from
+% paper/data/wave1d_stiff.json (modes widen1, widen2, cell, cell2,
+% bandlimit); the ratios quoted are computed from the cache.
+In seismic and electromagnetic finite differences an interface is
+routinely handled by changing the medium rather than the stencil
+(Section~\ref{sec:priorwork}). Tornberg and Engquist
+\cite{TornbergEngquist2006} derive the change for the system
+$p_t = a u_x$, $u_t = b p_x$ with $a = -\rho c^2$ and $b = -1/\rho$:
+$1/a$ and $1/b$ linear across the one cell centred on the jump, that is,
+the compliance $1/K$ and the density replaced by their cell means, the
+harmonic and arithmetic means of the Moczo line \cite{MoczoEtAl2002};
+their Theorem~1 gives second order for the Yee scheme, regularising $a$
+itself instead of $1/a$ stays first order with a smaller constant, and
+their fourth-order staggered scheme reaches second order only with its
+temporal correction terms masked near the jump, terms the collocated
+scheme here does not have. Koene, Wittsten and Robertsson
+\cite{KoeneWittstenRobertsson2022} instead band-limit the density and
+the compliance to the grid Nyquist with a windowed low-pass filter. We
+ran both on the scheme of this section: the same FD4 and RK4, grids,
+pulse and true-$\delta$ reference as Table~\ref{tab:knee1d}, with the
+coefficients the standard scheme samples replaced by their cell means
+over one cell and over two (the layer's edges sit on cell boundaries of
+every grid here, so the one-cell ramp of a jump ends exactly at the
+nearest nodes and changes nothing at $\delta = 0$; a staggered grid
+always has a coefficient position within $h/4$ of a jump, a collocated
+one does not), by the band-limited coefficients (cutoff $1.1\pi/h$,
+Hanning window of half-width $2.5h$, their filter applied to the true
+profile), and, as the coarse bound, by the true profile with its edge
+widened to $\max(\delta, h)$ and $\max(\delta, 2h)$, which blends $c$
+and $\rho$ and is the case they warn about. Each treatment is applied at
+its prescribed width at every $n$: the sources have no $\delta$ and state
+no switch. Table~\ref{tab:comparators1d} and
+Figure~\ref{fig:comparators1d} give the result.
+
+At the jump no coefficient treatment lifts the collocated scheme's first
+order except the two-cell mean, which is second order at every $n$,
+$5.5\times$ below the sampled medium at $n = 100$ and $87\times$ at
+$n = 1600$; the interface-aware stencils are $3.3\times$ below it on the
+coarsest grid and $730\times$ on the finest. The band-limited medium
+keeps first order at $0.8\times$ the constant, the widened edges at
+$1.4\times$ and $2.7\times$. Through the unresolved edge
+$\delta = 0.0025$ the one-cell mean and the band-limited medium cut the
+sampled error by $1.25$ to $1.6\times$ while $h > \delta$ and follow it
+through the knee; the two-cell mean stays second order, $5.7$ to
+$11\times$ below the sampled medium while $h \ge 2\delta$ and $4.7$ to
+$4.9\times$ above it from $h = \delta$ on, where the sampled scheme is
+fourth order and the averaged medium is not the true one. The seeds are
+$3.2\times$ below the two-cell mean at $h = 8\delta$, $37\times$ at
+$h = 2\delta$, $146\times$ at $h = \delta$ and $580\times$ at
+$h = \delta / 2$: the gap widens toward the knee. Widening the edge is
+worse than sampling it wherever it acts ($1.03$ to $1.7\times$ for one
+cell, $2.2$ to $5.3\times$ for two) and equal to it once the true edge is
+the wider one. On a resolved edge every treatment at its prescribed width
+is second order and falls behind the fourth-order sampled scheme, by
+$47$ to $530\times$ at $n = 1600$ through $\delta = 0.01$ and $0.04$: the
+second-order component the literature describes, measured on this
+scheme. The treatments therefore need the same switch as the seeds,
+applied while $h > \delta$ and not otherwise, which their sources, written
+for jumps, do not state; with it the best of them is second order through
+the edge at no cost per stencil, and the seeds are fourth order at one
+ODE march per rebuilt row. What this licenses is stated in
+Section~\ref{sec:priorwork}: one scheme, one contrast, one pulse, our
+implementation of each treatment on a collocated grid, against sources
+that analyse and run them on staggered grids.
+
+\begin{table}
+  \caption{The standard scheme on a treated medium (the standing
+  alternative) against the standard scheme on the sampled medium and the
+  seeds: relative $\ell^2$ error in $f$ at $t = 1$ against the true
+  medium's reference, and the rates between successive grids. The cell
+  means and the band-limited medium are applied at their prescribed width
+  at every $n$; the widened edges of the text are omitted, they never
+  beat the sampled medium.}
+  \label{tab:comparators1d}
+  \centering
+  \tablesetup
+  % figures/tab_1d_comparators.tex: scripts/paper_figures.py (#54, #69)
+  % from paper/data/wave1d_stiff.json; never hand-edited.
+  \resizebox{\textwidth}{!}{\input{figures/tab_1d_comparators.tex}}
+\end{table}
+
+\begin{figure}
+  \centering
+  % figures/wave1d_stiff_comparators.pdf: scripts/paper_figures.py from
+  % paper/data/wave1d_stiff.json (#69); never hand-edited.
+  \includegraphics[width=\textwidth]{wave1d_stiff_comparators}
+  \caption{Table~\ref{tab:comparators1d} drawn: error against $n$ for
+  the sampled medium, the three treated media and the seeds, per edge
+  width. The two-cell mean is second order everywhere and never sees the
+  knee; the one-cell mean and the band-limited medium track the sampled
+  scheme; the seeds are fourth order at every $n$.}
+  \label{fig:comparators1d}
+\end{figure}
 
 % ===========================================================================
 \section{Seeds in two dimensions}
@@ -1999,12 +2100,83 @@ naive scheme and is at or below the resolution floor wherever it is
 used; in this sweep it means every node set at $\delta = 0.0025$, up to
 $10{,}000$ nodes at $\delta = 0.01$ and never at $\delta = 0.04$. The
 comparison is against coefficient sampling on the same nodes; the
-smoothing and averaging methods of seismic finite differences were not
-run, and their second-order interface error is a proven property of a
-different scheme, not a measurement made here. The rule applies in one
+coefficient treatments of seismic finite differences were run on this
+operator too (below) and on the one-dimensional scheme
+(Section~\ref{sec:results1d}), and none of them reaches the seeds' order.
+The rule applies in one
 dimension as well (Section~\ref{sec:assembly1d}), where the resolved
 edge $\delta = 0.04$ of Table~\ref{tab:knee1d} is the case in which the
 two schemes agree to three digits and nothing is gained by seeding.
+
+\para{The standing alternative, on the scattered nodes}
+% TRACE: notes §5.7 (#69): paper/data/wave2d_stiff_cmp.json (flat) and
+% wave2d_stiff_cmp_a0.02.json (curved), modes widen1, widen2, cell, cell2,
+% bandlimit; the seeds' numbers from wave2d_stiff.json and
+% wave2d_stiff_a0.02.json; the ratios are computed from the caches. The
+% two modelling-error percentages are the scratch measurement recorded in
+% notes §5.7 (two cached spectral references compared on the 2500-node
+% set), not in the results cache.
+The coefficient treatments of Section~\ref{sec:results1d} were run on the
+naive operator of this section as well (Table~\ref{tab:comparators2d}):
+the wave moduli $K = \lambda + 2\mu$ and $\mu$ averaged harmonically and
+the density arithmetically over a square of side $h$ or $2h$ about each
+node, isotropy kept; the same three fields band-limited with the
+separable windowed sinc of \cite{KoeneWittstenRobertsson2022}; and the
+edge widened to $\max(\delta, h)$ and $\max(\delta, 2h)$; each against the
+true medium's reference, on the flat geometry through $\delta = 0.0025$
+and $0.01$ and the curved one through $0.0025$, $0.005$ and $0.01$. On
+scattered nodes no node sits at a fixed offset from the edge, so the
+one-cell mean acts everywhere. Through $\delta = 0.0025$, which no node
+set resolves, it is the best treatment on either geometry: level with
+sampling at $2{,}500$ nodes and $2.1$ to $3.6\times$ below it at
+$10{,}000$ and $19{,}600$, with rates $3.4$ to $3.6$ over the last two
+doublings, and the seeds of Tables~\ref{tab:flat2d_v}
+and~\ref{tab:curved2d_v} are $3.1$ to $5.9\times$ below it at every $n$.
+The band-limited coefficients are level with or above sampling on the two
+coarse sets and $1.5$ to $1.7\times$ below it on the two fine ones; the
+two-cell mean, the best treatment in one dimension, is $1.05$ to
+$1.4\times$ above sampling at every $n$ here, second order throughout.
+Where the knee sits inside the sweep the treatments cross above sampling
+as in one dimension, and earlier for the wider ones: through
+$\delta = 0.01$ the one-cell mean is $1.1\times$ below sampling while
+$h \ge 1.4\delta$ and $2.4\times$ above it at $h = 0.7\delta$, the
+band-limited coefficients $1.2$ to $1.9\times$ above at every $n$, the
+two-cell mean $1.8$ to $10\times$; through the curved $\delta = 0.005$
+the one-cell mean's crossover lies between $h = 2\delta$ and $1.4\delta$,
+before the seeds' at $h \approx \delta$. The widened edge is $5$ to
+$120\times$ worse than sampling wherever it acts, on both geometries: the
+exact solutions through edges of width $0.02$ and $0.04$ differ from the
+true $\delta = 0.01$ one by $27\%$ and $82\%$ in $v$ at $t = 1$, so a
+medium changed over a cell or two costs far more here than in one
+dimension, where the pulse crosses the layer once; here it crosses the
+band twice by $t = 1$ and converts at each of the four crossings. The
+spurious $u$ tells the same story: through $\delta = 0.0025$ the
+one-cell mean cuts it by $1.3$ to $1.8\times$, the seeds by $5.5$ to
+$67\times$. The anisotropic effective medium of Schoenberg and Muir,
+which \cite{KoeneWittstenRobertsson2022} find best in elastic media,
+needs an anisotropic five-field operator the implementation does not
+have and was not built; Section~\ref{sec:discussion} lists it. As in
+one dimension, this is one operator, one contrast and one pulse, with
+our isotropic reading of treatments their sources run on staggered
+Cartesian grids.
+
+\begin{table}
+  \caption{The naive operator on a treated medium against the naive
+  operator on the sampled medium: relative $\ell^2$ error in $v$ at
+  $t = 1$ against the true medium's reference on the flat geometry (top)
+  and the curved one (bottom), the rates between successive node sets,
+  and the resolution floor. The seeds on the same node sets are in
+  Tables~\ref{tab:flat2d_v} and~\ref{tab:curved2d_v}.}
+  \label{tab:comparators2d}
+  \centering
+  \tablesetup
+  % figures/tab_2d_flat_cmp_v.tex and tab_2d_curved_cmp_v.tex:
+  % scripts/paper_figures.py (#54, #69) from paper/data/wave2d_stiff_cmp.json
+  % and wave2d_stiff_cmp_a0.02.json; never hand-edited.
+  \input{figures/tab_2d_flat_cmp_v.tex}
+  \par\medskip
+  \input{figures/tab_2d_curved_cmp_v.tex}
+\end{table}
 
 \para{The naive knee, and the stress}
 In $v$ the naive knee is the $8$ to $19\%$ excess over the floor of
@@ -2621,7 +2793,10 @@ minutes. A curved march costs $3.6\times$ a flat one
 \subsection{Limitations}
 \stub{\#60: FD4 / degree 3 only, one contrast, at most $19{,}600$ nodes, the
 flat translation symmetry unexploited, one march per stencil, the port's
-exclusions}
+exclusions; the coefficient treatments of Sections~\ref{sec:results1d}
+and~\ref{sec:results2d} as our implementations on one problem, and the
+Schoenberg--Muir anisotropic medium not built (no anisotropic operator),
+\#69}
 \subsection{Future work}
 \stub{\#60: curvilinear evaluation of the marched seeds; seeded-width tuning;
 the seeds' true $\Delta^3$ as hyperviscosity right-hand sides; M\"uhlbach's

@@ -102,11 +102,22 @@ from pdes_demo.wave2d import (
     run_fourier_2d,
 )
 from pdes_demo.wave2d.exact import plane_wave_from_1d, spectral_plane_wave_1d
+from pdes_demo.wave2d.treatments import TreatedMedium2D
 
-MODE_SHORT = {"naive": "naive", "aware": "seeds", "ablate": "ablat"}
+MODE_SHORT = {
+    "naive": "naive",
+    "aware": "seeds",
+    "ablate": "ablat",
+    "widen1": "wid1",
+    "widen2": "wid2",
+    "cell": "cell",
+    "cell2": "cell2",
+    "bandlimit": "band",
+}
 TITLES = {"naive": "Standard RBF-FD (naive)", "aware": "Seed stencils"}
 PRINT_TITLES = {"naive": "naive", "aware": "seeds"}
 BUILD_MODE = {"naive": "naive", "aware": "aware", "ablate": "aware"}
+COMPARATORS = ("widen1", "widen2", "cell", "cell2", "bandlimit")
 UNIFORM = LayeredMedium2D(layer=ElasticMaterial(lam=1.0, mu=1.0, rho=1.0))
 # A band the exact uniform solution cannot tell from the background, on
 # which the seed rows are still built (float inequality): the seed floor.
@@ -124,7 +135,12 @@ def parse_args() -> argparse.Namespace:
         "--modes",
         nargs="+",
         default=["naive", "aware"],
-        choices=["naive", "aware", "ablate"],
+        choices=["naive", "aware", "ablate", *COMPARATORS],
+        help="schemes; the comparators of #69 run the naive operator on a treated "
+        "medium against the true medium's reference: the edge widened to "
+        "max(delta, h) / max(delta, 2h) (widen1 / widen2), the cell means of the "
+        "wave moduli (harmonic) and density over h / 2h (cell / cell2), and the "
+        "band-limited coefficients (bandlimit); pdes_demo.wave2d.treatments",
     )
     parser.add_argument(
         "--direction",
@@ -242,6 +258,7 @@ def angle_deg(args: argparse.Namespace) -> float:
 def run_tag(args: argparse.Namespace) -> str:
     """Suffix that names this configuration's figure and results files."""
     tag = "_naive" if args.modes == ["naive"] else ""
+    tag += "_cmp" if any(m in COMPARATORS for m in args.modes) else ""
     tag += "" if args.sharpness == 15.0 else f"_s{args.sharpness:g}"
     tag += direction_tag(args) + geometry_tag(args)
     tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
@@ -490,6 +507,24 @@ def _ops_path(
     )
 
 
+def run_medium(nodes: NodeSet, medium: LayeredMedium2D, mode: str):
+    """The medium a comparator mode of #69 runs the naive operator on: the
+    edge widened to what the node spacing resolves (``widen1``, ``widen2``;
+    a resolved edge is left alone, so the run then equals the naive one), or
+    the coefficients averaged over one or two cells or band-limited
+    (:class:`~pdes_demo.wave2d.treatments.TreatedMedium2D`). Other modes
+    run on the true medium."""
+    if mode.startswith("widen"):
+        cells = int(mode[len("widen") :])
+        return replace(medium, edge_width=max(medium.edge_width, cells * nodes.h))
+    if mode.startswith("cell"):
+        cells = float(mode[len("cell") :] or 1)
+        return TreatedMedium2D(medium, cells * nodes.h, kernel="box")
+    if mode == "bandlimit":
+        return TreatedMedium2D(medium, nodes.h, kernel="sinc")
+    return medium
+
+
 def operators_for(
     nodes: NodeSet, medium: LayeredMedium2D, mode: str, args: argparse.Namespace
 ) -> Operators:
@@ -499,6 +534,8 @@ def operators_for(
     the row list); everything else in :class:`Operators` is the naive build,
     which is what ``build_operators(mode="aware")`` starts from.
     """
+    if mode in COMPARATORS:
+        return build_operators(nodes, run_medium(nodes, medium, mode), mode="naive")
     if mode == "naive" or not medium.is_smooth:
         return build_operators(nodes, medium, mode=BUILD_MODE[mode])
     path = _ops_path(nodes, medium, mode, args)
@@ -560,9 +597,11 @@ def errors_for(
     """Relative l2 errors in v, h and u at ``t_end`` against ``reference``
     (the medium's own by default); at normal incidence the u entry is the
     largest spurious |u| instead."""
+    # A treated medium sets the time step (the band-limited one overshoots
+    # the true speeds); the pulse and the reference are the true medium's.
     snaps = run(
         nodes,
-        medium,
+        run_medium(nodes, medium, mode),
         t_end=args.t_end,
         n_snapshots=1,
         pulse_center=args.center,
@@ -791,7 +830,7 @@ def snapshot(
     n, width = args.snapshot_n, args.snapshot_width
     nodes = node_sets.get(n) or make_node_set(medium_for(0.0, args), n, seed=args.seed)
     medium = medium_for(width, args)
-    modes = [m for m in args.modes if m != "ablate"]
+    modes = [m for m in args.modes if m in TITLES]
     t0 = time.perf_counter()
     n_frames = 40
     runs = {

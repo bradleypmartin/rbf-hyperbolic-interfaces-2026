@@ -50,6 +50,11 @@ STYLE_2D = {
     "ablate": dict(color=COLORS["aware"], marker="^", ls="--", mfc="none"),
     "floor": dict(color=INK_SECONDARY, marker="s", ls="--"),
     "sfloor": dict(color=AWARE, marker="s", ls=":", mfc="none"),
+    "widen1": dict(color=INK_SECONDARY, marker="^", ls="--", mfc="none"),
+    "widen2": dict(color=INK, marker="v", ls=":", mfc="none"),
+    "cell": dict(color=INK_SECONDARY, marker="^", ls="--", mfc="none"),
+    "cell2": dict(color=INK_SECONDARY, marker="s", ls="-"),
+    "bandlimit": dict(color=INK, marker="D", ls=":", mfc="none"),
 }
 DEMO_LABELS_2D = {
     "naive": "standard RBF-FD (naive)",
@@ -57,6 +62,11 @@ DEMO_LABELS_2D = {
     "ablate": "seeds for the normal monomials only (ablation)",
     "floor": "no interface (resolution floor)",
     "sfloor": "seed operator, no contrast (seed floor)",
+    "widen1": "naive, edge widened to max(delta, h)",
+    "widen2": "naive, edge widened to max(delta, 2h)",
+    "cell": "naive, cell mean over h",
+    "cell2": "naive, cell mean over 2h",
+    "bandlimit": "naive, band-limited",
 }
 PRINT_LABELS_2D_ALL = {
     "naive": PRINT_LABELS_2D["naive"],
@@ -64,6 +74,11 @@ PRINT_LABELS_2D_ALL = {
     "ablate": "ablation: normal-only seeds",
     "floor": "no edge (resolution floor)",
     "sfloor": "seed floor (no contrast)",
+    "widen1": r"naive, edge widened to $\max(\delta, h)$",
+    "widen2": r"naive, edge widened to $\max(\delta, 2h)$",
+    "cell": "naive, cell mean over $h$",
+    "cell2": "naive, cell mean over $2h$",
+    "bandlimit": "naive, band-limited",
 }
 DEMO_LABELS_1D = {"aware": "seed stencils (ODE-continued)", "naive": LABELS["naive"]}
 
@@ -192,6 +207,97 @@ def convergence_1d(
         fig.suptitle(
             "Same equispaced grid, same time step: only the stencils that see the "
             "edge differ",
+            fontsize=12,
+        )
+    fig.savefig(out, dpi=160)
+    plt.close(fig)
+    return out
+
+
+STYLE_1D_COMPARATORS = {
+    "naive": STYLE_2D["naive"],
+    "aware": STYLE_2D["aware"],
+    "cell": dict(color=INK_SECONDARY, marker="^", ls="--", mfc="none"),
+    "cell2": dict(color=INK_SECONDARY, marker="s", ls="-"),
+    "bandlimit": dict(color=INK, marker="D", ls=":", mfc="none"),
+}
+LABELS_1D_COMPARATORS = {
+    "naive": "standard FD4, sampled",
+    "aware": "seeds",
+    "cell": "cell mean over $h$",
+    "cell2": "cell mean over $2h$",
+    "bandlimit": "band-limited",
+}
+
+
+def comparators_1d(
+    cache: ResultsCache,
+    out: Path,
+    *,
+    print_mode: bool = False,
+    widths: list[float] | None = None,
+    modes: tuple[str, ...] = ("naive", "cell", "cell2", "bandlimit", "aware"),
+) -> Path:
+    """Error vs resolution per edge width for the standard scheme on the
+    treated media of #69, against the sampled medium and the seeds (notes
+    §2.1, ``wave1d_stiff_comparators``). The widened edges are left out:
+    they never beat the sampled medium."""
+    if widths is None:
+        widths = [w for w in cache.values("delta", "error") if w is not None]
+    t_end = cache.args.get("t_end", 1.0)
+    n_w = len(widths)
+    cols = min(2, n_w) if print_mode else n_w
+    rows = ceil(n_w / cols)
+    fig, panels = plt.subplots(
+        rows,
+        cols,
+        figsize=(TEXTWIDTH_IN, 1.85 * rows + 0.35) if print_mode else (3.6 * n_w, 4.4),
+        sharex=True,
+        sharey=True,
+        constrained_layout=True,
+        squeeze=False,
+    )
+    axes = list(panels.ravel())
+    for ax in axes[n_w:]:
+        ax.set_visible(False)
+    axes = axes[:n_w]
+    ns = None
+    for ax, width in zip(axes, widths, strict=True):
+        errors = {}
+        for mode in modes:
+            ns, errors[mode] = _errors(cache, delta=width, mode=mode, field="f")
+            if ns.size == 0:
+                continue
+            style = STYLE_1D_COMPARATORS[mode]
+            ax.loglog(ns, errors[mode], label=LABELS_1D_COMPARATORS[mode], **style)
+        _guide(ax, ns, errors["aware"][1], 4, "4th order", print_mode)
+        if "cell2" in errors and errors["cell2"].size:
+            _guide(ax, ns, errors["cell2"][1], 2, "2nd order", print_mode)
+        if width == 0 or 2 / ns[-2] > width:
+            _guide(ax, ns, errors["naive"][1], 1, "1st order", print_mode)
+        if width:
+            _knee_line(ax, 2 / width, ns, print_mode)
+        ax.set_title(
+            _width_title(width, print_mode), fontsize=None if print_mode else 11
+        )
+        ax.set_xticks(ns, [str(int(n)) for n in ns])
+        ax.xaxis.set_minor_formatter(NullFormatter())
+        ax.set_xlim(ns[0] / 1.3, ns[-1] * 2.4)
+    for i, ax in enumerate(axes):
+        if i // cols == rows - 1:
+            ax.set_xlabel("grid nodes $n$" if print_mode else "number of grid nodes")
+        if i % cols == 0:
+            ax.set_ylabel(
+                rf"rel. error in $f$ at $t = {t_end:g}$"
+                if print_mode
+                else f"relative error in stress at t = {t_end:g}"
+            )
+    axes[0].set_ylim(1e-8, 5e-1)
+    axes[0].legend(loc="lower left", fontsize=_small(print_mode))
+    if not print_mode:
+        fig.suptitle(
+            "Standard FD4 on a treated medium (the standing alternative) vs "
+            "the seeds on the true one",
             fontsize=12,
         )
     fig.savefig(out, dpi=160)

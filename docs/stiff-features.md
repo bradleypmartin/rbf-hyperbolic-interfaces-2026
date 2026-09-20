@@ -273,6 +273,158 @@ in every run here. Nothing was tried for sharper contrasts, layers thinner
 than 19δ, or higher orders than FD4; the construction does not change for
 any of them.
 
+### 2.1 The standing alternative: the standard scheme on a changed medium (#69, `--comparators`, 2026-09-20)
+
+The comparison the ledger (`LITERATURE.md` §1a K6) said the write-up owed.
+In seismic and electromagnetic finite differences an interface is routinely
+handled by changing the *medium* rather than the stencil: the coefficients
+near it are averaged over a cell or smoothed over a few cells, and the
+unchanged standard scheme runs on the result. Two sources fix what that
+means (both fetched and read; page ranges in `docs/paper-index.md`):
+
+- Tornberg & Engquist (2006), §4.1: for p_t = a u_x, u_t = b p_x with
+  a = −ρc², b = −1/ρ, the regularised coefficients are 1/a linear across
+  the one cell [x̄ − h/2, x̄ + h/2] centred on the jump and 1/b linear
+  likewise (their eq. 18–22): the compliance 1/K and the density ρ are
+  replaced by their cell means. Theorem 1 gives second order for the Yee
+  scheme. Regularising a itself instead of 1/a "will yield an O(1) error
+  in the spatial discretization in at least one grid point close to the
+  discontinuity ... first order error overall, albeit possibly with a
+  smaller error coefficient". For their fourth-order *staggered* scheme
+  (§5) second order is reached only by also masking the scheme's temporal
+  correction terms within 3h/2 of the jump (eq. 37–39), terms the
+  collocated FD4 + RK4 scheme here does not have. Cell means of the moduli
+  (harmonic) and of the density (arithmetic) are also the Moczo et al.
+  (2002) line.
+- Koene, Wittsten & Robertsson (2022), §3.2–3.3, following Mittet (2017):
+  band-limit the density and the compliance to the grid Nyquist π/h. For a
+  jump that is the anti-aliased step ½ + Si(πz/h)/π, windowed; for a
+  general model, an oversampled grid is low-pass filtered along each axis
+  by a Hanning-windowed FIR (51 taps at tenfold oversampling, centred at
+  1.1× the Nyquist) and subsampled.
+
+What was run (`wave1d/treatments.py: TreatedMedium`, `widened`;
+`scripts/wave1d_stiff.py --comparators`): the same FD4 + RK4 on the same
+cell-centred grids, the same pulse and the same reference (the true-δ
+solution) as the table above, with the coefficients the naive scheme
+samples replaced by
+
+- *widened, h / 2h*: the true tanh profile with `edge_width = max(δ, mh)`,
+  m = 1, 2, the T0 bound of #69. It blends c and ρ linearly, so it is the
+  "regularise a itself" case Tornberg & Engquist warn about; a resolved
+  edge (mh ≤ δ) is left alone;
+- *cell mean, h / 2h*: the compliance and the density averaged over
+  [x − w/2, x + w/2] with w = h and w = 2h; for w = h this is their
+  eq. 18 and 22 at δ = 0. Both widths, because the layer's edges sit on
+  cell boundaries of every grid here (nodes at −1 + (i + ½)h, edges at 0
+  and 0.5): the one-cell ramp of a jump ends exactly at the nearest nodes
+  and changes no sampled coefficient, so at δ = 0 that row equals the naive
+  one to rounding. Their staggered grid has a coefficient position within
+  h/4 of any jump; a collocated grid does not. The two-cell mean does reach
+  the nodes beside the jump;
+- *band-limited*: the compliance and the density convolved with the
+  windowed sinc of Koene et al. §3.3 (cutoff 1.1π/h, Hanning window of
+  half-width 2.5h): their filter applied to the true profile instead of an
+  oversampled model, reducing to their anti-aliased step as δ → 0
+  (`tests/test_wave1d_treatments.py`).
+
+The kernel averages are Gauss–Legendre integrals split at the edge centres
+and 4δ either side (exact for a jump, to rounding for a tanh); each treated
+medium is a `Medium1D`, so `run(mode="naive")` takes it as it takes the
+true one, and the error is measured against the true medium's reference.
+The cell means and the band-limited medium are applied at their prescribed
+width at every n, also where h < δ: the sources have no δ and state no
+switch. Runtime: the sweep with the comparators takes 50 s.
+
+| δ | medium, scheme | n = 100 | 200 | 400 | 800 | 1600 | rates |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 (jump) | naive (sampled) | 7.1e-2 | 3.2e-2 | 1.6e-2 | 7.9e-3 | 3.9e-3 | 1.2, 1.0, 1.0, 1.0 |
+| 0 (jump) | widened, h | 8.5e-2 | 4.3e-2 | 2.1e-2 | 1.1e-2 | 5.4e-3 | 1.0, 1.0, 1.0, 1.0 |
+| 0 (jump) | widened, 2h | 1.6e-1 | 8.5e-2 | 4.3e-2 | 2.1e-2 | 1.1e-2 | 1.0, 1.0, 1.0, 1.0 |
+| 0 (jump) | cell mean, h | 7.1e-2 | 3.2e-2 | 1.6e-2 | 7.9e-3 | 3.9e-3 | 1.2, 1.0, 1.0, 1.0 |
+| 0 (jump) | cell mean, 2h | 1.3e-2 | 2.9e-3 | 7.3e-4 | 1.8e-4 | 4.5e-5 | 2.1, 2.0, 2.0, 2.0 |
+| 0 (jump) | band-limited | 5.7e-2 | 2.5e-2 | 1.3e-2 | 6.3e-3 | 3.1e-3 | 1.2, 1.0, 1.0, 1.0 |
+| 0 (jump) | interface-aware | 3.9e-3 | 2.5e-4 | 1.6e-5 | 9.9e-7 | 6.2e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.0025 | naive (sampled) | 7.2e-2 | 2.9e-2 | 6.3e-3 | 3.0e-5 | 7.4e-6 | 1.3, 2.2, 7.7, 2.0 |
+| 0.0025 | widened, h | 7.4e-2 | 3.2e-2 | 1.1e-2 | 3.0e-5 | 7.4e-6 | 1.2, 1.6, 8.5, 2.0 |
+| 0.0025 | widened, 2h | 1.6e-1 | 7.5e-2 | 3.2e-2 | 1.1e-2 | 7.4e-6 | 1.1, 1.2, 1.6, 10.5 |
+| 0.0025 | cell mean, h | 5.7e-2 | 1.9e-2 | 3.9e-3 | 4.3e-5 | 1.0e-5 | 1.6, 2.3, 6.5, 2.1 |
+| 0.0025 | cell mean, 2h | 1.3e-2 | 2.6e-3 | 5.9e-4 | 1.4e-4 | 3.6e-5 | 2.3, 2.1, 2.0, 2.0 |
+| 0.0025 | band-limited | 5.3e-2 | 1.8e-2 | 3.8e-3 | 3.0e-5 | 5.9e-6 | 1.5, 2.3, 7.0, 2.4 |
+| 0.0025 | seeds | 3.9e-3 | 2.5e-4 | 1.6e-5 | 9.9e-7 | 6.2e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.01 | naive (sampled) | 3.0e-2 | 5.6e-4 | 3.5e-5 | 1.0e-6 | 6.5e-8 | 5.7, 4.0, 5.0, 4.0 |
+| 0.01 | widened, h | 4.3e-2 | 5.6e-4 | 3.5e-5 | 1.0e-6 | 6.5e-8 | 6.3, 4.0, 5.0, 4.0 |
+| 0.01 | widened, 2h | 1.3e-1 | 4.3e-2 | 3.5e-5 | 1.0e-6 | 6.5e-8 | 1.5, 10.3, 5.0, 4.0 |
+| 0.01 | cell mean, h | 2.0e-2 | 7.6e-4 | 1.4e-4 | 3.5e-5 | 8.7e-6 | 4.7, 2.4, 2.0, 2.0 |
+| 0.01 | cell mean, 2h | 1.1e-2 | 2.3e-3 | 5.6e-4 | 1.4e-4 | 3.5e-5 | 2.2, 2.0, 2.0, 2.0 |
+| 0.01 | band-limited | 2.0e-2 | 5.3e-4 | 5.9e-5 | 1.4e-5 | 3.6e-6 | 5.2, 3.2, 2.1, 2.0 |
+| 0.01 | seeds | 3.9e-3 | 2.5e-4 | 1.6e-5 | 9.7e-7 | 6.1e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.04 | naive (sampled) | 3.5e-3 | 2.2e-4 | 1.4e-5 | 8.8e-7 | 5.5e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.04 | widened, h / 2h | 3.5e-3 | 2.2e-4 | 1.4e-5 | 8.8e-7 | 5.5e-8 | 4.0, 4.0, 4.0, 4.0 |
+| 0.04 | cell mean, h | 4.2e-3 | 5.0e-4 | 1.0e-4 | 2.5e-5 | 6.3e-6 | 3.1, 2.3, 2.0, 2.0 |
+| 0.04 | cell mean, 2h | 7.9e-3 | 1.7e-3 | 4.0e-4 | 1.0e-4 | 2.5e-5 | 2.2, 2.0, 2.0, 2.0 |
+| 0.04 | band-limited | 3.5e-3 | 2.5e-4 | 4.1e-5 | 1.0e-5 | 2.6e-6 | 3.8, 2.6, 2.0, 2.0 |
+| 0.04 | seeds | 3.5e-3 | 2.2e-4 | 1.4e-5 | 8.8e-7 | 5.5e-8 | 4.0, 4.0, 4.0, 4.0 |
+
+![The standard scheme on the treated media against the sampled medium and the seeds](figures/wave1d_stiff_comparators.png)
+
+**At a jump (δ = 0)** no coefficient treatment lifts the collocated
+scheme's first order except the two-cell mean, which is second order at
+every n (rates 2.1, 2.0, 2.0, 2.0): 5.5× below naive at n = 100 and 87× at
+n = 1600. The one-cell mean is naive to rounding (above); the band-limited
+medium keeps first order at 0.8× the naive constant; the widened edges keep
+it at 1.36× and 2.7× the naive constant, which is Tornberg & Engquist's
+prediction for regularising a itself. The interface-aware stencils are
+3.3× below the two-cell mean at n = 100 and 730× at n = 1600. So their
+second order does carry over to collocated FD4 once the averaging reaches
+the nodes beside the jump, and it is the ceiling: no treatment of the
+coefficients gets the collocated scheme past second order at a jump, and
+Tornberg & Engquist's §5 says the same of their fourth-order scheme.
+
+**Through an unresolved edge (δ = 0.0025, h = 8δ down to 2δ)** the one-cell
+mean and the band-limited medium cut the naive error by 1.25–1.6× and keep
+its pre-knee rates (1.5–2.3), then follow it through the knee at h = δ (the
+one-cell mean 1.4× above naive there and beyond, the band-limited medium
+level with it). The two-cell mean stays second order and does not see the
+knee: 5.7× below naive at h = 8δ, 11× at 4δ and 2δ, then 4.7× and 4.9×
+*above* naive at h = δ and δ/2, where the naive scheme is fourth order and
+the averaged medium is not the true one. The seeds are 3.2× below the
+two-cell mean at h = 8δ, 10× at 4δ, 37× at 2δ, 146× at δ and 580× at δ/2:
+the gap widens toward the knee, the opposite of the outcome #69 named as
+the one that would change the story (averaged FD4 matching the seeds near
+h ≈ δ). The widened edges are worse than naive wherever they act (widened
+h: 1.03×, 1.1×, 1.7× at h = 8δ, 4δ, 2δ; widened 2h: 2.2×, 2.6×, 5.3×, and
+350× at h = δ where the 2h edge is still twice the true one) and equal to
+it once mh ≤ δ.
+
+**On a resolved edge (δ = 0.01 from n = 200 on, δ = 0.04 everywhere)** every
+treatment applied at its prescribed width is second order and falls behind
+the fourth-order naive scheme: at n = 1600 the one-cell mean is 133× above
+naive through δ = 0.01 and 114× through δ = 0.04, the band-limited medium
+55× and 47×, the two-cell mean 530× and 455×. This is the second-order
+component the ledger's K6 describes, measured on this scheme. The
+treatments therefore need the same switch as the seeds (apply while h > δ,
+sample the true medium otherwise), which the sources, written for jumps, do
+not state; with it, the best of them is second order through the edge at no
+cost per stencil, and the seeds are fourth order at one ODE march per
+rebuilt row.
+
+**Scope, and what the measurement licenses.** One collocated scheme, one
+contrast (c: 1 → 2), one pulse, our implementations of the treatments on a
+cell-centred grid whose cell boundaries hold the jump; the sources analyse
+and run them on staggered grids, where their orders are proven or observed,
+and Koene et al. find the anisotropic Schoenberg–Muir medium better still in
+elastic media (not built here: the port has no anisotropic operator). The
+measurement converts the ledger's "not run" into: on these grids the seeds
+are 3.2× below the best coefficient treatment on the coarsest grid and
+further below it on every finer one (37× at h = 2δ; 730× at n = 1600 for
+the jump), at and past the knee 31× and 96× below the band-limited medium
+(then level with naive) and 146× and 580× below the two-cell mean, and no
+coefficient treatment reaches the seeds' order anywhere. It is not a proof
+that one method beats another in general. In 2-D only the widened edge was
+run (section 5.7): there the changed medium's own error dominates and it is
+worse than sampling at every n where it acts.
+
 ## 3. Related work (#33)
 
 Brad's question: the construction came from intuition about these
@@ -1907,3 +2059,149 @@ converted-S floor does at 26.6°), and the seeded-width tuning of
 the 2048 × 4096 grid of δ = 0.0025, and are cached; the 24 curved seed
 operators about an hour on 6–12 workers; the sweep 12 min from the
 caches, the spectra 23 min, the clip 21 min.
+
+### 5.7 The standing alternative on the scattered nodes (#69, `--modes widen1 widen2 cell cell2 bandlimit`, 2026-09-20)
+
+The 2-D half of section 2.1: the naive RBF-FD operator of section 5.2 on a
+changed medium, against the true medium's reference, on the flat geometry
+through δ = 0.0025 and 0.01 (the #40 references and node sets) and the
+curved one through δ = 0.0025, 0.005 and 0.01 (the #42 product-grid
+references). Five treatments of the coefficients the naive operator samples
+(`wave2d/treatments.py: TreatedMedium2D`; `scripts/wave2d_stiff.py`, the
+comparator modes; results `paper/data/wave2d_stiff_cmp.json` and
+`wave2d_stiff_cmp_a0.02.json`):
+
+- *widened, h / 2h* (T0 of #69): the same tanh profile with
+  `edge_width = max(δ, mh)`, the naive operator built on it (a resolved
+  edge is left alone, so the run then equals the naive one);
+- *cell mean, h / 2h* (T2): the wave moduli K = λ + 2μ and μ averaged
+  harmonically and the density arithmetically over a square of side h or
+  2h about each node, isotropy kept (λ = K − 2μ of the averages): the
+  Moczo et al. (2002) line and the 2-D reading of the compliance-and-density
+  rule of section 2.1. On scattered nodes no node sits at a fixed offset
+  from the edge, so the one-cell mean acts everywhere (the alignment
+  degeneracy of the 1-D grid does not arise);
+- *band-limited* (T2): the same three fields through the product of two
+  windowed sincs, the separable low-pass of Koene et al. §3.3 (cutoff
+  1.1π/h along each axis, Hanning window of half-width 2.5h).
+
+The averages are composite Gauss–Legendre product rules with sub-squares no
+wider than 1.5δ, 6·10⁻⁸ relative against adaptive quadrature at δ = h/8
+(`tests/test_wave2d_treatments.py`); the treated medium sets the time step
+(the band-limited one overshoots the true speeds by Gibbs), the pulse and
+the reference are the true medium's. Runtime from the caches: 6.5 min flat,
+27 min curved, the curved band-limited evaluation the largest part. As in
+section 2.1 the treatments are applied at their prescribed width at every
+n. The anisotropic Schoenberg–Muir medium (T3), which Koene et al. find
+best in elastic media, needs an anisotropic five-field operator the port
+does not have and was not built.
+
+Errors in v at t = 1 (the last column: the largest spurious |u| at 19,600
+nodes for the flat pulse, the relative error in u for the curved one):
+
+Flat (`--widths 0.0025 0.01`):
+
+| δ | operator | n = 2500 | 4900 | 10,000 | 19,600 | rates | u at 19,600 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.0025 | naive (sampled) | 8.9e-02 | 4.8e-02 | 2.7e-02 | 1.3e-02 | 1.9, 1.6, 2.2 | 3.4e-03 |
+| 0.0025 | widened, h | 4.4e-01 | 3.0e-01 | 1.9e-01 | 1.2e-01 | 1.2, 1.2, 1.4 | 4.6e-04 |
+| 0.0025 | widened, 2h | 9.1e-01 | 6.5e-01 | 4.3e-01 | 2.9e-01 | 1.0, 1.2, 1.2 | 7.1e-05 |
+| 0.0025 | cell mean, h | 9.3e-02 | 4.2e-02 | 1.2e-02 | 3.6e-03 | 2.4, 3.4, 3.6 | 1.9e-03 |
+| 0.0025 | cell mean, 2h | 1.2e-01 | 6.1e-02 | 2.9e-02 | 1.4e-02 | 2.0, 2.1, 2.2 | 5.6e-04 |
+| 0.0025 | band-limited | 1.0e-01 | 4.9e-02 | 1.8e-02 | 7.6e-03 | 2.2, 2.7, 2.6 | 1.6e-03 |
+| 0.0025 | seeds (§5.4 / §5.6) | 3.0e-02 | 7.7e-03 | 2.1e-03 | 6.4e-04 | 4.1, 3.7, 3.5 | 5.1e-05 |
+| 0.01 | naive (sampled) | 6.2e-02 | 2.1e-02 | 5.7e-03 | 1.4e-03 | 3.1, 3.7, 4.2 | 8.5e-05 |
+| 0.01 | widened, h | 3.0e-01 | 1.2e-01 | 5.7e-03 | 1.4e-03 | 2.6, 8.7, 4.2 | 8.5e-05 |
+| 0.01 | widened, 2h | 8.3e-01 | 5.4e-01 | 2.8e-01 | 1.1e-01 | 1.3, 1.8, 2.7 | 7.1e-05 |
+| 0.01 | cell mean, h | 5.9e-02 | 1.9e-02 | 6.5e-03 | 3.3e-03 | 3.3, 3.1, 2.0 | 5.8e-05 |
+| 0.01 | cell mean, 2h | 1.1e-01 | 5.7e-02 | 2.8e-02 | 1.5e-02 | 2.1, 2.0, 1.9 | 6.2e-05 |
+| 0.01 | band-limited | 7.5e-02 | 2.6e-02 | 7.8e-03 | 2.5e-03 | 3.1, 3.4, 3.3 | 5.8e-05 |
+| 0.01 | seeds (§5.4 / §5.6) | 3.0e-02 | 1.1e-02 | 3.9e-03 | 1.6e-03 | 3.1, 2.8, 2.7 | 1.1e-04 |
+| floor | naive, uniform | 5.2e-02 | 1.8e-02 | 4.8e-03 | 1.3e-03 | 3.1, 3.7, 3.9 | 3.0e-05 |
+
+Curved, amplitude 0.02 (`--amplitude 0.02 --widths 0.0025 0.005 0.01`):
+
+| δ | operator | n = 2500 | 4900 | 10,000 | 19,600 | rates | u at 19,600 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.0025 | naive (sampled) | 9.2e-02 | 4.6e-02 | 2.4e-02 | 1.2e-02 | 2.1, 1.9, 2.1 | 2.0e-02 |
+| 0.0025 | widened, h | 4.5e-01 | 2.9e-01 | 1.8e-01 | 1.1e-01 | 1.3, 1.3, 1.4 | 1.4e-01 |
+| 0.0025 | widened, 2h | 9.3e-01 | 6.5e-01 | 4.3e-01 | 2.8e-01 | 1.0, 1.2, 1.2 | 3.3e-01 |
+| 0.0025 | cell mean, h | 9.0e-02 | 3.8e-02 | 1.1e-02 | 3.4e-03 | 2.6, 3.4, 3.6 | 9.9e-03 |
+| 0.0025 | cell mean, 2h | 1.2e-01 | 6.0e-02 | 2.7e-02 | 1.3e-02 | 2.1, 2.2, 2.2 | 2.0e-02 |
+| 0.0025 | band-limited | 9.7e-02 | 4.5e-02 | 1.6e-02 | 6.9e-03 | 2.3, 2.8, 2.6 | 1.2e-02 |
+| 0.0025 | seeds (§5.4 / §5.6) | 2.9e-02 | 8.0e-03 | 2.9e-03 | 9.5e-04 | 3.8, 2.9, 3.3 | 4.0e-03 |
+| 0.005 | naive (sampled) | 8.1e-02 | 3.2e-02 | 6.3e-03 | 1.9e-03 | 2.8, 4.5, 3.5 | 6.0e-03 |
+| 0.005 | widened, h | 4.0e-01 | 2.4e-01 | 1.2e-01 | 5.4e-02 | 1.6, 1.8, 2.5 | 6.7e-02 |
+| 0.005 | widened, 2h | 9.0e-01 | 6.2e-01 | 3.8e-01 | 2.3e-01 | 1.1, 1.4, 1.5 | 2.6e-01 |
+| 0.005 | cell mean, h | 6.7e-02 | 2.0e-02 | 5.7e-03 | 2.6e-03 | 3.6, 3.6, 2.3 | 6.6e-03 |
+| 0.005 | cell mean, 2h | 1.1e-01 | 5.3e-02 | 2.4e-02 | 1.2e-02 | 2.2, 2.2, 2.0 | 1.7e-02 |
+| 0.005 | band-limited | 8.6e-02 | 3.2e-02 | 9.9e-03 | 3.5e-03 | 2.9, 3.3, 3.1 | 6.9e-03 |
+| 0.005 | seeds (§5.4 / §5.6) | 2.6e-02 | 4.5e-03 | 2.0e-03 | 8.8e-04 | 5.2, 2.3, 2.5 | 2.6e-03 |
+| 0.01 | naive (sampled) | 5.8e-02 | 1.8e-02 | 5.2e-03 | 1.3e-03 | 3.5, 3.4, 4.1 | 4.4e-03 |
+| 0.01 | widened, h | 3.0e-01 | 1.2e-01 | 5.2e-03 | 1.3e-03 | 2.7, 8.9, 4.1 | 4.4e-03 |
+| 0.01 | widened, 2h | 8.4e-01 | 5.4e-01 | 2.8e-01 | 1.1e-01 | 1.3, 1.8, 2.6 | 1.2e-01 |
+| 0.01 | cell mean, h | 5.4e-02 | 1.8e-02 | 6.6e-03 | 3.1e-03 | 3.3, 2.8, 2.2 | 5.7e-03 |
+| 0.01 | cell mean, 2h | 1.1e-01 | 5.3e-02 | 2.6e-02 | 1.3e-02 | 2.2, 2.0, 2.0 | 1.6e-02 |
+| 0.01 | band-limited | 6.8e-02 | 2.2e-02 | 6.8e-03 | 2.2e-03 | 3.3, 3.3, 3.3 | 4.8e-03 |
+| 0.01 | seeds (§5.4 / §5.6) | 4.2e-02 | 1.0e-02 | 3.9e-03 | 1.6e-03 | 4.2, 2.8, 2.6 | 3.9e-03 |
+| floor | naive, uniform | 5.3e-02 | 1.8e-02 | 4.8e-03 | 1.3e-03 | 3.2, 3.7, 3.9 | 2.6e-05 |
+
+![Flat: the naive operator on the treated media vs the sampled medium](figures/wave2d_stiff_comparators.png)
+
+![Curved: the same](figures/wave2d_stiff_comparators_curved.png)
+
+**Through an edge no node set resolves (δ = 0.0025, h = 8δ down to 2.9δ)**
+the one-cell mean is the best treatment on both geometries: level with
+sampling at 2500 nodes (0.96× and 1.02×), 1.15–1.2× below it at 4900,
+2.1–2.2× at 10,000 and 3.5–3.6× at 19,600, with rates 3.4 and 3.6 over the
+last two doublings (its second-order regime starts only once h approaches
+δ, which this sweep does not reach); it sits 1.7–2.8× above the resolution
+floor where sampling sits 1.7–10× above it. The seeds are 3.1–5.9× below
+the one-cell mean at every n on either geometry (flat 3.1, 5.4, 5.9, 5.6;
+curved 3.2, 4.7, 3.9, 3.6), at their own floor. The band-limited
+coefficients are level with or slightly above sampling on the two coarse
+sets and 1.5–1.7× below it on the two fine ones (rates 2.6–2.8); the
+two-cell mean, the best treatment in 1-D, is 1.05–1.4× *above* sampling at
+every n here, second order throughout (2.0–2.2). In spurious u (flat) the
+one-cell mean cuts sampling's 1.3–1.8×, the seeds 5.5–67×; the two-cell
+mean cuts it 6× at 19,600 nodes while its v is the worse one, the
+smoother medium exciting the stencils less and the changed medium costing
+more.
+
+**Where the knee sits inside the sweep** the treatments cross above
+sampling as in 1-D, earlier for the wider ones: through δ = 0.01 (h = 2δ
+to 0.7δ) the one-cell mean is 1.05–1.1× below sampling while h ≥ 1.4δ,
+then 1.13× above at h = δ and 2.4× at h = 0.7δ (rates falling to 2.0), the
+band-limited coefficients 1.2–1.9× above at every n, the two-cell mean
+1.8–10×; through the curved δ = 0.005 (h = 4δ to 1.4δ) the one-cell mean is
+1.2×, 1.55× and 1.1× below sampling and then 1.4× above it at h = 1.4δ,
+so its crossover lies between h = 2δ and 1.4δ, before the seeds' at
+h ≈ δ (section 5.4). The rule for the treatments is therefore the seeds'
+rule with a wider margin: average over one cell while h ≳ 2δ, sample
+otherwise.
+
+**The widened edge** is worse than sampling wherever it acts, by 5–9.7×
+for one cell and 10–24× for two through δ = 0.0025, by up to 28× and 120×
+through the curved δ = 0.005 at 10,000–19,600 nodes, and equal to sampling
+once mh ≤ δ; its rates are the changed medium's (1.0–1.4 through
+δ = 0.0025). That is the medium change alone: the exact solutions through
+edges of width 0.02 and 0.04 differ from the true δ = 0.01 one by 27% and
+82% in v at t = 1 (the cached spectral references for δ = 0.01, 0.02 and
+0.04 compared on the 2500-node set, `reference_at`; not in the results
+cache). A medium changed over a cell or two costs far more here than in
+1-D (1.4× and 2.7× at a jump there): the plane pulse crosses the band
+twice by t = 1 and converts at each of its four edge crossings, and every
+crossing sees the changed edge. The spurious u of the widened edge is 6–8×
+below sampling's, for the same reason as the two-cell mean's.
+
+**Scope, and what it adds to section 2.1.** One operator (30-node degree-4
+RBF-FD with Δ³ hyperviscosity), one contrast, one pulse, ≤ 19,600 nodes,
+our isotropic reading of the treatments on scattered nodes; the sources
+run them on staggered Cartesian grids. On these node sets no coefficient
+treatment reaches the seeds' order or their floor; the best of them, the
+one-cell mean, is 3.1–5.9× above the seeds through the sharp edge and
+crosses above sampling before the seeds do; the ranking of the treatments
+differs from 1-D (the two-cell mean, best there, is worst of the three
+here), which is the changed medium's cost on this problem rather than
+anything about the stencils. Both statements are measurements on this
+problem, not a comparison of methods in general.
