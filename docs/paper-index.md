@@ -72,6 +72,34 @@ Read in full (4 pp.): results, tools, the Sep 3 email verbatim, the Sep 6
 calls, the two proposals, what he is and is not claiming. Quoted in
 `docs/navier-stokes-notes.md`.
 
+## Tornberg & Engquist 2006 (`tornberg-engquist-2006-regularization-wave-propagation-maa.pdf`, 28 pp.)
+
+PDF page = printed page − 246. Fetched 2026-09-20 for #69 (the comparators).
+
+| PDF pages | Section | Use for |
+| --- | --- | --- |
+| 1–2 | Abstract, §1 introduction, **§2 equations**: p_t = a u_x, u_t = b p_x with a = −ρc², b = −1/ρ; jump conditions eq. 6–7 | The variables their regularisation acts on |
+| 3–4 | §3 the Yee scheme and the Q4 (fourth-order staggered) scheme, eq. 9–12 | Why their fourth-order result does not transfer: the Q4 has temporal correction terms |
+| 5–7 | **§4.1 the regularised coefficients**: eq. 18–22 (1/a linear across [x̄ − h/2, x̄ + h/2], the same for b, i.e. 1/b = −ρ linear), eq. 23; the remark that regularising a itself stays first order; Theorem 1 (second order in L2) | The `cell` comparator (`wave1d/treatments.py`) is eq. 18 and 22 at δ = 0; T0 is the "regularise a itself" case |
+| 8–14 | §4.2–4.4 numerical results and stability for the Yee scheme | — |
+| 15–18 | **§5 higher order**: eq. 37–39, second order only with the correction terms masked within 3h/2 of the jump; §5.2 results | The caveat on "second order" in the notes §2 and the manuscript |
+| 19–26 | §6 a problem with a discontinuous solution, §7 conclusions | — |
+| 27–28 | References | Citations |
+
+## Koene, Wittsten & Robertsson 2021 (`koene-wittsten-robertsson-2021-anti-aliasing-vs-equivalent-medium-arxiv.pdf`, 34 pp.)
+
+arXiv v2 of the GJI 229 (2022) paper. Fetched 2026-09-20 for #69.
+
+| PDF pages | Section | Use for |
+| --- | --- | --- |
+| 1–3 | Abstract, §1 the four classes of interface treatment | Framing: anti-aliasing wins in acoustic media, Schoenberg–Muir in elastic |
+| 7–9 | **§3.2 the anti-aliased step-function** eq. 22 (½ + Si(πz/Δz)/π), §3.2.2 the Kaiser window (length and shape 3), which quantities: **density and compliance** (Mittet 2017), the three hazards (fluid–solid, negative properties, CFL) | The δ → 0 case of the `bandlimit` comparator |
+| 10 | **§3.3 the 2-D low-pass filter**: oversample ×10, zero-phase FIR along each axis, Hanning window of 51 points centred at 1.1× the Nyquist wavenumber, subsample | The `bandlimit` kernel as implemented (half-width 2.5h, cutoff 1.1π/h) |
+| 10–12 | §3.4 Schoenberg–Muir calculus, orthorhombic averaging | T3, named and excluded |
+| 13–22 | §4 numerical tests (acoustic, elastic isotropic, anisotropic) | Their verdict, quoted in LITERATURE.md K6 |
+| 23–28 | §5 discussion, conclusions | — |
+| 30–34 | Appendices (Si rational approximation; compliance matrices) | — |
+
 ## Martin & Fornberg preprints
 
 Both are indexed below; page numbers are PDF pages.

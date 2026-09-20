@@ -15,6 +15,8 @@ papers=(
   "openai-2026-finite-time-blowup-euler.pdf|https://cdn.openai.com/pdf/315b36cd-ec98-4023-8342-93345194ece1/euler.pdf|a0c234518e6c489e16996805023eb2e75c00b7c03455f7a3a5be2c124954bfdd"
   "alpoge-buckmaster-2026-euler-blowup-smooth-forcing.pdf|https://cims.nyu.edu/~tristanb/euler.pdf|97ef408bff09b4f6ed9f3867734d1eb2245f3f34e6334b28136c84c02d0ae8d8"
   "buckmaster-2026-statement.pdf|https://cims.nyu.edu/~tristanb/statement.pdf|8d7723941bcda2fa55c1e74faa6298e04c706d17ff8abd2ad01878039c621f9d"
+  "tornberg-engquist-2006-regularization-wave-propagation-maa.pdf|https://www.intlpress.com/site/pub/files/_fulltext/journals/maa/2006/0013/0003/MAA-2006-0013-0003-a003.pdf|fc4d63910bd79bc506d5ac21382ccc707033cc3e4f27e31a784dbd39f4a1185f"
+  "koene-wittsten-robertsson-2021-anti-aliasing-vs-equivalent-medium-arxiv.pdf|https://arxiv.org/pdf/2104.08206v2|5a52ef3473ae16a1276712813179a11df9e6d163580ffa89430d50a1a66cf826"
 )
 
 for entry in "${papers[@]}"; do
