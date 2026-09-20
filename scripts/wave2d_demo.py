@@ -16,9 +16,16 @@ interface.
     uv run python scripts/wave2d_demo.py --amplitude 0.02   # curved (§3.4.2)
     uv run python scripts/wave2d_demo.py --n 2500 --frames 60 --out outputs/quick.mp4
     uv run python scripts/wave2d_demo.py --amplitude 0.02 --png-only   # snapshot only
+    uv run python scripts/wave2d_demo.py --amplitude 0.02 --edge-width 0.005   # Part 3
+
+``--edge-width delta`` smooths the curved interfaces into tanh edges of that
+width (Part 3, #42): the aware solver is then the seed-stencil operator and
+the reference the product-grid Fourier solution of ``wave2d/spectral.py``,
+evaluated at the nodes frame by frame.
 """
 
 import argparse
+import os
 import time
 from pathlib import Path
 
@@ -38,11 +45,14 @@ from pdes_demo.wave2d import (
     LayeredMedium2D,
     NodeSet,
     SineInterface,
+    build_operators,
     exact_plane_wave,
     make_node_set,
+    oblique_p_wave,
     pixel_grid,
     resample_matrix,
     run,
+    run_fourier_2d,
 )
 
 MODES = ("naive", "aware")
@@ -50,6 +60,7 @@ TITLES = {
     "naive": "Standard RBF-FD (naive)",
     "aware": "Interface-aware RBF-FD",
 }
+SEED_TITLES = {**TITLES, "aware": "Seed stencils"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,6 +80,17 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="nodes of the reference run for curved interfaces (default 4 x n)",
+    )
+    parser.add_argument(
+        "--edge-width",
+        type=float,
+        default=0.0,
+        help="tanh edge width delta on the curved interfaces (0 = jump; Part 3)",
+    )
+    parser.add_argument("--ref-nx", type=int, default=None)
+    parser.add_argument("--ref-ny", type=int, default=None)
+    parser.add_argument(
+        "--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2)
     )
     parser.add_argument("--t-end", type=float, default=0.5)
     parser.add_argument("--frames", type=int, default=250)
@@ -97,7 +119,13 @@ def parse_args() -> argparse.Namespace:
         help="write the snapshot PNG and skip the video (ffmpeg output differs "
         "between runs, so this avoids touching a committed clip)",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.edge_width and not args.amplitude:
+        parser.error(
+            "--edge-width is for the curved case; flat smooth edges are "
+            "measured by scripts/wave2d_stiff.py"
+        )
+    return args
 
 
 def reference_v(
@@ -107,6 +135,21 @@ def reference_v(
     if medium.is_flat:
         v = np.array([exact_plane_wave(nodes, t, medium)[1] for t in times])
         return v, "the exact solution"
+    if medium.is_smooth:
+        t0 = time.perf_counter()
+        frames = run_fourier_2d(
+            medium,
+            lambda xy: oblique_p_wave(xy, medium, (0, 1), 0.75, 23.0),
+            args.t_end,
+            snapshot_times=times,
+            n_x=args.ref_nx,
+            n_y=args.ref_ny,
+            snapshot_transform=lambda s: (s.t, s.evaluate(nodes.xy)[1]),
+        )
+        if not np.allclose([t for t, _ in frames], times):
+            raise RuntimeError("reference snapshots are not aligned with the runs")
+        print(f"reference: product grid, {time.perf_counter() - t0:.1f}s")
+        return np.array([v for _, v in frames]), "the product-grid Fourier solution"
     ref_n = args.ref_n or 4 * args.n
     t0 = time.perf_counter()
     fine = make_node_set(medium, ref_n, seed=args.seed)
@@ -146,9 +189,12 @@ def main() -> None:
     medium = LayeredMedium2D(
         lower=SineInterface(0.25, args.amplitude),
         upper=SineInterface(0.5, args.amplitude),
+        edge_width=args.edge_width,
     )
+    titles = SEED_TITLES if medium.is_smooth else TITLES
     if args.out is None:
         suffix = "_curved" if args.amplitude else ""
+        suffix += f"_w{args.edge_width:g}" if args.edge_width else ""
         args.out = Path(f"outputs/wave2d_naive_vs_aware{suffix}.mp4")
 
     t0 = time.perf_counter()
@@ -161,6 +207,7 @@ def main() -> None:
             t_end=args.t_end,
             n_snapshots=args.frames,
             align_snapshots=True,
+            operators=build_operators(nodes, medium, mode=mode, workers=args.workers),
         )
         for mode in MODES
     }
@@ -206,9 +253,15 @@ def main() -> None:
     use_demo_style()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     shape = "curved" if args.amplitude else "flat"
+    if medium.is_smooth:
+        shape += (
+            f" edges of width {args.edge_width:g} = h/{nodes.h / args.edge_width:.3g}"
+        )
+    else:
+        shape += " interfaces"
     caption = (
         "Pressure pulse hitting a band with 4x stiffness and 2x density, "
-        f"{shape} interfaces  |  {nodes.n} scattered nodes, RBF-FD, RK4"
+        f"{shape}  |  {nodes.n} scattered nodes, RBF-FD, RK4"
     )
 
     # --- static snapshot grid for the slides ------------------------------
@@ -237,7 +290,7 @@ def main() -> None:
                     **text_kw,
                 )
                 if r == 0:
-                    ax_e.set_title(f"{TITLES[mode]}\n{error_title}", fontsize=11)
+                    ax_e.set_title(f"{titles[mode]}\n{error_title}", fontsize=11)
             axes[r, 0].set_ylabel(f"t = {times[k]:.2f}\ny")
         for ax in axes[-1]:
             ax.set_xlabel("x")
@@ -275,7 +328,7 @@ def main() -> None:
         im_e = bottom.imshow(image(diff[mode][0]), **error_kw)
         for ax in (top, bottom):
             style_map(ax, medium)
-        top.set_title(f"{TITLES[mode]}: |v|")
+        top.set_title(f"{titles[mode]}: |v|")
         bottom.set_title(error_title)
         bottom.set_xlabel("x")
         labels[mode] = bottom.text(

@@ -8,13 +8,19 @@ the RK4 amplification at CFL 0.5 are reported next to the jump-aware operator.
 ``--variants`` adds the configurations the study tried and rejected
 (``docs/stiff-features.md`` §5.3). ``--run`` integrates the wide plane pulse
 to ``t_end`` for every case and reports the energy ratio and the spurious u.
+``--amplitude 0.02`` bends the interfaces (#42): same spectra on the curved
+node set, with the seeds along the true normals; ``--run`` then reports the
+energy ratio and the spurious u only (the curved reference lives in
+``wave2d_stiff.py --amplitude``).
 
     uv run python scripts/wave2d_stiff_eigenvalues.py                 # 900 nodes
     uv run python scripts/wave2d_stiff_eigenvalues.py --n 2500 --run  # minutes
     uv run python scripts/wave2d_stiff_eigenvalues.py --variants seeds naive19 seeds30
+    uv run python scripts/wave2d_stiff_eigenvalues.py --n 2500 --amplitude 0.02 --run
 """
 
 import argparse
+import os
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -29,6 +35,7 @@ from pdes_demo.wave2d import (
     LayeredMedium2D,
     NodeSet,
     Operators,
+    SineInterface,
     build_operators,
     energy,
     exact_plane_wave,
@@ -81,12 +88,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sharpness", type=float, default=15.0)
     parser.add_argument("--center", type=float, default=0.875)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--amplitude", type=float, default=0.0, help="sine amplitude of the interfaces"
+    )
     parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=max(1, (os.cpu_count() or 2) - 2),
+        help="processes for the seed marches (default: all cores but two)",
+    )
     return parser.parse_args()
 
 
+def medium_for(width: float, args: argparse.Namespace) -> LayeredMedium2D:
+    if args.amplitude == 0.0:
+        return LayeredMedium2D(edge_width=width)
+    return LayeredMedium2D(
+        lower=SineInterface(0.25, args.amplitude),
+        upper=SineInterface(0.5, args.amplitude),
+        edge_width=width,
+    )
+
+
 def build(
-    variant: str, nodes: NodeSet, medium: LayeredMedium2D, seed_hyper_scale: float
+    variant: str,
+    nodes: NodeSet,
+    medium: LayeredMedium2D,
+    seed_hyper_scale: float,
+    workers: int | None = None,
 ) -> Operators:
     if variant == "naive":
         return build_operators(nodes, medium)
@@ -94,12 +124,19 @@ def build(
         return build_operators(nodes, medium, stencil_size=19, poly_degree=3)
     if variant == "seeds30":
         ops = build_operators(
-            nodes, medium, mode="aware", interface_stencil=30, interface_degree=4
+            nodes,
+            medium,
+            mode="aware",
+            interface_stencil=30,
+            interface_degree=4,
+            workers=workers,
         )
     elif variant == "hyper19":
-        ops = build_operators(nodes, medium, mode="aware", seed_hyper_stencil=19)
+        ops = build_operators(
+            nodes, medium, mode="aware", seed_hyper_stencil=19, workers=workers
+        )
     else:
-        ops = build_operators(nodes, medium, mode="aware")
+        ops = build_operators(nodes, medium, mode="aware", workers=workers)
     if variant == "naive-hyper":
         ops = replace(ops, hyper_block=build_operators(nodes, medium).hyper_block)
     if seed_hyper_scale != 1.0 and ops.interface_nodes.size:
@@ -152,17 +189,18 @@ def rk4_boundary(n_pts: int = 800) -> np.ndarray:
 def main() -> None:
     args = parse_args()
     use_demo_style()
-    jump = LayeredMedium2D()
+    jump = medium_for(0.0, args)
     nodes = make_node_set(jump, args.n, seed=args.seed)
     h = nodes.h
     dt = args.cfl * h / jump.c_max
     gamma = args.gamma_scale * hyperviscosity_gamma(h)
     widths = []
+    limit = (0.25 - 2 * abs(args.amplitude)) / 4
     for w in args.widths:
         width = w * h
-        if 4 * width > 0.25:
-            width = 0.0625
-            print(f"edge width {w:g} h = {w * h:.4f} capped at 0.0625 (band limit)")
+        if width > limit:
+            width = limit
+            print(f"edge width {w:g} h = {w * h:.4f} capped at {limit:g} (band limit)")
         widths.append(width)
     variants = ["naive"] + args.variants
 
@@ -178,7 +216,9 @@ def main() -> None:
         f" {'min Re':>10s} {'RK4 |R|':>8s}"
     )
     if args.run:
-        header += f" {'E(t)/E(0)':>10s} {'max|u|':>9s} {'err v':>9s}"
+        header += f" {'E(t)/E(0)':>10s} {'max|u|':>9s}"
+        if args.amplitude == 0.0:
+            header += f" {'err v':>9s}"
     print(header)
     refs: dict[LayeredMedium2D, np.ndarray] = {}  # frozen, so hashable
 
@@ -202,13 +242,13 @@ def main() -> None:
             )
             e0 = energy(snaps.state[0], nodes, medium)
             e1 = energy(snaps.state[-1], nodes, medium)
-            if medium not in refs:
-                refs[medium] = reference(nodes, medium, args)
-            v, v_ref = snaps.state[-1][1], refs[medium][1]
-            err = np.linalg.norm(v - v_ref) / np.linalg.norm(v_ref)
-            line += (
-                f" {e1 / e0:10.4f} {np.abs(snaps.state[-1][0]).max():9.1e} {err:9.2e}"
-            )
+            line += f" {e1 / e0:10.4f} {np.abs(snaps.state[-1][0]).max():9.1e}"
+            if args.amplitude == 0.0:
+                if medium not in refs:
+                    refs[medium] = reference(nodes, medium, args)
+                v, v_ref = snaps.state[-1][1], refs[medium][1]
+                err = np.linalg.norm(v - v_ref) / np.linalg.norm(v_ref)
+                line += f" {err:9.2e}"
         print(line, flush=True)
         return hyper
 
@@ -233,10 +273,10 @@ def main() -> None:
 
     spectra: dict[tuple[str, float], np.ndarray] = {}
     for width in widths:
-        medium = LayeredMedium2D(edge_width=width)
+        medium = medium_for(width, args)
         for variant in variants:
             t0 = time.perf_counter()
-            ops = build(variant, nodes, medium, args.seed_hyper_scale)
+            ops = build(variant, nodes, medium, args.seed_hyper_scale, args.workers)
             built = time.perf_counter() - t0
             label = f"delta = {width:.4f} = h/{h / width:.3g}, {variant}"
             spectra[(variant, width)] = report(label, ops, medium, built)
@@ -276,12 +316,14 @@ def main() -> None:
                 ax.set_xlabel(r"Re($\lambda \, \Delta t$)")
             if j == 0:
                 ax.set_ylabel(f"{variant}\n" + r"Im($\lambda \, \Delta t$)")
+    geometry = f", curved (amplitude {args.amplitude:g})" if args.amplitude else ""
     fig.suptitle(
-        f"Spectra with $\\Delta^3$ hyperviscosity on {nodes.n} nodes, "
+        f"Spectra with $\\Delta^3$ hyperviscosity on {nodes.n} nodes{geometry}, "
         f"$\\gamma$ = {gamma:.2e}, $\\Delta t$ = {dt:.4f} (shaded: RK4 region)",
         fontsize=12,
     )
-    out = args.out or Path(f"outputs/wave2d_stiff_eigenvalues_n{args.n}.png")
+    tag = f"_a{args.amplitude:g}" if args.amplitude else ""
+    out = args.out or Path(f"outputs/wave2d_stiff_eigenvalues_n{args.n}{tag}.png")
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=160)
     print(f"wrote {out}")
