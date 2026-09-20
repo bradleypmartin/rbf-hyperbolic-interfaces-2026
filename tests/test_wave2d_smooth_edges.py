@@ -1,5 +1,5 @@
 """Smooth flat edges in 2-D, the normal-incidence spectral reference (#36) and
-the seed-aware operator (#39)."""
+the seed-aware operator (#39, #40)."""
 
 import numpy as np
 import pytest

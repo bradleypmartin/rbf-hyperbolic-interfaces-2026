@@ -21,6 +21,8 @@ the seed stencils of :mod:`pdes_demo.wave2d.seeds` for a smooth edge
 material, the 1-D rule of ``wave1d.operators``.
 """
 
+from concurrent.futures import Executor, ProcessPoolExecutor
+from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Literal
 
@@ -36,7 +38,7 @@ from .interface import (
 )
 from .neighbors import minimal_image, periodic_knn, stencil_offsets
 from .rbf import StencilWeights, rbf_fd_weights
-from .seeds import normal_profile, seed_basis, seed_weights
+from .seeds import NormalProfile, SeedBasis, normal_profile, seed_basis, seed_weights
 
 Mode = Literal["naive", "aware"]
 
@@ -95,6 +97,7 @@ def build_operators(
     interface_band: float = 4.0,
     seed_rtol: float = 0.0,
     seed_hyper_stencil: int | None = None,
+    workers: int | None = None,
 ) -> Operators:
     """Operators on ``nodes``; ``mode="aware"`` rebuilds the rows of nodes within
     ``interface_band * h`` of an interface with the coupled stencils of
@@ -110,7 +113,9 @@ def build_operators(
     ``seed_hyper_stencil`` (default ``stencil_size``) nodes with the same
     seeds annihilated, since a 19-node stencil carrying 20 coupled
     constraints has too few degrees of freedom left for a ``Delta^3``
-    (``docs/stiff-features.md`` §5.3). Two ODE marches per stencil.
+    (``docs/stiff-features.md`` §5.3). Two ODE marches per stencil, about
+    50 ms; ``workers`` > 1 spreads them over that many processes (the march
+    is Python-bound, so it scales with the cores), same weights to rounding.
     """
     if mode not in ("naive", "aware"):
         raise ValueError(f"unknown mode {mode!r}")
@@ -140,6 +145,7 @@ def build_operators(
             rtol=seed_rtol,
             shape=shape,
             hyper_power=hyper_power,
+            workers=workers,
         )
     elif mode == "aware":
         elastic, hyper_block, interface_nodes = _apply_interface_rows(
@@ -271,6 +277,7 @@ def _apply_seed_rows(
     rtol: float,
     shape: float,
     hyper_power: int,
+    workers: int | None = None,
 ) -> tuple[sp.csr_array, sp.csr_array, np.ndarray]:
     """Rows whose ``stencil_size``-node stencils see a smooth edge get the seed
     stencils: elastic rows on those nodes, hyperviscosity rows on the
@@ -285,6 +292,61 @@ def _apply_seed_rows(
     idx_all, _ = periodic_knn(nodes.xy, max(stencil_size, hyper_stencil))
     idx_all = idx_all[:, :stencil_size]
     centre_all = _stencils_seeing_variation(nodes, medium, idx_all, rtol)
+    pool_or_none = (
+        ProcessPoolExecutor(max_workers=workers)
+        if workers is not None and workers > 1 and centre_all.size > 1
+        else nullcontext(None)
+    )
+    with pool_or_none as pool:
+        return _seed_rows_with(
+            pool,
+            nodes,
+            medium,
+            elastic,
+            hyper_block,
+            centre_all,
+            stencil_size=stencil_size,
+            hyper_stencil=hyper_stencil,
+            degree=degree,
+            shape=shape,
+            hyper_power=hyper_power,
+        )
+
+
+def _seed_basis_task(task: tuple[np.ndarray, NormalProfile, int]) -> SeedBasis:
+    local, profile, degree = task
+    return seed_basis(local, profile, degree)
+
+
+def _seed_bases(
+    pool: Executor | None,
+    local: np.ndarray,
+    profiles: list[NormalProfile],
+    degree: int,
+) -> list[SeedBasis]:
+    """One :func:`seed_basis` per stencil, serially or on the pool (each task
+    carries its 19 or 30 local coordinates and the profile, a few hundred
+    bytes, and returns about 20 KB of seed values)."""
+    tasks = [(local[s], profiles[s], degree) for s in range(len(profiles))]
+    if pool is None:
+        return [_seed_basis_task(t) for t in tasks]
+    return list(pool.map(_seed_basis_task, tasks, chunksize=8))
+
+
+def _seed_rows_with(
+    pool: Executor | None,
+    nodes: NodeSet,
+    medium: LayeredMedium2D,
+    elastic: sp.csr_array,
+    hyper_block: sp.csr_array,
+    centre_all: np.ndarray,
+    *,
+    stencil_size: int,
+    hyper_stencil: int,
+    degree: int,
+    shape: float,
+    hyper_power: int,
+) -> tuple[sp.csr_array, sp.csr_array, np.ndarray]:
     offsets = np.stack(
         [
             np.abs(ifc.vertical_offset(nodes.x[centre_all], nodes.y[centre_all]))
@@ -305,9 +367,7 @@ def _apply_seed_rows(
                 continue
             idx, _ = periodic_knn(nodes.xy, k, query=nodes.xy[centre])
             local, _, theta = _local_frames(nodes, ifc, centre, idx)
-            bases = [
-                seed_basis(local[s], profiles[s], degree) for s in range(centre.size)
-            ]
+            bases = _seed_bases(pool, local, profiles, degree)
             w = seed_weights(local, theta, bases, shape=shape, hyper_power=hyper_power)
             groups.append((centre, idx, w))
     return _merge_coupled_rows(
