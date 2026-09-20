@@ -1,5 +1,5 @@
 """Smooth flat edges in 2-D, the normal-incidence spectral reference (#36) and
-the seed-aware operator (#39)."""
+the seed-aware operator (#39, #40)."""
 
 import numpy as np
 import pytest
@@ -344,10 +344,15 @@ def test_seed_rows_are_the_stencils_that_see_the_edge_and_nothing_else_moves() -
     small_norm = abs(small.hyper_block).sum(axis=1)[small.interface_nodes]
     assert 0.5 < np.median(big_norm / naive_norm) < 2.0
     assert np.median(small_norm / naive_norm) < 0.75
-    # A tolerance trims the tails; the surviving rows all see the edge.
-    trimmed = build_operators(nodes, smooth, mode="aware", seed_rtol=1e-3)
+    # A tolerance trims the tails; the surviving rows all see the edge. Built
+    # on a process pool: a seed row depends on its own stencil only, so the
+    # rows must equal the serial build's bit for bit.
+    trimmed = build_operators(nodes, smooth, mode="aware", seed_rtol=1e-3, workers=4)
     assert 0 < trimmed.interface_nodes.size < aware.interface_nodes.size
     assert set(trimmed.interface_nodes) <= set(aware.interface_nodes)
+    rows = np.concatenate([f * nodes.n + trimmed.interface_nodes for f in range(5)])
+    assert abs(trimmed.elastic[rows] - aware.elastic[rows]).max() == 0.0
+    assert abs(trimmed.hyper_block[rows] - aware.hyper_block[rows]).max() == 0.0
 
 
 def test_seed_aware_operator_is_exact_on_a_resolved_plane_wave() -> None:
@@ -372,3 +377,31 @@ def test_seed_aware_operator_is_exact_on_a_resolved_plane_wave() -> None:
         assert np.abs(rate[0]).max() < 1e-2 * scale
         assert np.abs(rate[3]).max() < 1e-2 * scale
     assert ops.interface_nodes.size > nodes.n // 3
+
+
+# --- the flat sweep (#40) --------------------------------------------------------
+
+
+def test_seed_stencils_beat_naive_through_an_edge_between_the_rows() -> None:
+    # The smallest configuration that shows the sweep's result: 900 nodes,
+    # delta = h/8 (the edge centre sits between the straddling rows at h/2,
+    # which see 98% of the contrast), the wide pulse of the sweep, t = 1.
+    # The seeds cut the spurious u (exact: 0) 5x, to 1.5x the resolution
+    # floor's, and bring v from 1.9x the floor to 1.1x; the numbers are those
+    # of docs/stiff-features.md section 5.4.
+    nodes = make_node_set(FLAT, 900, seed=0)
+    medium = LayeredMedium2D(edge_width=nodes.h / 8)
+    pulse = dict(pulse_center=0.875, pulse_sharpness=15.0)
+    ref = spectral_plane_wave(nodes, 1.0, medium, center=0.875, sharpness=15.0)
+    err_v, u_max = {}, {}
+    for mode in ("naive", "aware"):
+        ops = build_operators(nodes, medium, mode=mode, workers=4)
+        state = run(nodes, medium, t_end=1.0, n_snapshots=1, operators=ops, **pulse)
+        err_v[mode] = _rel(state.state[-1][1], ref[1])
+        u_max[mode] = np.abs(state.state[-1][0]).max()
+    floor = run(nodes, UNIFORM, t_end=1.0, n_snapshots=1, **pulse).state[-1]
+    floor_v = _rel(floor[1], exact_plane_wave(nodes, 1.0, UNIFORM, 0.875, 15.0)[1])
+    assert u_max["aware"] < u_max["naive"] / 3, u_max
+    assert err_v["aware"] < err_v["naive"] / 1.4, err_v
+    assert err_v["aware"] < 1.25 * floor_v, (err_v, floor_v)
+    assert err_v["naive"] > 1.6 * floor_v, (err_v, floor_v)

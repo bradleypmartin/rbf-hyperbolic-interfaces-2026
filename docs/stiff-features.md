@@ -1053,3 +1053,168 @@ stencil is the prefix of the 30-node one, so one march with the seeds
 rescaled to the smaller r_max (column scalings, the span is unchanged)
 serves both; and the flat case's translation symmetry (§4.2). Neither is
 built.
+
+### 5.4 The flat δ sweep: naive vs seeds vs the spectral reference (#40, `scripts/wave2d_stiff.py`)
+
+The 2-D twin of the 1-D knee plot of section 2. Setup as §5.2 (the flat
+band, the wide pulse of sharpness 15 centred at 0.875, t = 1, the Part 2
+node sets, the MATLAB γ, CFL 0.5), now with both operators at every
+(n, δ): the naive scheme, and `build_operators(mode="aware")`, which at
+δ = 0 is Part 2's interface-aware operator and for δ > 0 puts the seed
+stencils of §5.3 on every row whose 19-node stencil sees the edge. No
+rule about which rows to seed was imposed beforehand; the sweep is what
+sets the rule. Errors are relative l2 errors at t = 1 against the ray
+sum (δ = 0) or the cached 1-D spectral snapshots, in v and h, plus the
+largest spurious |u|. The reference depends on y only and is evaluated at
+every node directly, so no resampling enters. Seed rows: 985, 1627, 2735,
+4888 at δ = 0.0025 (39% down to 25% of the nodes: the tails reach 19δ
+plus a stencil radius); 1796, 3388, 6719, 12929 at δ = 0.01 (72% to
+66%); every row at δ = 0.04. The marches run on a process pool
+(`build_operators(workers=...)`, bit for bit the serial weights) and the
+seed operators are cached under `outputs/`; the default configuration
+takes 636 s on 12 workers with the operators built (the largest, 19,600
+seed rows, in 94 s) and about 4 minutes from the cache.
+
+Error in v (rates in h between consecutive n):
+
+| δ | operator | n = 2500 | 4900 | 10000 | 19600 | rates |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 (jump) | naive | 1.3e-1 | 7.2e-2 | 3.6e-2 | 2.2e-2 | 1.7, 2.0, 1.5 |
+| 0 (jump) | interface-aware | 5.4e-2 | 1.8e-2 | 4.7e-3 | 1.2e-3 | 3.2, 3.8, 4.0 |
+| 0.0025 | naive | 8.9e-2 | 4.8e-2 | 2.7e-2 | 1.3e-2 | 1.9, 1.6, 2.2 |
+| 0.0025 | seeds | 3.0e-2 | 7.7e-3 | 2.1e-3 | 6.4e-4 | 4.1, 3.7, 3.5 |
+| 0.01 | naive | 6.2e-2 | 2.2e-2 | 5.7e-3 | 1.4e-3 | 3.1, 3.7, 4.2 |
+| 0.01 | seeds | 3.0e-2 | 1.1e-2 | 3.9e-3 | 1.6e-3 | 3.1, 2.8, 2.7 |
+| 0.04 | naive | 5.2e-2 | 1.9e-2 | 5.1e-3 | 1.4e-3 | 2.9, 3.7, 3.9 |
+| 0.04 | seeds | 7.5e-2 | 2.8e-2 | 7.7e-3 | 2.7e-3 | 2.9, 3.6, 3.1 |
+| floor | naive, uniform | 5.2e-2 | 1.8e-2 | 4.8e-3 | 1.3e-3 | 3.0, 3.8, 3.8 |
+
+h/δ at the four n: 8, 5.7, 4, 2.9 for δ = 0.0025; 2, 1.4, 1, 0.71 for
+δ = 0.01; 0.5, 0.36, 0.25, 0.18 for δ = 0.04.
+
+Largest spurious |u| (exact: 0), and the error in h:
+
+| δ | operator | max \|u\| at 2500 … 19600 | error in h at 2500 … 19600 | rates in h |
+| --- | --- | --- | --- | --- |
+| 0 (jump) | naive | 9.6e-3, 1.1e-2, 5.7e-3, 5.7e-3 | 7.3e-2, 4.1e-2, 2.1e-2, 1.2e-2 | 1.7, 1.9, 1.6 |
+| 0 (jump) | interface-aware | 1.2e-3, 4.6e-4, 1.5e-4, 3.3e-5 | 4.0e-2, 1.4e-2, 3.8e-3, 1.1e-3 | 3.2, 3.5, 3.8 |
+| 0.0025 | naive | 9.5e-3, 1.1e-2, 4.7e-3, 3.4e-3 | 5.9e-2, 4.2e-2, 2.8e-2, 1.2e-2 | 1.0, 1.2, 2.4 |
+| 0.0025 | seeds | 1.7e-3, 6.5e-4, 1.9e-4, 5.1e-5 | 2.3e-2, 6.8e-3, 2.2e-3, 6.7e-4 | 3.6, 3.2, 3.5 |
+| 0.01 | naive | 2.7e-3, 1.5e-3, 7.6e-4, 8.5e-5 | 3.9e-2, 1.5e-2, 4.2e-3, 1.0e-3 | 2.8, 3.6, 4.3 |
+| 0.01 | seeds | 3.5e-3, 1.1e-3, 4.3e-4, 1.1e-4 | 3.7e-2, 8.6e-3, 2.4e-3, 1.1e-3 | 4.4, 3.6, 2.4 |
+| 0.04 | naive | 1.2e-3, 4.8e-4, 1.0e-4, 2.4e-5 | 3.4e-2, 1.1e-2, 2.9e-3, 7.4e-4 | 3.3, 3.8, 4.0 |
+| 0.04 | seeds | 5.9e-3, 1.8e-3, 5.7e-4, 1.2e-4 | 4.2e-2, 1.7e-2, 6.0e-3, 2.2e-3 | 2.6, 3.0, 3.0 |
+| floor | naive, uniform | 8.9e-4, 4.5e-4, 1.2e-4, 3.0e-5 | | |
+
+![Naive RBF-FD vs seed stencils through smooth edges: error in v and spurious u vs resolution](figures/wave2d_stiff_convergence.png)
+
+**What the table says.**
+
+- *Through an edge the nodes never resolve (δ = 0.0025, h/δ from 8 to
+  2.9) the seeds are fourth order at every resolution*, rates 4.1, 3.7,
+  3.5 in v and 3.6, 3.2, 3.5 in h, against 1.6–2.2 for the naive scheme,
+  which is 3×, 6×, 13×, 20× worse in v and 6×, 17×, 25×, 67× worse in
+  spurious u from 2500 to 19,600 nodes. The seeds' u sits at 1.9×, 1.4×,
+  1.6×, 1.7× the floor's (the naive scheme: 11× to 113×). That is the
+  1-D result of section 2 in 2-D: the order of the jump-aware stencils,
+  reached without the grid seeing the edge, on the same nodes and the
+  same time step. The constant is not the jump row's but half of it, at
+  every n (3.0e-2 against 5.4e-2, …, 6.4e-4 against 1.2e-3), and half
+  the uniform-medium floor's. That is the seed operator's own floor, not
+  the edge: seeding the same rows through a contrast of 10⁻⁶ (a medium
+  the exact translated pulse cannot tell from uniform, seeds equal to
+  the monomials to rounding, 794, 1103, 1965, 3353 rows) gives 2.7e-2,
+  6.2e-3, 1.9e-3, 6.9e-4, half the naive floor at every n and within
+  10–25% of the seed errors at δ = 0.0025. So the seeds remove the edge
+  error down to their own resolution floor, as the jump-aware operator
+  does down to the naive one. Why a band of 19-node degree-3 seed rows
+  with 30-node annihilating Δ³ rows is more accurate than 30-node
+  degree-4 stencils everywhere on this pulse is not settled: plain
+  19-node degree-3 stencils everywhere, with their own Δ³ rows, are 2–4×
+  *worse* than 30/4 (9.5e-2, 3.9e-2, 1.4e-2, 4.9e-3; the scheme §5.3
+  found unstable at the MATLAB γ, harmless to t = 1), so it is not the
+  degree; and the energy ratios E(1)/E(0) match the naive floor's
+  (0.93, 0.92, 0.99, 0.99 against 0.93, 0.92, 0.99, 0.99), so it is not
+  less damping. The §5.3 variants at 2500 nodes point at the Δ³ rows:
+  the seed elastic rows with the naive Δ³ rows sit at 4.4e-2, with
+  19-node Δ³ rows at 4.7e-2, with the chosen 30-node annihilating rows at
+  3.0e-2. A uniform-medium dispersion study of those rows would settle
+  it; nothing in the sweep's conclusions depends on it.
+- *The crossover is at h ≈ δ.* At δ = 0.01 the seeds lead by 2.1× in v at
+  h = 2δ (u equal), 2.0× at h = 1.4δ (u 1.4×), 1.5× at h = δ (u 1.8×),
+  and trail by 0.9× (u 0.8×) at h = 0.71δ. The seed rates fall from 3.1
+  to 2.7 across the panel while the naive rates rise from 3.1 to 4.2,
+  because the naive scheme is resolving the edge and the seeds are
+  seeding rows that no longer need it: 66–72% of the nodes carry the
+  19-node degree-3 stencils here.
+- *A resolved edge should not be seeded* (δ = 0.04, h ≤ δ/2, every row a
+  seed row): the seeds are 1.4–2.0× worse than naive in v and 4–5×
+  worse in u, at rates of 2.9–3.6 against 2.9–3.9, as the 2500-node
+  acceptance run of §5.3 found. The naive scheme is at its floor to
+  within 6% at every n, with the floor's rates; there is nothing left
+  for the seeds to remove and the 19/3 stencils through a resolved
+  profile are the less accurate scheme.
+- *So the rule for a flat edge is: seed when δ ≤ h, run naive otherwise.*
+  In this sweep that means every n at δ = 0.0025, up to 10,000 nodes at
+  δ = 0.01 and never at δ = 0.04; with it the seed operator is never
+  worse than naive and is at or below the floor wherever it is used. The
+  rule is per edge (δ is the edge's, h the node set's), not per row:
+  `seed_rtol` trims the tails, and the accuracy loss on a resolved edge
+  comes from the rows at its centre, not its tails. A per-row version for
+  edges of varying width would threshold the material change across a
+  stencil's own diameter; nothing here needs it. The δ ≲ h/4 estimate
+  from the three 2500-node points of §5.3 was too cautious: at h/2 the
+  seeds halve v and only just lose in u, and this sweep puts the
+  break-even between h = δ and h = 0.71δ.
+- *The naive knee.* In v it is the 8–19% excess over the floor at
+  δ = 0.01 that §5.2 measured; in spurious u, the quantity the floor
+  does not pollute, the naive scheme at δ = 0.01 sits 3×, 3×, 6×, 3×
+  above the floor and drops 9× between 10,000 and 19,600 nodes (h = δ to
+  0.71δ) against 4× for the floor: the plateau while h ≥ δ and the drop
+  once h < δ, at h = δ as in 1-D. The 2-D naive scheme is not first
+  order through an unresolved edge as 1-D FD4 was (rates 1.6–2.2 in v
+  at δ = 0.0025): the fixed rows straddling the edge centre keep the
+  coefficient sampling symmetric, and RBF-FD through a jump is already
+  the "second order, large constant" of Part 2, so the knee is a change
+  of constant, not of order, and shows as a bend rather than a kink.
+- *h says what v says*, table above: fourth order for the seeds at
+  δ = 0.0025 (2.3e-2 down to 6.7e-4, 18× below naive at 19,600 nodes),
+  and the same crossover and loss at 0.01 and 0.04.
+
+**The still** (`docs/figures/wave2d_stiff_snapshot.png`, 10,000 nodes,
+δ = 0.0025 = h/4, the wide pulse, one-sided resampling to a 250² grid,
+both error maps on one colour scale): the reference wave, then the two
+error maps at t = 0.25, when the pulse has just split at the upper edge,
+and at t = 1, the sweep's measurement time (the t = 0.5 row below is from
+the same runs, not in the figure).
+
+| t | naive: error in v, max \|u\| | seeds: error in v, max \|u\| |
+|---|---|---|
+| 0.25 | 1.5%, 3.5e-3 | 0.07%, 1.9e-4 |
+| 0.50 | 2.6%, 3.3e-3 | 0.11%, 1.6e-4 |
+| 1.00 | 2.7%, 4.7e-3 | 0.21%, 1.9e-4 |
+
+At t = 0.25 the naive error is the horizontal streaking along the edge
+that the stencils straddling it produce, already spread over the whole
+pulse; the seed panel is nearly blank at this scale (0.07%). By t = 1
+the naive error
+has been carried everywhere the reflections went, and the seeds' 0.2% is
+the resolution error of the pulse.
+
+![Pressure pulse through a band with smooth edges at 10,000 nodes: the reference wave and the two error maps](figures/wave2d_stiff_snapshot.png)
+
+**Regression test.** `test_seed_stencils_beat_naive_through_an_edge_between_the_rows`
+in `tests/test_wave2d_smooth_edges.py`: 900 nodes, δ = h/8, the wide
+pulse, t = 1, about 15 s with four workers. Seeds against naive: u 6.7e-3
+against 3.4e-2 (floor 4.4e-3), v 0.19 against 0.32 (floor 0.17); the
+test asserts u below a third of naive's, v below naive's by 1.4× and
+within 1.25× of the floor, and naive above 1.6× the floor. 400 nodes
+cannot resolve the wide pulse (floor 0.3) and the comparison there
+depends on the node set's seed.
+
+**Acceptance.** (1) Fourth order with a δ-independent constant: yes for
+δ ≤ h, rates 3.5–4.1 at δ = 0.0025 at a constant below the jump row's;
+the rates fall towards the crossover at δ = 0.01 and the seeds lose
+beyond it, hence the rule. (2) The naive knee: at h = δ, in spurious u;
+in v the floor hides it as §5.2 predicted. (3) Figures under
+`docs/figures/`, this section, the regression test, runtime above.
