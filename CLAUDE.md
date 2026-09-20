@@ -106,7 +106,10 @@ fragments and the eight 2-D figures placed); #69 measured comparison
 (the standing alternative in §4 and §6, the §1 sentence and the §7 stub
 rewritten, `LITERATURE.md` K6 and §6b rewritten from "not run" to the
 measured statement with its scope; T3 Schoenberg–Muir stays excluded).
-Open, in dependency order: #60 §7, #61 assembly, #62 arXiv packaging.
+#60 §7 drafted (limitations that cross-reference §2.4 and add what
+the experiments leave open, future work in the order to do it with the
+curvilinear evaluation first, conclusions quoting `LITERATURE.md` §6b
+verbatim). Open, in dependency order: #61 assembly, #62 arXiv packaging.
 `docs/stiff-features.md` stays canonical: the manuscript quotes it, every
 number traces to a notes section or the results cache, and a `% TRACE`
 comment per section names the source. Figures and tables come from
