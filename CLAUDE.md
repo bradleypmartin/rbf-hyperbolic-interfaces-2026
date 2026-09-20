@@ -75,7 +75,22 @@ the flat seeds at 19,600 nodes, level with the seed floor), so route
 them at δ ≤ h/3; the spectra at 2500 nodes are the flat ones.
 The fine-end rate of the seeds (2.3–2.6) is the 19-node degree-3 rows
 covering the 19δ tails, not the edge (`--seed-rtol` trims them).
-Derivation in `docs/stiff-features.md` §4, results in §5 (§5.6 curved).
+#69 (2026-09-20) ran the standing alternative head to head, the same
+scheme on a changed medium (`wave1d/treatments.py`, `wave2d/treatments.py`;
+`--comparators`, `--modes widen1 widen2 cell cell2 bandlimit`): cell means
+of compliance and density over one and two cells (Tornberg–Engquist 2006
+eq. 18/22 at a jump, the Moczo line), band-limited coefficients (Koene et
+al. 2022 §3.3) and the widened edge, against the true-δ reference. 1-D
+(notes §2.1): at a jump only the two-cell mean lifts the order, to two;
+through an unresolved edge the treatments gain 1.25–11× on sampling while
+the seeds are 3–580× below the best of them; on a resolved edge every
+treatment at its prescribed width is second order. 2-D (§5.7): the one-cell
+mean gains up to 3.6× on sampling through δ = 0.0025 with the seeds
+3.1–5.9× below it, the widened edge is 5–120× worse than sampling, and the
+treatments cross above sampling at h ≈ 1.4–2δ. No coefficient treatment
+reaches the seeds' order; Schoenberg–Muir (T3) not built.
+Derivation in `docs/stiff-features.md` §4, results in §5 (§5.6 curved,
+§5.7 comparators).
 
 **Manuscript (#51, sub-issues #52–#62).** `paper/` holds the arXiv-ready
 write-up of Part 3 (amsart, tectonic, `references.bib`, `make_arxiv.py`;
@@ -87,10 +102,11 @@ unverified citation ships), #54 results cache `paper/data/` with the
 print-style figures and `tab_*.tex` fragments from
 `scripts/paper_figures.py` (`--check` gates byte identity), #55 §1–2,
 #56 §3, #57 §4, #58 §5; #59 §6 drafted (all 14 `tab_2d_*` / `tab_spectra_*`
-fragments and the eight 2-D figures placed; the ledger's caveat sits under
-the rule in §6.4). Open, in dependency order: #69 (stretch: the naive
-operator on pre-processed coefficients, before #61), #60 §7, #61 assembly,
-#62 arXiv packaging.
+fragments and the eight 2-D figures placed); #69 measured comparison
+(the standing alternative in §4 and §6, the §1 sentence and the §7 stub
+rewritten, `LITERATURE.md` K6 and §6b rewritten from "not run" to the
+measured statement with its scope; T3 Schoenberg–Muir stays excluded).
+Open, in dependency order: #60 §7, #61 assembly, #62 arXiv packaging.
 `docs/stiff-features.md` stays canonical: the manuscript quotes it, every
 number traces to a notes section or the results cache, and a `% TRACE`
 comment per section names the source. Figures and tables come from
@@ -131,7 +147,10 @@ src/pdes_demo/   library code
                    double-cross; smooth edges dispatch to stiff.py) /
                    simulate.py (RK4) / exact.py (ray-sum reference solution) /
                    spectral.py (Fourier pseudo-spectral reference for smooth
-                   edges) / stiff.py (ODE-continued seed stencils, Part 3)
+                   edges) / stiff.py (ODE-continued seed stencils, Part 3) /
+                   treatments.py (the standing alternative, #69: cell-averaged
+                   and band-limited coefficients, the widened edge, as a
+                   Medium1D for the naive scheme)
   wave2d/          domain.py (materials, sine interfaces with optional tanh
                    edges for flat interfaces, interface-straddling node sets
                    by repulsion; signed normal distance for curved smooth
@@ -148,7 +167,9 @@ src/pdes_demo/   library code
                    coordinate, along the true normal for a curved edge,
                    Part 3) / spectral.py (Fourier-in-x reference for
                    oblique incidence on flat media; product-grid reference
-                   for curved smooth media, Part 3)
+                   for curved smooth media, Part 3) / treatments.py (#69:
+                   cell means and band-limited coefficients on scattered
+                   nodes for the naive operator)
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py; paper_figures.py (the manuscript's
                  figures and tables from paper/data/, #54)
@@ -178,7 +199,8 @@ uv run pytest                                 # tests
 uv run ruff check . && uv run ruff format .
 uv run python scripts/<driver>.py             # figures / clips into outputs/
 uv run python scripts/wave1d_stiff.py         # Part 3 figures, ~50 s (references
-                                              # cached in outputs/)
+                                              # cached in outputs/); --comparators adds
+                                              # the coefficient treatments of #69 (50 s)
 uv run python scripts/wave2d_stiff.py         # Part 3 2-D flat δ sweep, naive vs seeds,
                                               # and a still: ~11 min on 12 workers, ~4 min
                                               # once the seed operators are cached in outputs/
@@ -188,6 +210,10 @@ uv run python scripts/wave2d_stiff.py --amplitude 0.02 --widths 0 0.005 0.01 \
     --seed-floor --truncation --snapshot-width 0.005   # #42 curved sweep: ~12 min from
                                               # the caches, ~2 h to build them (references
                                               # 4–35 min each, seed operators 1–8 min each)
+uv run python scripts/wave2d_stiff.py --modes naive widen1 widen2 cell cell2 bandlimit \
+    --widths 0.0025 0.01 --no-snapshot        # #69 comparators, flat (~7 min from the
+                                              # caches); --amplitude 0.02 --widths 0.0025
+                                              # 0.005 0.01 for curved (~15 min)
 uv run python scripts/wave2d_stiff_eigenvalues.py   # Part 3 2-D spectra, seed vs naive,
                                               # ~10 min at n = 900; --n 2500 --run ~25 min;
                                               # --amplitude 0.02 for the curved geometry
