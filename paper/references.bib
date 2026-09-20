@@ -1,0 +1,391 @@
+% =====================================================================
+% references.bib — bibliography for the Part 3 manuscript (epic #51).
+%
+% HOUSE RULE (mirrored from weil-positivity-lab, bolza-bending and
+% dirichlet-bridge): no unverified citation ships. Every entry below is
+% flagged TODO(verify) until the literature pass (#53) checks it against a
+% primary source and replaces the flag with a dated verification comment
+% naming that source. Entries seeded here come from docs/stiff-features.md
+% §3 (the 2026-09-19 scan, which opened a publisher, repository or Crossref
+% page for each) and from papers/README.md (own work, PDFs in papers/).
+% Two entries marked "from memory" were not in either and need the harder
+% check.
+%
+% Named in the notes but NOT entered here (authors and titles missing from
+% the scan; #53 completes or drops them): the "exact three-point schemes"
+% paper, Adv. Cont. Discrete Models 2020, doi:10.1186/s13662-020-02957-7;
+% the equivalent-medium seismic FD paper, Geophys. J. Int. 239 (2024) 675;
+% R. A. Zalik, "Another look at Chebyshev systems" (only a PDF at
+% webhome.auburn.edu/~zalikri/fv/t.pdf was opened; journal unknown).
+%
+% BUILD PITFALL (found in #52): tectonic 0.16.9's BibTeX hangs forever on
+% amsalpha when a braced accent such as {\'o} falls inside the three-letter
+% label prefix of a single author's surname. Write P\'olya and M\"uhlbach
+% (unbraced) in single-author entries; braced accents elsewhere are fine.
+% =====================================================================
+
+% ---------------------------------------------------------------------
+% Own work: the jump construction the seeds generalise
+% ---------------------------------------------------------------------
+
+% TODO(verify): PDF in papers/ (hand-supplied); ProQuest 10151046.
+@phdthesis{Martin2016,
+  author = {Martin, Bradley P.},
+  title  = {Application of {RBF-FD} to Wave and Heat Transport Problems in
+            Domains with Interfaces},
+  school = {University of Colorado Boulder},
+  year   = {2016},
+  note   = {ProQuest 10151046},
+}
+
+% TODO(verify): notes §3 opened doi:10.1190/geo2014-0492.1; preprint in papers/.
+@article{MartinFornbergStCyr2015,
+  author  = {Martin, Bradley and Fornberg, Bengt and St-Cyr, Amik},
+  title   = {Seismic modeling with radial-basis-function-generated finite
+             differences},
+  journal = {Geophysics},
+  volume  = {80},
+  number  = {4},
+  pages   = {T137--T146},
+  year    = {2015},
+  doi     = {10.1190/geo2014-0492.1},
+}
+
+% TODO(verify): notes §3 opened doi:10.1016/j.jcp.2017.01.065; preprint in papers/.
+@article{MartinFornberg2017,
+  author  = {Martin, Bradley and Fornberg, Bengt},
+  title   = {Seismic modeling with radial basis function-generated finite
+             differences ({RBF-FD}) -- a simplified treatment of interfaces},
+  journal = {Journal of Computational Physics},
+  volume  = {335},
+  pages   = {828--845},
+  year    = {2017},
+  doi     = {10.1016/j.jcp.2017.01.065},
+}
+
+% TODO(verify): from papers/README.md ("related, not downloaded"); no DOI
+% recorded there.
+@article{MartinFornberg2017heat,
+  author  = {Martin, Bradley and Fornberg, Bengt},
+  title   = {Using {RBF-FD} to solve heat transfer equilibrium problems in
+             domains with interfaces},
+  journal = {Engineering Analysis with Boundary Elements},
+  volume  = {79},
+  pages   = {38--48},
+  year    = {2017},
+}
+
+% ---------------------------------------------------------------------
+% Finite-difference machinery the setting quotes (from memory; #53 checks)
+% ---------------------------------------------------------------------
+
+% TODO(verify): from memory, not in the notes' scan. fd_weights.py implements
+% this algorithm.
+@article{Fornberg1988,
+  author  = {Fornberg, Bengt},
+  title   = {Generation of finite difference formulas on arbitrarily spaced
+             grids},
+  journal = {Mathematics of Computation},
+  volume  = {51},
+  number  = {184},
+  pages   = {699--706},
+  year    = {1988},
+}
+
+% TODO(verify): from memory, not in the notes' scan; docs/paper-index.md
+% names it as the hyperviscosity citation of the Geophysics paper.
+@article{FornbergLehto2011,
+  author  = {Fornberg, Bengt and Lehto, Erik},
+  title   = {Stabilization of {RBF}-generated finite difference methods for
+             convective {PDEs}},
+  journal = {Journal of Computational Physics},
+  volume  = {230},
+  number  = {6},
+  pages   = {2270--2285},
+  year    = {2011},
+}
+
+% ---------------------------------------------------------------------
+% Same mechanism for steady problems: basis functions from local solutions
+% ---------------------------------------------------------------------
+
+% TODO(verify): notes §3 opened doi:10.1016/0041-5553(62)90005-8 and
+% mathnet.ru/eng/zvmmf7977 (Russian original, Zh. Vychisl. Mat. Mat. Fiz.
+% 1:1 (1961) 5–63).
+@article{TikhonovSamarskii1962,
+  author  = {Tikhonov, A. N. and Samarskii, A. A.},
+  title   = {Homogeneous difference schemes},
+  journal = {USSR Computational Mathematics and Mathematical Physics},
+  volume  = {1},
+  number  = {1},
+  pages   = {5--67},
+  year    = {1962},
+  doi     = {10.1016/0041-5553(62)90005-8},
+}
+
+% TODO(verify): textbook form named in notes §3; publisher record not opened.
+@book{Samarskii2001,
+  author    = {Samarskii, A. A.},
+  title     = {The Theory of Difference Schemes},
+  publisher = {Marcel Dekker},
+  address   = {New York},
+  year      = {2001},
+}
+
+% TODO(verify): notes §3 opened doi:10.1137/0720034 (Crossref record).
+@article{BabuskaOsborn1983,
+  author  = {Babu{\v{s}}ka, I. and Osborn, J. E.},
+  title   = {Generalized finite element methods: their performance and their
+             relation to mixed methods},
+  journal = {SIAM Journal on Numerical Analysis},
+  volume  = {20},
+  number  = {3},
+  pages   = {510--536},
+  year    = {1983},
+  doi     = {10.1137/0720034},
+}
+
+% TODO(verify): notes §3 opened doi:10.1137/0731051 (Crossref record).
+@article{BabuskaCalozOsborn1994,
+  author  = {Babu{\v{s}}ka, I. and Caloz, G. and Osborn, J. E.},
+  title   = {Special finite element methods for a class of second order
+             elliptic problems with rough coefficients},
+  journal = {SIAM Journal on Numerical Analysis},
+  volume  = {31},
+  number  = {4},
+  pages   = {945--981},
+  year    = {1994},
+  doi     = {10.1137/0731051},
+}
+
+% TODO(verify): notes §3 opened doi:10.1006/jcph.1997.5682.
+@article{HouWu1997,
+  author  = {Hou, Thomas Y. and Wu, Xiao-Hui},
+  title   = {A multiscale finite element method for elliptic problems in
+             composite materials and porous media},
+  journal = {Journal of Computational Physics},
+  volume  = {134},
+  number  = {1},
+  pages   = {169--189},
+  year    = {1997},
+  doi     = {10.1006/jcph.1997.5682},
+}
+
+% TODO(verify): notes §3 opened arXiv:math/0505223; journal record not opened.
+@article{OwhadiZhang2007,
+  author  = {Owhadi, Houman and Zhang, Lei},
+  title   = {Metric-based upscaling},
+  journal = {Communications on Pure and Applied Mathematics},
+  volume  = {60},
+  number  = {5},
+  pages   = {675--723},
+  year    = {2007},
+  note    = {arXiv:math/0505223},
+}
+
+% TODO(verify): notes §3 opened the Caltech repository record
+% (authors.library.caltech.edu/records/y53sh-pjq83); no DOI recorded.
+@article{OwhadiZhang2008,
+  author  = {Owhadi, Houman and Zhang, Lei},
+  title   = {Numerical homogenization of the acoustic wave equations with a
+             continuum of scales},
+  journal = {Computer Methods in Applied Mechanics and Engineering},
+  volume  = {198},
+  number  = {3--4},
+  pages   = {397--406},
+  year    = {2008},
+}
+
+% ---------------------------------------------------------------------
+% Fitted operators for singularly perturbed problems
+% ---------------------------------------------------------------------
+
+% TODO(verify): notes §3 opened doi:10.1093/qjmam/8.2.129; the title below
+% is from memory and needs the record's own.
+@article{AllenSouthwell1955,
+  author  = {Allen, D. N. de G. and Southwell, R. V.},
+  title   = {Relaxation methods applied to determine the motion, in two
+             dimensions, of a viscous fluid past a fixed cylinder},
+  journal = {The Quarterly Journal of Mechanics and Applied Mathematics},
+  volume  = {8},
+  number  = {2},
+  pages   = {129--145},
+  year    = {1955},
+  doi     = {10.1093/qjmam/8.2.129},
+}
+
+% TODO(verify): notes §3 opened mathnet.ru/eng/mzm6928; the title below is
+% the usual English rendering and needs the record's own.
+@article{Ilin1969,
+  author  = {Il'in, A. M.},
+  title   = {Differencing scheme for a differential equation with a small
+             parameter affecting the highest derivative},
+  journal = {Mathematical Notes},
+  volume  = {6},
+  pages   = {596--602},
+  year    = {1969},
+}
+
+% TODO(verify): notes §3 opened doi:10.1109/T-ED.1969.16566 (Crossref
+% record); the title below is from memory and needs the record's own.
+@article{ScharfetterGummel1969,
+  author  = {Scharfetter, D. L. and Gummel, H. K.},
+  title   = {Large-signal analysis of a silicon {R}ead diode oscillator},
+  journal = {IEEE Transactions on Electron Devices},
+  volume  = {16},
+  number  = {1},
+  pages   = {64--77},
+  year    = {1969},
+  doi     = {10.1109/T-ED.1969.16566},
+}
+
+% TODO(verify): notes §3 opened the PDF at karlin.mff.cuni.cz (§3.5.1,
+% "operator-fitted methods"); publisher record not opened.
+@book{RoosStynesTobiska2008,
+  author    = {Roos, Hans-G{\"o}rg and Stynes, Martin and Tobiska, Lutz},
+  title     = {Robust Numerical Methods for Singularly Perturbed Differential
+               Equations},
+  edition   = {2nd},
+  publisher = {Springer},
+  series    = {Springer Series in Computational Mathematics},
+  volume    = {24},
+  year      = {2008},
+}
+
+% ---------------------------------------------------------------------
+% Trefftz and quasi-Trefftz methods
+% ---------------------------------------------------------------------
+
+% TODO(verify): notes §3 opened doi:10.1093/imanum/drv064.
+@article{KretzschmarMoiolaPerugiaSchnepp2016,
+  author  = {Kretzschmar, Fritz and Moiola, Andrea and Perugia, Ilaria and
+             Schnepp, Sascha M.},
+  title   = {A priori error analysis of space-time {T}refftz discontinuous
+             {G}alerkin methods for wave problems},
+  journal = {IMA Journal of Numerical Analysis},
+  volume  = {36},
+  number  = {4},
+  pages   = {1599--1635},
+  year    = {2016},
+  doi     = {10.1093/imanum/drv064},
+}
+
+% TODO(verify): notes §3 opened doi:10.1137/16M1065744 (Crossref record).
+@article{BanjaiGeorgoulisLijoka2017,
+  author  = {Banjai, Lehel and Georgoulis, Emmanuil H. and Lijoka, Oluwaseun},
+  title   = {A {T}refftz polynomial space-time discontinuous {G}alerkin method
+             for the second order wave equation},
+  journal = {SIAM Journal on Numerical Analysis},
+  volume  = {55},
+  number  = {1},
+  pages   = {63--86},
+  year    = {2017},
+  doi     = {10.1137/16M1065744},
+}
+
+% TODO(verify): notes §3 opened arXiv:2011.04617; journal record not opened.
+@article{ImbertGerardMoiolaStocker2023,
+  author  = {Imbert-G{\'e}rard, Lise-Marie and Moiola, Andrea and Stocker,
+             Paul},
+  title   = {A space-time quasi-{T}refftz {DG} method for the wave equation
+             with piecewise-smooth coefficients},
+  journal = {Mathematics of Computation},
+  volume  = {92},
+  number  = {341},
+  pages   = {1211--1249},
+  year    = {2023},
+  note    = {arXiv:2011.04617},
+}
+
+% TODO(verify): notes §3 opened arXiv:2408.00392; preprint status and year
+% to confirm.
+@misc{ImbertGerardMoiolaStocker2024,
+  author = {Imbert-G{\'e}rard, Lise-Marie and Moiola, Andrea and Stocker,
+            Paul},
+  title  = {Polynomial quasi-{T}refftz {DG} for {PDEs} with smooth
+            coefficients: elliptic problems},
+  year   = {2024},
+  note   = {arXiv:2408.00392},
+}
+
+% ---------------------------------------------------------------------
+% Chebyshev systems: the well-posedness side
+% ---------------------------------------------------------------------
+
+% TODO(verify): notes §3 opened doi:10.1090/S0002-9947-1922-1501228-5 (AMS
+% PDF could not be fetched).
+@article{Polya1922,
+  author  = {P\'olya, G.},
+  title   = {On the mean-value theorem corresponding to a given linear
+             homogeneous differential equation},
+  journal = {Transactions of the American Mathematical Society},
+  volume  = {24},
+  number  = {4},
+  pages   = {312--324},
+  year    = {1922},
+  doi     = {10.1090/S0002-9947-1922-1501228-5},
+}
+
+% TODO(verify): notes §3 opened the archive.org record.
+@book{KarlinStudden1966,
+  author    = {Karlin, Samuel and Studden, William J.},
+  title     = {Tchebycheff Systems: With Applications in Analysis and
+               Statistics},
+  publisher = {Interscience},
+  address   = {New York},
+  year      = {1966},
+}
+
+% TODO(verify): notes §3 opened doi:10.1007/BFb0058618.
+@book{Coppel1971,
+  author    = {Coppel, W. A.},
+  title     = {Disconjugacy},
+  series    = {Lecture Notes in Mathematics},
+  volume    = {220},
+  publisher = {Springer},
+  year      = {1971},
+  doi       = {10.1007/BFb0058618},
+}
+
+% TODO(verify): notes §3 opened doi:10.1016/0021-9045(73)90104-4.
+@article{Muhlbach1973,
+  author  = {M\"uhlbach, G.},
+  title   = {A recurrence formula for generalized divided differences and
+             some applications},
+  journal = {Journal of Approximation Theory},
+  volume  = {9},
+  number  = {2},
+  pages   = {165--172},
+  year    = {1973},
+  doi     = {10.1016/0021-9045(73)90104-4},
+}
+
+% TODO(verify): notes §3 opened doi:10.1007/BF02162033.
+@article{SchultzVarga1967,
+  author  = {Schultz, M. H. and Varga, R. S.},
+  title   = {L-splines},
+  journal = {Numerische Mathematik},
+  volume  = {10},
+  number  = {4},
+  pages   = {345--369},
+  year    = {1967},
+  doi     = {10.1007/BF02162033},
+}
+
+% ---------------------------------------------------------------------
+% The jump case, for contrast
+% ---------------------------------------------------------------------
+
+% TODO(verify): notes §3 opened doi:10.1137/0731054 (Crossref record);
+% erratum SIAM J. Numer. Anal. 32 (1995) 1704.
+@article{LeVequeLi1994,
+  author  = {LeVeque, Randall J. and Li, Zhilin},
+  title   = {The immersed interface method for elliptic equations with
+             discontinuous coefficients and singular sources},
+  journal = {SIAM Journal on Numerical Analysis},
+  volume  = {31},
+  number  = {4},
+  pages   = {1019--1044},
+  year    = {1994},
+  doi     = {10.1137/0731054},
+}

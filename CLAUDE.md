@@ -77,6 +77,18 @@ The fine-end rate of the seeds (2.3–2.6) is the 19-node degree-3 rows
 covering the 19δ tails, not the edge (`--seed-rtol` trims them).
 Derivation in `docs/stiff-features.md` §4, results in §5 (§5.6 curved).
 
+**Manuscript (#51, sub-issues #52–#62).** `paper/` holds the arXiv-ready
+write-up of Part 3 (amsart, tectonic, `references.bib`, `make_arxiv.py`;
+the `paper/` pattern of Brad's weil-positivity-lab, bolza-bending and
+dirichlet-bridge repos). `docs/stiff-features.md` stays canonical: the
+manuscript quotes it, every number traces to a notes section or the
+results cache (#54), and a `% TRACE` comment per section names the source.
+Figures and tables come from committed scripts, never hand-edited (#54).
+Bibliography entries enter flagged `TODO(verify)` and are cited only after
+the literature pass (#53) verifies them; novelty is cited, not claimed,
+until `LITERATURE.md` buckets it. One sub-issue per PR, in the dependency
+order on #51.
+
 Audience: bright tech workers with no assumed PDE background. **No live
 coding.** The deliverables are `slides/talk.pdf` (19 pages), three clips in
 `slides/videos/` played from `slides/clips.html`, and the speaker script
@@ -130,6 +142,9 @@ slides/          talk.tex → talk.pdf (committed), notes.md (speaker script wit
                  build.sh, README.md
 papers/          reference PDFs (gitignored), fetch_papers.sh, README.md with
                  sources and checksums
+paper/           the Part 3 manuscript (#51): main.tex → main.pdf (committed),
+                 references.bib, figures/ (from #54's scripts), make_arxiv.py,
+                 README.md, LICENSE (CC BY 4.0; code stays MIT)
 outputs/         generated artifacts (gitignored)
 index.html       GitHub Pages landing page (.nojekyll at the root)
 ```
@@ -161,6 +176,9 @@ uv run python scripts/wave2d_demo.py --amplitude 0.02 --edge-width 0.005   # #42
                                               # crop, tectonic → slides/talk.pdf
 uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the notes
 ./papers/fetch_papers.sh                      # public papers, checksum-checked
+(cd paper && tectonic main.tex)               # the manuscript → paper/main.pdf
+(cd paper && tectonic --keep-intermediates main.tex && uv run python make_arxiv.py)
+                                              # arXiv tarball (needs main.bbl)
 ```
 
 Clip renders are listed in `slides/README.md`. Both demo drivers take
@@ -189,6 +207,10 @@ Clip renders are listed in `slides/README.md`. Both demo drivers take
   touches the deck or the clips.
 - Deck and clip passes go one item at a time, one commit per item, so the PR
   history reads item by item.
+- Manuscript: after any edit under `paper/`, rebuild with tectonic, look at
+  the changed pages with `pdftoppm`, and commit `main.pdf` with the source.
+  `\date` is fixed by hand, never `\today`. Section stubs are `\stub{}`
+  lines, visible in the PDF until the owning sub-issue replaces them.
 
 ## Hard constraints
 
@@ -198,7 +220,8 @@ Clip renders are listed in `slides/README.md`. Both demo drivers take
 - `papers/*.pdf` and `outputs/` are gitignored on purpose; don't un-ignore.
   `slides/figures/`, `slides/videos/` and `slides/talk.pdf` are committed on
   purpose so the talk is self-contained from a fresh clone, and `talk.pdf` is
-  committed on every deck change.
+  committed on every deck change. `paper/main.pdf` likewise, on every
+  manuscript change.
 - Don't fabricate details about the OpenAI paper or its reception. Everything
   stated in `docs/` and on the slides must trace to a source we've read (PDF
   in `papers/` or a URL cited inline).
