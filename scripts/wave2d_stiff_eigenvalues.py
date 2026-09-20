@@ -29,7 +29,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
 
-from pdes_demo.plotting import AWARE, INK_MUTED, INK_SECONDARY, NAIVE, use_demo_style
+from pdes_demo.plotting import (
+    AWARE,
+    INK_MUTED,
+    INK_SECONDARY,
+    NAIVE,
+    TEXTWIDTH_IN,
+    use_demo_style,
+    use_print_style,
+)
 from pdes_demo.results_cache import ResultsCache
 from pdes_demo.wave1d import periodic_grid
 from pdes_demo.wave2d import (
@@ -99,6 +107,13 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="also write the results JSON here (paper/data for the committed copy)",
     )
+    parser.add_argument(
+        "--style",
+        choices=["demo", "print"],
+        default="demo",
+        help="deck style (default) or the manuscript's print style",
+    )
+    parser.add_argument("--format", choices=["png", "pdf"], default="png")
     parser.add_argument(
         "--workers",
         type=int,
@@ -195,7 +210,10 @@ def rk4_boundary(n_pts: int = 800) -> np.ndarray:
 
 def main() -> None:
     args = parse_args()
-    use_demo_style()
+    if args.style == "print":
+        use_print_style()
+    else:
+        use_demo_style()
     jump = medium_for(0.0, args)
     nodes = make_node_set(jump, args.n, seed=args.seed)
     h = nodes.h
@@ -333,10 +351,16 @@ def main() -> None:
             )
 
     boundary = rk4_boundary()
+    print_mode = args.style == "print"
+    if print_mode:
+        panel = TEXTWIDTH_IN / len(widths)
+        figsize = (TEXTWIDTH_IN, panel * 1.45 * len(variants) + 0.2)
+    else:
+        figsize = (3.9 * len(widths), 3.9 * len(variants))
     fig, axes = plt.subplots(
         len(variants),
         len(widths),
-        figsize=(3.9 * len(widths), 3.9 * len(variants)),
+        figsize=figsize,
         constrained_layout=True,
         squeeze=False,
     )
@@ -345,9 +369,11 @@ def main() -> None:
             ax = axes[i, j]
             z = spectra[(variant, width)] * dt
             ax.fill(boundary.real, boundary.imag, color="#eef3fa", zorder=0)
-            ax.plot(boundary.real, boundary.imag, color=INK_MUTED, lw=1, zorder=1)
-            ax.axvline(0, color=INK_SECONDARY, lw=0.8)
-            ax.scatter(z.real, z.imag, s=4, color=COLORS[variant], lw=0, zorder=2)
+            ax.plot(boundary.real, boundary.imag, color=INK_MUTED, lw=0.8, zorder=1)
+            ax.axvline(0, color=INK_SECONDARY, lw=0.6)
+            ax.scatter(
+                z.real, z.imag, s=1 if print_mode else 4, color=COLORS[variant], lw=0
+            )
             ax.text(
                 0.03,
                 0.97,
@@ -355,28 +381,40 @@ def main() -> None:
                 f"{rk4_amplification(spectra[(variant, width)], dt):.4f}",
                 transform=ax.transAxes,
                 va="top",
-                fontsize=9,
+                fontsize=5.5 if print_mode else 9,
                 color=INK_SECONDARY,
             )
             ax.set_xlim(-3.2, 1.2)
             ax.set_ylim(-3.2, 3.2)
             ax.set_aspect("equal")
+            if print_mode:
+                ax.grid(False)
+                ax.set_xticks([-3, -2, -1, 0, 1])
             if i == 0:
-                ax.set_title(f"edge width $\\delta$ = h/{h / width:.3g}", fontsize=11)
+                ax.set_title(
+                    rf"$\delta = h/{h / width:.3g}$"
+                    if print_mode
+                    else f"edge width $\\delta$ = h/{h / width:.3g}",
+                    fontsize=None if print_mode else 11,
+                )
             if i == len(variants) - 1:
                 ax.set_xlabel(r"Re($\lambda \, \Delta t$)")
             if j == 0:
                 ax.set_ylabel(f"{variant}\n" + r"Im($\lambda \, \Delta t$)")
-    geometry = f", curved (amplitude {args.amplitude:g})" if args.amplitude else ""
-    fig.suptitle(
-        f"Spectra with $\\Delta^3$ hyperviscosity on {nodes.n} nodes{geometry}, "
-        f"$\\gamma$ = {gamma:.2e}, $\\Delta t$ = {dt:.4f} (shaded: RK4 region)",
-        fontsize=12,
-    )
+    if not print_mode:
+        geometry = f", curved (amplitude {args.amplitude:g})" if args.amplitude else ""
+        fig.suptitle(
+            f"Spectra with $\\Delta^3$ hyperviscosity on {nodes.n} nodes{geometry}, "
+            f"$\\gamma$ = {gamma:.2e}, $\\Delta t$ = {dt:.4f} (shaded: RK4 region)",
+            fontsize=12,
+        )
     tag = f"_a{args.amplitude:g}" if args.amplitude else ""
-    out = args.out or Path(f"outputs/wave2d_stiff_eigenvalues_n{args.n}{tag}.png")
+    out = args.out or Path(
+        f"outputs/wave2d_stiff_eigenvalues_n{args.n}{tag}.{args.format}"
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=160)
+    plt.close(fig)
     print(f"wrote {out}")
     vtag = "" if args.variants == ["seeds"] else "_variants"
     name = f"wave2d_stiff_eigenvalues_n{args.n}{tag}{vtag}.json"

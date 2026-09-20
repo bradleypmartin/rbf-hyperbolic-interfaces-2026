@@ -68,19 +68,19 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
-from matplotlib.ticker import NullFormatter
 
 from pdes_demo.plotting import (
-    AWARE,
-    COLORS,
     ERROR_CMAP,
     FIELD_CMAP,
     INK,
     INK_MUTED,
     INK_SECONDARY,
+    TEXTWIDTH_IN,
     use_demo_style,
+    use_print_style,
 )
 from pdes_demo.results_cache import ResultsCache
+from pdes_demo.stiff_figures import convergence_2d
 from pdes_demo.wave1d import periodic_grid
 from pdes_demo.wave1d.spectral import reference_size
 from pdes_demo.wave2d import (
@@ -103,18 +103,9 @@ from pdes_demo.wave2d import (
 )
 from pdes_demo.wave2d.exact import plane_wave_from_1d, spectral_plane_wave_1d
 
-MODE_LABELS = {
-    "naive": "standard RBF-FD (naive)",
-    "aware": "seed stencils (interface-aware at delta = 0)",
-    "ablate": "seeds for the normal monomials only (ablation)",
-}
 MODE_SHORT = {"naive": "naive", "aware": "seeds", "ablate": "ablat"}
 TITLES = {"naive": "Standard RBF-FD (naive)", "aware": "Seed stencils"}
-STYLE = {
-    "naive": dict(color=COLORS["naive"], marker="o", ls="-"),
-    "aware": dict(color=COLORS["aware"], marker="o", ls="-"),
-    "ablate": dict(color=COLORS["aware"], marker="^", ls="--", mfc="none"),
-}
+PRINT_TITLES = {"naive": "naive RBF-FD", "aware": "seed stencils"}
 BUILD_MODE = {"naive": "naive", "aware": "aware", "ablate": "aware"}
 UNIFORM = LayeredMedium2D(layer=ElasticMaterial(lam=1.0, mu=1.0, rho=1.0))
 # A band the exact uniform solution cannot tell from the background, on
@@ -204,6 +195,13 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="also write the results JSON here (paper/data for the committed copy)",
     )
+    parser.add_argument(
+        "--style",
+        choices=["demo", "print"],
+        default="demo",
+        help="deck style (default) or the manuscript's print style",
+    )
+    parser.add_argument("--format", choices=["png", "pdf"], default="png")
     args = parser.parse_args()
     args.direction = tuple(args.direction)
     args.oblique = args.direction != (0, 1)
@@ -711,17 +709,7 @@ def sweep(
     print(f"resolution floor (uniform medium): {time.perf_counter() - t0:.1f}s")
     record_errors(cache, ns, {"floor": floor}, None, args)
 
-    fig, panels = plt.subplots(
-        2,
-        len(args.widths),
-        figsize=(3.6 * len(args.widths), 7.6),
-        sharey="row",
-        sharex=True,
-        constrained_layout=True,
-        squeeze=False,
-    )
-    axes, axes_u = panels
-    for ax, ax_u, width in zip(axes, axes_u, args.widths, strict=True):
+    for width in args.widths:
         medium = medium_for(width, args)
         title = (
             "jump edges (delta = 0)" if width == 0 else f"edge width delta = {width:g}"
@@ -771,95 +759,11 @@ def sweep(
                             error=err,
                         )
 
-        for mode in args.modes:
-            ax.loglog(
-                ns,
-                [e["v"] for e in results[mode]],
-                label=MODE_LABELS[mode],
-                ms=5,
-                **STYLE[mode],
-            )
-            ax_u.loglog(ns, [e["u"] for e in results[mode]], ms=5, **STYLE[mode])
-        ax.loglog(
-            ns,
-            [e["v"] for e in floor],
-            "s--",
-            color=INK_SECONDARY,
-            label="no interface (resolution floor)",
-            ms=5,
-            lw=1.4,
-        )
-        if not args.curved:  # the curved floors' u is spurious, not an error
-            ax_u.loglog(
-                ns, [e["u"] for e in floor], "s--", color=INK_SECONDARY, ms=5, lw=1.4
-            )
-        if "sfloor" in floors:
-            kw = dict(color=AWARE, ms=5, lw=1.4, ls=":", marker="s", mfc="none")
-            ax.loglog(
-                ns,
-                [e["v"] for e in floors["sfloor"]],
-                label="seed operator, no contrast (seed floor)",
-                **kw,
-            )
-            if not args.curved:
-                ax_u.loglog(ns, [e["u"] for e in floors["sfloor"]], **kw)
-        guides = [("naive", 2, "2nd order")]
-        if "aware" in args.modes:
-            guides.append(("aware", 4, "4th order"))
-        for mode, order, label in guides:
-            anchor = results[mode][0]["v"]
-            guide = anchor * (ns[0] / ns) ** (order / 2)
-            ax.loglog(ns, guide, ":", color=INK_MUTED, lw=1.1)
-            ax.annotate(
-                label,
-                (ns[-1], guide[-1]),
-                xytext=(5, 0),
-                textcoords="offset points",
-                color=INK_SECONDARY,
-                fontsize=9,
-                va="center",
-            )
-        if width and ns[0] <= width**-2 <= ns[-1]:
-            for a in (ax, ax_u):
-                a.axvline(width**-2, color=INK_MUTED, lw=1.0, ls=":")
-            ax.annotate(
-                "h = delta",
-                (width**-2, 0.97),
-                xycoords=("data", "axes fraction"),
-                xytext=(4, 0),
-                textcoords="offset points",
-                color=INK_SECONDARY,
-                fontsize=9,
-                rotation=90,
-                va="top",
-            )
-        ax.set_title(title, fontsize=11)
-        ax_u.set_xlabel("number of nodes")
-        ax_u.set_xticks(ns, [str(int(n)) for n in ns])
-        ax_u.xaxis.set_minor_formatter(NullFormatter())
-        ax_u.set_xlim(ns[0] / 1.3, ns[-1] * 2.4)
-    axes[0].set_ylabel(f"relative error in v at t = {args.t_end:g}")
-    handles, labels = axes[0].get_legend_handles_labels()
-    if len(labels) <= 3:
-        axes[0].legend(loc="lower left", fontsize=9)
-    else:
-        fig.legend(handles, labels, loc="outside lower center", ncol=2, fontsize=9)
-    axes_u[0].set_ylabel(
-        f"relative error in u at t = {args.t_end:g}"
-        if args.u_error
-        else "max |u| (exact: 0)"
+    out = convergence_2d(
+        cache,
+        args.out_dir / f"wave2d_stiff{run_tag(args)}.{args.format}",
+        print_mode=args.style == "print",
     )
-    title = "Same nodes, same time step: the edge is only as sharp as delta"
-    if args.oblique:
-        title += (
-            f"\nP train at {angle_deg(args):.1f} deg to the normal, direction "
-            f"{args.direction}"
-        )
-    if args.curved:
-        title += f"\nsine interfaces of amplitude {args.amplitude:g} (curved case)"
-    fig.suptitle(title, fontsize=12)
-    out = args.out_dir / f"wave2d_stiff{run_tag(args)}.png"
-    fig.savefig(out, dpi=160)
     print(f"\nwrote {out}")
 
 
@@ -939,16 +843,19 @@ def snapshot(
     imshow_kw = dict(origin="lower", extent=(0, 1, 0, 1), interpolation="bilinear")
     field_kw = dict(cmap=FIELD_CMAP, vmin=0, vmax=1, **imshow_kw)
     error_kw = dict(cmap=ERROR_CMAP, vmin=0, vmax=err_lim, **imshow_kw)
-    text_kw = dict(fontsize=10, color=INK, va="top", ha="left")
+    print_mode = args.style == "print"
+    fs = 7 if print_mode else 11
+    text_kw = dict(fontsize=6 if print_mode else 10, color=INK, va="top", ha="left")
+    titles = PRINT_TITLES if print_mode else TITLES
 
     n_ref = 2 if show_curl else 1
     n_rows, n_cols = len(frames), n_ref + len(modes)
-    fig, axes = plt.subplots(
-        n_rows,
-        n_cols,
-        figsize=(3.4 * n_cols, 3.2 * n_rows + 1.2),
-        constrained_layout=True,
-    )
+    if print_mode:
+        # One text width across; the colorbars below add about 0.5 in per figure.
+        figsize = (TEXTWIDTH_IN, TEXTWIDTH_IN / n_cols * 1.15 * n_rows + 0.55)
+    else:
+        figsize = (3.4 * n_cols, 3.2 * n_rows + 1.2)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, constrained_layout=True)
     axes = np.atleast_2d(axes)
     ref_name = (
         "Fourier reference" if (args.oblique or args.curved) else "spectral reference"
@@ -958,7 +865,12 @@ def snapshot(
         im_v = ax_v.imshow(wave[k], **field_kw)
         style_map(ax_v, medium)
         if r == 0:
-            ax_v.set_title(f"The wave ({ref_name})\n|v|", fontsize=11)
+            ax_v.set_title(
+                f"the wave ({ref_name}), $|v|$"
+                if print_mode
+                else f"The wave ({ref_name})\n|v|",
+                fontsize=fs,
+            )
         if show_curl:
             ax_c = axes[r, 1]
             curl_kw = dict(
@@ -967,7 +879,12 @@ def snapshot(
             im_c = ax_c.imshow(curl[k], **curl_kw, **imshow_kw)
             style_map(ax_c, medium)
             if r == 0:
-                ax_c.set_title("S waves: |u_y - v_x|\n(zero for a P wave)", fontsize=11)
+                ax_c.set_title(
+                    r"S waves, $|u_y - v_x|$"
+                    if print_mode
+                    else "S waves: |u_y - v_x|\n(zero for a P wave)",
+                    fontsize=fs,
+                )
         for c, mode in enumerate(modes):
             ax_e = axes[r, n_ref + c]
             im_e = ax_e.imshow(image(to_grid @ diff[mode][k]), **error_kw)
@@ -999,34 +916,43 @@ def snapshot(
                     error=value,
                 )
             if r == 0:
-                ax_e.set_title(f"{TITLES[mode]}\nerror in v vs reference", fontsize=11)
-        axes[r, 0].set_ylabel(f"t = {times[k]:.2f}\ny")
+                ax_e.set_title(
+                    f"{titles[mode]}, error in $v$"
+                    if print_mode
+                    else f"{titles[mode]}\nerror in v vs reference",
+                    fontsize=fs,
+                )
+        axes[r, 0].set_ylabel(
+            f"$t = {times[k]:.2f}$" if print_mode else f"t = {times[k]:.2f}\ny"
+        )
     for ax in axes[-1]:
-        ax.set_xlabel("x")
+        ax.set_xlabel("$x$" if print_mode else "x")
+    cb_kw = dict(location="bottom", pad=0.02)
     fig.colorbar(
         im_v,
         ax=axes[:, 0].tolist(),
-        location="bottom",
         shrink=0.8,
-        pad=0.02,
-        label="|v|, vertical particle velocity",
+        label="$|v|$" if print_mode else "|v|, vertical particle velocity",
+        **cb_kw,
     )
     if show_curl:
         fig.colorbar(
             im_c,
             ax=axes[:, 1].tolist(),
-            location="bottom",
             shrink=0.8,
-            pad=0.02,
-            label="|curl of the velocity|",
+            label="|curl|" if print_mode else "|curl of the velocity|",
+            **cb_kw,
         )
     fig.colorbar(
         im_e,
         ax=axes[:, n_ref:].ravel().tolist(),
-        location="bottom",
         shrink=0.5,
-        pad=0.02,
-        label=f"|error in v| vs the {ref_name}, one colour scale",
+        label=(
+            "$|$error in $v|$, one scale"
+            if print_mode
+            else f"|error in v| vs the {ref_name}, one colour scale"
+        ),
+        **cb_kw,
     )
     incidence = (
         f"P train at {angle_deg(args):.1f} deg to the normal"
@@ -1039,23 +965,28 @@ def snapshot(
         if args.curved
         else "a band with 4x stiffness and 2x density"
     )
-    fig.suptitle(
-        f"{incidence} through {band}, "
-        f"edges of width delta = {width:g} = h/{nodes.h / width:.3g}\n"
-        f"{nodes.n} scattered nodes, RBF-FD, RK4",
-        fontsize=11,
-    )
+    if not print_mode:
+        fig.suptitle(
+            f"{incidence} through {band}, "
+            f"edges of width delta = {width:g} = h/{nodes.h / width:.3g}\n"
+            f"{nodes.n} scattered nodes, RBF-FD, RK4",
+            fontsize=11,
+        )
     out = args.out_dir / (
-        f"wave2d_stiff_snapshot{direction_tag(args)}{geometry_tag(args)}.png"
+        f"wave2d_stiff_snapshot{direction_tag(args)}{geometry_tag(args)}.{args.format}"
     )
     fig.savefig(out, dpi=160)
+    plt.close(fig)
     print(f"wrote {out}")
 
 
 def main() -> None:
     args = parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    use_demo_style()
+    if args.style == "print":
+        use_print_style()
+    else:
+        use_demo_style()
     t_all = time.perf_counter()
     t0 = time.perf_counter()
     wanted = set() if args.snapshot_only else set(args.ns)
