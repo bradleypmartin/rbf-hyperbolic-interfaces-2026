@@ -319,7 +319,12 @@ def convergence_2d(
                 ax_u.set_ylabel(
                     r"max $|u|$ (exact: 0)" if print_mode else "max |u| (exact: 0)"
                 )
-    handles, leg_labels = axes_v[0].get_legend_handles_labels()
+    # The jump panel has no seed floor, so collect the legend across panels.
+    entries: dict[str, object] = {}
+    for ax in axes_v:
+        for handle, label in zip(*ax.get_legend_handles_labels(), strict=True):
+            entries.setdefault(label, handle)
+    handles, leg_labels = list(entries.values()), list(entries)
     if print_mode or len(leg_labels) > 3:
         fig.legend(
             handles,

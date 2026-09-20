@@ -111,6 +111,9 @@ DRIVER_RUNS = [
             "--direction",
             "1",
             "2",
+            "--widths",  # the driver refuses a jump at oblique incidence
+            "0.0025",
+            "0.01",
         ],
         {"wave2d_stiff_snapshot_d12.pdf": "wave2d_stiff_oblique_snapshot.pdf"},
     ),
