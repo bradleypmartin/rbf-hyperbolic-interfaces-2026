@@ -1470,3 +1470,327 @@ floor-dominated, and the smallest informative configuration (4900
 nodes) costs a minute of reference and marches; the driver is the
 record. Runtime of the default oblique sweep: 500 s with the operators
 cached, of which 260 s are the two references (cached thereafter).
+
+### 5.6 The curved feature: route (a) seeds along the true normal (#42, `scripts/wave2d_stiff.py --amplitude 0.02`)
+
+The last of the 2-D chain and the case Brad wanted to go to first: both
+interfaces bent into the sine curves of Part 2's curved study
+(amplitude 0.02, curvature up to κ = 0.02 (2π)² = 0.79, tilt up to 7.2°),
+with smooth edges of width δ in the true normal distance. Everything
+below is at normal incidence, so "normal" means locally oblique by up
+to 7.2° and the x'-dependent seeds of §5.5 act on every stencil that is
+not at a crest or a trough.
+
+**The medium.** `LayeredMedium2D` with curved interfaces and
+`edge_width > 0` now blends in the signed normal distance to each sine
+curve, `SineInterface.signed_distance`: the foot point from the
+fixed-point iteration of `closest_point` (moved into the interface
+class as `foot_point`; the stencil code keeps its name), and the
+distance as the displacement's component along the normal there. The
+foot point's error enters that component squared, so the distance is
+exact to rounding wherever the iteration converges at all (κ times the
+distance below one: everywhere within half a period). The two edges of
+the band are taken on *one* periodic image of it, the image whose
+centre line is nearest (`normal_distances`); taking each edge's own
+nearest image pairs the lower edge of one band with the upper edge of
+the next around y = 0.75 and reads a blend weight of −1, which is how
+the first version failed its own test. The images at ±1 are placed at
+d ± 1, the flat rule, which is off by up to a percent of a distance
+that is at least 0.375, where the tails are below 10⁻¹⁶ for δ ≤ 0.01.
+The flat branch of `layer_fraction` is untouched, so the flat seed
+operators cached by #40 rebuild bit for bit (checked against the
+n = 2500, δ = 0.01 cache before anything else was changed), and the
+jump medium (δ = 0) is untouched too.
+
+**The seeds: route (a).** `NormalProfile` carries the tangent angle θ
+of its foot point and samples the medium along the true normal,
+(x₀ − y' sin θ, y₀ + y' cos θ); the ODE stops (edge centres and their
+±10δ flanks) come from Newton on the line's intersection with each
+interface and its images (`crossings`; the closed form is kept for
+θ = 0 so the flat profile is bit for bit the #38 one). Along that line
+the blend is exactly the medium's tanh step in y' for the interface
+the line is normal to (`test_normal_profile_is_the_edge_profile_in_the_normal_coordinate`,
+10⁻¹³), so the seeds of a curved-edge stencil are the *flat* seeds of
+the same local coordinates (`test_curved_seeds_are_the_flat_seeds_of_the_same_local_stencil`,
+10⁻¹² through a δ = 0.005 edge on a stencil tilted by 0.08 rad): the
+x'-ansatz extends the normal profile unchanged along the tangent, which
+is the locally-flat approximation of the jump stencils in
+`wave2d/interface.py`, zeroth order in the curvature, route (a) of the
+issue and of §4.1. Nothing else in the seed construction changed; the
+frames, the anchor at the evaluation node, the r_max scaling, the
+19-node elastic rows and the 30-node Δ³ rows are those of §5.3. What
+route (a) gets wrong, in the tangent frame: a node at tangential offset
+x' from the foot point is at true normal distance y' − κx'²/2 + O(κ²)
+from the curve, while its seed value assumes y'. Over a stencil radius
+r ≈ 2.5h that is κr²/2 = 1.0·10⁻³ at 2500 nodes and 1.3·10⁻⁴ at
+19,600, to be compared with δ: a tenth of a δ = 0.01 edge at the coarse
+end, and 5% of a δ = 0.0025 edge at the fine end. So the geometric
+error of route (a) is largest where the seeds matter most, through the
+sharpest edge, and it shrinks with n only as h². The measurements below
+are what that costs.
+
+A curved seed march costs 3.6× a flat one (131 ms against 37 ms per
+19-node stencil): every material sample along the normal is a
+`layer_fraction` evaluation with two foot-point iterations, and the
+DOP853 march samples a few thousand times. The marches run on the
+process pool as before and the assembled operators are cached with the
+amplitude in the key (`outputs/wave2d_stiff_ops_*_a0.02.npz`), which
+is the caching this issue needed; the "one march per interface"
+shortcut of the caching breadcrumb does not apply as stated, because
+the seeds are anchored at the evaluation node (§4.2: the jet and the
+frozen chain matrix live there), so every stencil's seeds are its own
+even on a flat edge, and the per-stencil march stays.
+
+**The references.** Two, one per column type, as planned on the issue:
+
+- δ > 0: `wave2d/spectral.py: run_fourier_2d`, the 2-D extension of the
+  #41 solver. The x-modes mix on a curved medium, so the five real
+  fields live on an n_x × n_y product grid (x at j/n_x, y cell-centred,
+  the #41 conventions), derivatives by FFT along each axis (`scipy.fft`
+  on all cores), the material multiplied in physical space, RK4 at
+  Δt = cfl / (c_max √(n_x² + n_y²)) with cfl = 0.5 (the largest
+  eigenvalue of the semi-discretisation is c_p |k| with
+  |k| < π √(n_x² + n_y²), and RK4 holds the imaginary axis to 2.83, so
+  cfl < 0.9 is stable). `GridState.evaluate` interpolates the fields
+  and their derivatives at any point trigonometrically in both
+  directions, n_x n_y per point and field: 1.6 s for 19,600 nodes at
+  512 × 2048. Checks (`tests/test_wave2d_curved_edges.py`): on a flat
+  medium at oblique incidence, same grid and same step, it agrees with
+  the Fourier-in-x solver of §5.5 to 10⁻¹¹ (two representations of one
+  scheme); the interpolant reproduces the grid samples to 10⁻¹³ and its
+  y-derivative a centred difference to 10⁻⁵ of ε²; on a curved edge the
+  energy is conserved to 10⁻⁹ and doubling both grid directions moves
+  the answer by 10⁻⁸ at δ = 0.04, and the curl is no longer zero: the
+  curved edge converts P to S. Cost: 45 ms per step at 512 × 1024 and
+  93 ms at 512 × 2048 on this machine, so 4 and 16 minutes to t = 1.
+- δ = 0: Part 2's interface-aware operator on a node set of its own,
+  resampled one-sided onto the sweep's nodes as `wave2d_convergence.py`
+  did, now at 122,500 nodes (350², h = 1/350) instead of 40,000. A jump
+  on a curved interface has no product-grid reference.
+
+**Reference error bars.** Product grid, at t = 1 on 6000 random points:
+at δ = 0.01 the 512 × 1024 grid moves by 1.3·10⁻⁹ when n_x is halved,
+3.1·10⁻⁹ when both directions are doubled and 3.1·10⁻⁹ when the step is
+halved (the last two are the same number: the doubled grid's difference
+is its halved step), so its error is 3·10⁻⁹ and the material's
+x-variation is resolved by 256 points; at δ = 0.005 the 1024 × 2048
+grid moves by 8·10⁻¹¹ and 2.6·10⁻¹⁰ under doubling in x and in y. Both
+are five orders below anything measured. The jump reference: the
+62,500- and 122,500-node interface-aware runs differ by 1.7·10⁻⁴ in v
+on the 19,600-node set, where the 19,600-node interface-aware run's
+error is 1.25·10⁻³ against the coarser reference and 1.39·10⁻³ against
+the finer (a reference made by the same scheme flatters a run of it by
+the correlation of their errors), so the finer one's bar is about 5%
+of the finest point and its numbers are the ones reported. Cost:
+201 s for 512 × 1024 to t = 1, 1952 s for 1024 × 2048, 286 s for the
+122,500-node jump run (99 s at 62,500), 45 min for the whole study.
+
+**What is measured.** The sweep of §5.4 on the curved geometry: the
+Part 2 node sets with their rows straddling the sine curves
+(`make_node_set` on the curved jump medium; the node set does not
+depend on δ), the wide pulse of sharpness 15 from y = 0.875, t = 1, the
+MATLAB γ, CFL 0.5, both operators at every (n, δ) with the seeds on
+every row whose 19-node stencil sees the edge, and δ = 0 on the jump
+path. Columns δ = 0, 0.005, 0.01, as planned on the issue (δ = 0.0025
+below, §5.6.1). Seeded rows: 1320, 2452, 4631, 8553 at δ = 0.005 (53%
+down to 44% of the nodes), 1796, 3386, 6730, 12,959 at δ = 0.01 (72%
+to 66%), the flat counts to within a percent; the 19,600-node operators
+took 330 s and 475 s on 6 workers while the reference study had the
+other cores. Errors are relative l2 errors in v, h and u at t = 1, the
+last against the reference's own u since a curved edge makes u (at
+normal incidence on a flat edge u ≡ 0 and its size was the diagnostic;
+here it is 0.12 in every run and says nothing). Two floors as in §5.5:
+the pulse in the uniform medium on the same nodes against its exact
+translate (the resolution floor, a P wave that never meets an edge),
+and the seed rows built through a 10⁻⁶ contrast against the same
+translate (the seed operator's own floor, `--seed-floor`). And the
+truncation probe of §5.5 item 5, `--truncation`: the elastic operator
+applied to the reference state at t = 1 on the nodes against the exact
+rate from the reference's own derivatives (`GridState.evaluate` with
+``dx=1``, ``dy=1``) and the material at the nodes, relative l2 over the
+seeded rows and over the rest, for both operators (the naive operator's
+"edge rows" are the rows the seeds would rebuild).
+
+Error in v at t = 1 (rates in h between consecutive n; "seeds" at
+δ = 0 is Part 2's interface-aware operator, "seed floor" the seed
+operator through a 10⁻⁶ contrast):
+
+| δ | operator | n = 2500 | 4900 | 10000 | 19600 | rates |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 (jump) | naive | 1.25e-1 | 6.8e-2 | 3.2e-2 | 1.95e-2 | 1.8, 2.1, 1.4 |
+| 0 (jump) | interface-aware | 5.1e-2 | 1.69e-2 | 4.6e-3 | 1.39e-3 | 3.3, 3.6, 3.6 |
+| 0.005 | naive | 8.1e-2 | 3.2e-2 | 6.3e-3 | 1.90e-3 | 2.8, 4.5, 3.5 |
+| 0.005 | seeds | 2.6e-2 | 4.5e-3 | 2.0e-3 | 8.8e-4 | 5.2, 2.3, 2.5 |
+| 0.005 | seed floor | 3.3e-2 | 4.7e-3 | 1.68e-3 | 8.3e-4 | 5.8, 2.9, 2.0 |
+| 0.01 | naive | 5.8e-2 | 1.78e-2 | 5.2e-3 | 1.30e-3 | 3.5, 3.4, 4.1 |
+| 0.01 | seeds | 4.2e-2 | 1.04e-2 | 3.9e-3 | 1.62e-3 | 4.2, 2.8, 2.6 |
+| 0.01 | seed floor | 5.1e-2 | 1.20e-2 | 3.8e-3 | 1.57e-3 | 4.3, 3.4, 2.6 |
+| floor | naive, uniform | 5.3e-2 | 1.81e-2 | 4.8e-3 | 1.30e-3 | 3.2, 3.9, 3.8 |
+
+h/δ at the four n: 4, 2.9, 2, 1.4 for δ = 0.005; 2, 1.4, 1, 0.71 for
+δ = 0.01.
+
+Error in h, and the relative error in u (u is made by the curved edges,
+0.12 at most; the floors' pulse has none, so their u column is the
+largest spurious |u|, as in §5.4):
+
+| δ | operator | h at 2500 … 19600 | rates | u at 2500 … 19600 | rates |
+| --- | --- | --- | --- | --- | --- |
+| 0 (jump) | naive | 9.8e-2, 4.7e-2, 2.0e-2, 1.28e-2 | 2.2, 2.4, 1.4 | 2.0e-1, 1.0e-1, 4.8e-2, 2.8e-2 | 2.0, 2.2, 1.6 |
+| 0 (jump) | interface-aware | 4.6e-2, 1.62e-2, 4.4e-3, 1.28e-3 | 3.1, 3.6, 3.7 | 1.5e-1, 6.4e-2, 2.1e-2, 6.6e-3 | 2.5, 3.1, 3.4 |
+| 0.005 | naive | 8.4e-2, 3.4e-2, 6.9e-3, 1.79e-3 | 2.7, 4.4, 4.0 | 1.8e-1, 7.8e-2, 2.0e-2, 6.0e-3 | 2.4, 3.9, 3.5 |
+| 0.005 | seeds | 2.2e-2, 4.4e-3, 1.35e-3, 6.1e-4 | 4.8, 3.3, 2.4 | 1.0e-1, 3.3e-2, 9.3e-3, 2.6e-3 | 3.4, 3.5, 3.7 |
+| 0.01 | naive | 5.4e-2, 1.74e-2, 4.5e-3, 1.14e-3 | 3.4, 3.8, 4.1 | 1.2e-1, 4.9e-2, 1.5e-2, 4.4e-3 | 2.8, 3.3, 3.7 |
+| 0.01 | seeds | 3.9e-2, 8.5e-3, 2.6e-3, 1.11e-3 | 4.6, 3.3, 2.5 | 9.9e-2, 3.2e-2, 9.7e-3, 3.9e-3 | 3.3, 3.3, 2.7 |
+| floor | naive, uniform | | | spurious 9.5e-4, 3.9e-4, 1.2e-4, 2.6e-5 | |
+
+![Naive RBF-FD vs seed stencils through curved smooth edges: error in v and in u vs resolution](figures/wave2d_stiff_convergence_curved.png)
+
+Truncation error of the elastic operator on the reference state at
+t = 1, relative l2 over the seeded rows | over the rest (the bulk rows
+are the same 30-node degree-4 stencils in both operators):
+
+| δ | n | naive, edge rows | seeds, edge rows | bulk rows | seeds/bulk |
+| --- | --- | --- | --- | --- | --- |
+| 0.005 | 2500 | 3.9e-2 | 9.0e-3 | 2.5e-3 | 3.6 |
+| 0.005 | 4900 | 2.3e-2 | 2.5e-3 | 8.6e-4 | 2.9 |
+| 0.005 | 10000 | 1.05e-2 | 6.3e-4 | 2.5e-4 | 2.5 |
+| 0.005 | 19600 | 4.7e-3 | 2.0e-4 | 7.2e-5 | 2.8 |
+| 0.01 | 2500 | 1.83e-2 | 6.1e-3 | 2.6e-3 | 2.4 |
+| 0.01 | 4900 | 8.8e-3 | 1.79e-3 | 9.0e-4 | 2.0 |
+| 0.01 | 10000 | 3.1e-3 | 5.0e-4 | 2.5e-4 | 2.0 |
+| 0.01 | 19600 | 7.6e-4 | 1.66e-4 | 7.3e-5 | 2.3 |
+
+Rates of the seeds' edge rows: 3.8, 4.1, 3.4 at δ = 0.005 and 3.6, 3.8,
+3.3 at δ = 0.01; of the bulk rows 3.2, 3.7, 3.7; of the naive edge rows
+1.5, 2.4, 2.4 and 2.2, 3.0, 4.2.
+
+**What the tables say.**
+
+- *The curved jump stencils of Part 2 are at the resolution floor at
+  every n*, 5.1e-2, 1.69e-2, 4.6e-3, 1.39e-3 against the floor's 5.3e-2,
+  1.81e-2, 4.8e-3, 1.30e-3, at rates 3.3, 3.6, 3.6 (the naive scheme:
+  1.8, 2.1, 1.4, 14× worse at 19,600 nodes). That is the measurement
+  §5.5 asked for before judging the curved seeds: at nominal normal
+  incidence, tilt up to 7.2°, the locally-flat jump construction keeps
+  the order it has on a flat interface through 19,600 nodes, against a
+  reference of its own kind with a 5% error bar, and the converted-S
+  floor that took a third of the order away at 26.6° does not register
+  at 7°. Part 2's 3.2–3.7 at t = 0.3 was right; it was measured at too
+  few nodes to be sure.
+- *Through an edge the nodes do not resolve (δ = 0.005, h/δ from 4 to
+  1.4) the curved seeds are at their own floor at every n*: 2.6e-2,
+  4.5e-3, 2.0e-3, 8.8e-4 against the seed floor's 3.3e-2, 4.7e-3,
+  1.68e-3, 8.3e-4 (0.8×, 0.96×, 1.2×, 1.06×), 3.1×, 7×, 3.1×, 2.2× below
+  the naive scheme, which has its knee at h ≈ 2δ (rates 2.8, 4.5, 3.5:
+  it resolves the edge from 10,000 nodes on and is still above the
+  seeds at h = 1.4δ). In h the seeds are 3.8×, 7.7×, 5.1×, 2.9× below
+  naive. Through δ = 0.01 the curved numbers are the flat ones of §5.4
+  to two digits from 4900 nodes on (seeds 1.04e-2, 3.9e-3, 1.62e-3
+  against 1.1e-2, 3.9e-3, 1.6e-3; naive 1.78e-2, 5.2e-3, 1.30e-3 against
+  2.2e-2, 5.7e-3, 1.4e-3), and the seed-when-δ ≤ h rule reads off the
+  same column as before: at h = δ (10,000 nodes) the seeds win 1.35×, at
+  h = 0.71δ the naive scheme wins 1.25×, exactly the flat crossover.
+  Curvature, at amplitude 0.02, changed nothing that these node sets
+  can see.
+- *The seeds' floor is the seed operator's, and at the fine end it is
+  the degree-3 augmentation, not the edge.* The seed floor (the same
+  rows through no contrast) is below the naive floor at 4900 and 10,000
+  nodes (4.7e-3 against 1.81e-2, 1.68e-3 against 4.8e-3 at δ = 0.005)
+  and above it at 19,600 (8.3e-4 against 1.30e-3), with rates falling
+  to 2.0–2.6 there: 19-node degree-3 rows are third order in the first
+  derivatives with a small constant, and with rtol = 0 they cover the
+  19δ tails on both sides of both edges, 44–72% of the nodes. That is
+  the mechanism behind the seeds' 2.3–2.6 rates at the fine end here
+  and in §5.4–5.5, a resolution effect of the seeded region's stencils
+  and not of the edge. §5.6.1 tests the obvious lever, trimming the
+  seeded rows to the stencils that see more than 10⁻³ of the contrast
+  (3.8δ instead of 19δ).
+- *The scattered field, u, is where the curvature shows, and the seeds
+  carry it.* u is zero for the flat pulse and is made here by the
+  curved edges (0.12 at most), so its relative error measures the
+  scattered field alone: at δ = 0 the jump stencils get it 4.2× better
+  than naive at 19,600 nodes (6.6e-3 against 2.8e-2) at rates 2.5, 3.1,
+  3.4 against 2.0, 2.2, 1.6; through δ = 0.005 the seeds 2.3× better
+  (2.6e-3 against 6.0e-3) at 3.4, 3.5, 3.7; through δ = 0.01 the two
+  agree at 19,600 nodes (3.9e-3 against 4.4e-3), where the naive
+  scheme resolves the edge. The relative error of a small field is
+  larger than v's, and the seeds' u converges faster than their v at
+  δ = 0.005 (3.5–3.7 against 2.3–2.5): the v floor at the fine end is
+  the seeded rows' resolution of the *incident* pulse (the floor bullet
+  above),
+  which u, born at the edge, does not carry.
+- *Route (a)'s geometry is invisible at these widths.* On the true
+  curved solution at t = 1 the seed rows' truncation error is 2.0–3.6×
+  the bulk rows' and converges at the bulk rows' rate (3.4–4.1 against
+  3.2–3.7), with no flattening at the fine end where κr²/2 is 2.6% of
+  δ = 0.005; the naive edge rows are 4–23× the seeds' at δ = 0.005 and
+  converge at 1.5–2.4 until the edge is resolved. A degree-3 19-node
+  row is expected to sit a factor above a degree-4 30-node row on a
+  smooth solution, and the factor is the same at both δ, so nothing of
+  it is the curvature.
+
+**Spectrum on 2500 nodes, curved** (`scripts/wave2d_stiff_eigenvalues.py
+--n 2500 --amplitude 0.02 --run`, the acceptance run of §5.3 on the
+curved geometry; the same γ, Δt = 0.0041, the seeds on their true
+normals, the wide pulse to t = 1):
+
+| δ | operator | rebuilt rows | max Re λ, with γ | RK4 max \|R\| | E(1)/E(0) |
+| --- | --- | --- | --- | --- | --- |
+| jump | naive | 0 | +4.7e-3 | 1.00002 | 0.955 |
+| jump | interface-aware | 793 | +4.7e-2 | 1.0002 | 0.971 |
+| h/8 | naive | 0 | +4.7e-3 | 1.00002 | 0.956 |
+| h/8 | seeds | 982 | +6.0e-2 | 1.0003 | 0.988 |
+| h/2 | naive | 0 | +3.8e-3 | 1.00002 | 0.982 |
+| h/2 | seeds | 1796 | +8.3e-2 | 1.0003 | 0.999 |
+| 2h | naive | 0 | +2.1e-5 | 1.00000 | 0.991 |
+| 2h | seeds | 2500 | +1.05e-1 | 1.0004 | 1.016 |
+
+![Spectra of the naive and seed-aware operators on 2500 nodes with curved edges at three widths](figures/wave2d_stiff_eigenvalues_n2500_a0.02.png)
+
+Row for row the flat table of §5.3 (there: seeds +6.3e-2, +7.8e-2,
++9.6e-2 at max |R| 1.0003, 1.0003, 1.0004, energy 0.995, 1.003, 1.012;
+jump-aware +4.9e-2 at 1.0002). The rotation of every seed stencil into
+its own frame, the tilted normals and the curved rows change the
+rightmost eigenvalues by 10% and the RK4 amplification not at all: the
+stability answer of #39 carries over to the curved edge unchanged, with
+the 30-node Δ³ footprint on the seed rows. The energy ratios above one
+at 2h (1.6% growth over t = 1) are what max |R| = 1.0004 allows and the
+same as flat; the resolved edge is the naive scheme's case anyway.
+
+**The clip** (`scripts/wave2d_demo.py --amplitude 0.02 --edge-width
+0.005`, `outputs/wave2d_naive_vs_aware_curved_w0.005.mp4`, 251 frames
+to t = 0.5, not committed): the Part 2 curved clip with the edges
+smoothed to δ = 0.005 = h/2 on 10,000 nodes, the naive operator against
+the seed operator, both against the product-grid solution evaluated at
+the nodes frame by frame (`run_fourier_2d(snapshot_transform=...)`,
+1024 × 2048, 19 minutes for the 251 frames). The clip's pulse is the
+demo's (sharpness 23 from y = 0.75, so it reaches the upper edge by
+t = 0.1). Relative error in v along the run, naive / seeds: 4.1e-3 /
+2.2e-3 at t = 0.1 (the resolution floor, before the edge), 7.0e-3 /
+2.9e-3 at 0.2, 9.4e-3 / 4.9e-3 at 0.3, 1.82e-2 / 7.0e-3 at 0.4, 1.36e-2
+/ 4.7e-3 at 0.5. The snapshot grid
+(`outputs/wave2d_naive_vs_aware_curved_w0.005.png`, t = 0.15, 0.30,
+0.45) is the picture of the issue: at t = 0.15 the naive error is a
+dark line that follows the sine of the upper edge, darkest where the
+curve is steepest, and the seeds' map has no line at all, only the
+faint speckle of the resolution error above the band.
+
+**The still** (`docs/figures/wave2d_stiff_snapshot_curved.png`, 10,000
+nodes, δ = 0.005 = h/2, the sweep's pulse): the reference's |v| from
+the product grid, its |u_y − v_x| (the S waves the curved edges make
+out of the incident P pulse; at t = 0.25 they sit on the upper edge
+with the period of the sine, strongest where the curve is steepest),
+and the two error maps in v on one colour scale, at t = 0.25 and t = 1.
+Errors in v and u: naive 0.37%, 1.6% at t = 0.25 and 0.63%, 2.0% at
+t = 1; seeds 0.04%, 0.5% and 0.20%, 0.93%. At t = 0.25 the naive map
+is the picture of the problem: a streak that follows the sine of the
+upper edge, darkest at x ≈ 0.7 where the pulse has just arrived at the
+trough, with the transmitted pulse's error below it; the seeds' map
+has no streak, only the resolution speckle above the band, ten times
+lower in norm. By t = 1 both maps are the propagated pulse's own
+resolution error and the seeds' is a third of the naive one, which is
+the tables' 3.1×.
+
+![Pressure pulse through a band with curved smooth edges at 10,000 nodes: the reference, its curl, and the two error maps](figures/wave2d_stiff_snapshot_curved.png)
+
