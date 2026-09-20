@@ -2787,24 +2787,223 @@ minutes. A curved march costs $3.6\times$ a flat one
 % ===========================================================================
 \section{Discussion}
 \label{sec:discussion}
-% TRACE: #27's comments (2026-09-19, 2026-09-20), notes §5.3 (the true
-% Delta^3 of the seeds), §5.6.1 (seeded width), §5.6.2 (route (b), the
-% curvilinear evaluation). Drafted by #60.
+% TRACE: #27's comments (2026-09-19 and 2026-09-20: the flat translation
+% symmetry, one march per stencil, nothing beyond FD4 and one contrast,
+% route (a)'s geometric floor and the curvilinear evaluation), notes §2
+% (the caveats: contrast, layers thinner than 19 delta, order; the
+% 1e-5 h threshold), §5.3 (the true Delta^3 of the seeds, the two unbuilt
+% optimisations, the costs), §5.6 (the seed floor's rate, the seeded
+% region's share of the nodes), §5.6.1 (the trim, the 40 % extrapolation),
+% §5.6.2 (route (b), the curvilinear evaluation, the two things #42 did
+% not do, the reference costs), §5.7 and LITERATURE.md K6 (the scope of
+% the comparison, T3 not built, the K6 (ii) hypothesis), §3 (Mühlbach's
+% recurrence); the forward references of Sections 4, 5.3, 5.4 and 6. The
+% conclusions quote LITERATURE.md §6b verbatim (the abstract-safe
+% sentence, the conclusions sentence, the required caveat). Drafted by #60.
+
 \subsection{Limitations}
-\stub{\#60: FD4 / degree 3 only, one contrast, at most $19{,}600$ nodes, the
-flat translation symmetry unexploited, one march per stencil, the port's
-exclusions; the coefficient treatments of Sections~\ref{sec:results1d}
-and~\ref{sec:results2d} as our implementations on one problem, and the
-Schoenberg--Muir anisotropic medium not built (no anisotropic operator),
-\#69}
+\label{sec:limitations}
+Section~\ref{sec:scope} lists what the implementation leaves out of the
+2016--2017 methods. The restrictions below are those of the experiments.
+
+\para{Order and contrast}
+Everything was run at fourth order, FD4 in one dimension and degree four
+away from and degree three across an edge in two, at one material
+contrast in each dimension (Section~\ref{sec:setting}) and one pulse per
+test problem. Nothing was tried at a sharper contrast, for a layer
+thinner than the $19\delta$ tails of an edge, or at an order above four
+(Section~\ref{sec:results1d}). The construction does not change for any
+of them, and the conditioning of Section~\ref{sec:chain}, the stability
+at the standard $\gamma$ of Section~\ref{sec:stability2d} and the seeded
+width were measured only where the tables say they were. In one
+dimension an edge below about $10^{-5} h$ is better served by the
+interface-aware weights directly, since the seeds converge to them at
+first order in $\delta$ (Section~\ref{sec:assembly1d}).
+
+\para{Node sets}
+The largest node set has $19{,}600$ nodes, and the fine end of every
+two-dimensional sweep is a resolution effect of the seeded region, not
+of the edge: with no tolerance on the material spread the seeded rows
+cover the $19\delta$ tails on both sides of both edges, $44$ to $72\%$
+of the nodes, with $19$-node degree-three rows whose first derivatives
+are third order, so the seeds' rates fall to $2.3$ to $2.6$ at the fine
+end and the seed floor's own rate to $2.0$ between $10{,}000$ and
+$19{,}600$ nodes at $\delta = 0.005$ (Section~\ref{sec:curvedresults}).
+The trim to $3.8\delta$ restores rates of $3.2$ to $3.6$ without
+lowering the error on these node sets. Where between $3.8\delta$ and
+$19\delta$ to put the boundary of the seeded region beyond $19{,}600$
+nodes was not settled, and no result here says what the seeds do on a
+node set on which the trim would matter.
+
+\para{The rule's evidence}
+The rule of Section~\ref{sec:flatsweep} was set on $v$ at normal
+incidence through flat edges and read off the same column on the curved
+geometry (Section~\ref{sec:curvedresults}). At oblique incidence it was
+checked on the seeded side only: the train does not reach below
+$h = 0.71\delta$, where the seeds still lead by $1.6\times$
+(Section~\ref{sec:oblique2d}), so nothing at oblique incidence says
+where the seeds stop paying. The mode-converted S waves put every
+scheme, the jump stencils included, at order about $2.5$ at $26.6^\circ$
+on these node sets and do not register at $7^\circ$; fourth-order
+behaviour at oblique incidence on this problem needs $h$ below about
+$1 / 300$, the next node set up. The energy growth of the seed operator,
+about $0.012$ per unit time at $\delta = 2h$
+(Section~\ref{sec:stability2d}), was found only in the regime the rule
+excludes, in which every row is a seed row, and was not chased.
+
+\para{Geometry}
+Route (a) evaluates seeds marched along one normal in the tangent frame
+of the stencil, so the material at a stencil's far nodes is wrong by
+$\kappa r^2 / 2$ against $\delta$ (Section~\ref{sec:curved2d}). On the
+two sine interfaces run, at amplitude $0.02$, that error first shows
+through $\delta = 0.0025$ at $10{,}000$ and $19{,}600$ nodes, as $1.4$
+to $1.5\times$ the flat seeds' error, level with the seed floor, and
+would lead at the next node set (Section~\ref{sec:curvedresults}). A
+radius of curvature comparable to the stencil was not run, nor was the
+oblique train on the curved geometry.
+
+\para{Cost}
+Each seed row is one or two marches of the $600$-state system of
+Section~\ref{sec:elasticseeds}: $21$ to $25$\,ms for a 19-node stencil
+and $53$\,ms for a seed row on a flat edge, $3.6\times$ that on a
+curved one, and the two largest curved operators took $330$ and
+$475$\,s on six workers (Sections~\ref{sec:assembly2d}
+and~\ref{sec:curvedresults}). Neither the flat translation symmetry,
+one march per row with dense output, nor the 19-node stencil as the
+prefix of the 30-node one was used, and nothing is tuned; the operators
+are cached, and the references of the curved geometry cost more than
+everything else together ($45$ minutes plus $3.6$ hours). These are the
+costs of the reference implementation and an upper bound on the
+construction's.
+
+\para{The comparison}
+The coefficient treatments of Sections~\ref{sec:results1d}
+and~\ref{sec:results2d} are our implementations, one scheme per
+dimension, one contrast and one pulse, and their sources analyse and
+run them on staggered Cartesian grids. The one-dimensional grid is
+cell-centred with every jump on a cell boundary, which is why the
+one-cell mean changes nothing at a jump there; the two-dimensional
+averaging is an isotropic reading of the compliance rule, the wave
+moduli harmonically and the density arithmetically over a square; and
+the anisotropic effective medium of Schoenberg and Muir, which
+\cite{KoeneWittstenRobertsson2022} find best in elastic media, was not
+built because the implementation has no anisotropic five-field
+operator. The measurement licenses what Section~\ref{sec:priorwork}
+states and no more; it is not a ranking of the methods in general.
+
 \subsection{Future work}
-\stub{\#60: curvilinear evaluation of the marched seeds; seeded-width tuning;
-the seeds' true $\Delta^3$ as hyperviscosity right-hand sides; M\"uhlbach's
-recurrence in place of the dense solve; higher order; other contrasts; thin
-bands; variable Lam\'e parameters; 3-D; the oblique train on the curved
-geometry}
+\label{sec:futurework}
+In the order we would do them.
+\begin{enumerate}
+\item \emph{Curvilinear evaluation of the marched seeds}, before route
+  (b) of Section~\ref{sec:curved2d}: keep the marches, evaluate each
+  seed at the node's true arclength and normal distance instead of its
+  tangent coordinates, and scale the tangential jets at the anchor by
+  $1 / (1 - \kappa y_e)$. The material is then exact at every node at
+  no march cost and only the operator's curvature terms remain. It is
+  worth building where route (a)'s geometric floor, $\kappa r^2 / 2$
+  against $\delta$, meets the resolution floor: the next node set up
+  through $\delta = 0.0025$, or a tighter curve.
+\item \emph{The seeded width.} The trim of
+  Section~\ref{sec:curvedresults} is the lever that restores the order
+  beyond $19{,}600$ nodes (extrapolating the two rates, the trimmed
+  seeds lead by $40\%$ at $40{,}000$ nodes); where between $3.8\delta$
+  and $19\delta$ to put the boundary of the seeded region is one sweep
+  at the next node set.
+\item \emph{The seeds' true $\Delta^3$ as hyperviscosity right-hand
+  sides.} The hyperviscosity rows of Section~\ref{sec:assembly2d}
+  impose $\Delta^3 S = 0$ on every seed, a choice; the alternative is
+  the seeds' actual sixth derivatives at the anchor, which need the
+  normal derivatives of the coefficient functions to sixth order and so
+  the material's to fifth. Finite differences of the marched seeds
+  cannot give them at a sharp edge (a sixth difference at step
+  $\delta / 10$ amplifies rounding by $10^{13}$); a Taylor recursion on
+  the first-order system at the anchor, with the Taylor coefficients of
+  the coefficient matrix from the $\tanh$ recurrence
+  $T' = (1 - T^2) / \delta$, can, in about sixty lines plus a test
+  against the monomials' $\Delta^3$ in constant material. What it would
+  do is predictable: at an anchor a distance $d$ from an edge the sixth
+  derivative scales like $(r_{\max} / \delta)^5 e^{-2d / \delta}$, so
+  the hyperviscosity would act on the seed part of the solution with
+  strength $\gamma \Delta^3 S \propto (h / \delta)^5$, a consistent
+  discretisation of $\gamma \Delta^3$ applied to the edge structure,
+  strong exactly when the edge is unresolved. That is the behaviour the
+  seeds exist to remove, so we expect a stable operator with more
+  damping, not less, that damps the resolved physics at the edge, and
+  would build it only if the spectrum or the errors ever called for it.
+\item \emph{The cost of the marches.} The two optimisations Section~\ref{sec:assembly2d}
+  names, one march per row on a flat edge and one march per stencil
+  for both the 19- and the 30-node rows; and in one dimension
+  M\"uhlbach's recurrence for generalised divided differences
+  \cite{Muhlbach1973}, the analogue of Fornberg's algorithm for an
+  extended complete Chebyshev system, in place of the dense $5 \times 5$
+  solve. None was needed for the sweeps.
+\item \emph{Two runs the drivers can take today.} The oblique train on
+  the curved geometry, since the product-grid reference of
+  Section~\ref{sec:tests2d} takes any initial state, to see whether the
+  converted-S floor of Section~\ref{sec:oblique2d} moves with
+  curvature; and a dispersion study in a uniform medium of the
+  $30$-node annihilating $\Delta^3$ rows, to settle why the band of
+  seed rows is more accurate on this pulse than $30$-node degree-four
+  stencils everywhere (Section~\ref{sec:flatsweep}), on which nothing
+  here depends.
+\item \emph{What the construction does not change for.} Higher order,
+  which in two dimensions meets the instability
+  Section~\ref{sec:assembly2d} found for degree-four rows across a
+  sharp edge; other contrasts; an edge or a layer thinner than the
+  $19\delta$ tails, where a stencil sees both edges of a band and the
+  implementation has no triple stencils (Section~\ref{sec:scope}); the
+  variable Lam\'e parameters of the published test case, which vary
+  along the edge as well as across it, so that the ansatz of
+  Section~\ref{sec:design2d}, the material a function of the normal
+  coordinate alone, no longer applies as it stands; and three
+  dimensions, where the ansatz has two tangential coordinates and the
+  same normal one. The implementation is two-dimensional and none of
+  these was run.
+\item \emph{From the comparison.} An anisotropic five-field operator,
+  which would let the Schoenberg--Muir medium that
+  \cite{KoeneWittstenRobertsson2022} find best in elastic media run
+  head to head with the seeds on the same nodes; and the seeds on a
+  smoothed medium: applied to the medium the coefficient treatments
+  manufacture, a seeded scheme would be expected to remove the
+  second-order component those treatments accept at the interface,
+  which is a hypothesis and nothing here tested.
+\end{enumerate}
+
 \subsection{Conclusions}
-\stub{\#60: the rule and the one-construction claim, in \#53's wording}
+\label{sec:conclusions}
+Between a medium that varies on the scale of the grid and one with a
+jump lies the edge that is smooth but thinner than the grid, and the
+question was whether a stencil on an unchanged grid or node set can
+keep its order through it. On the node sets tested it can. The seeds
+are the $t = 0$ profiles of polynomial-in-time solutions, continued
+through the edge by ordinary differential equations rather than by
+Taylor expansion, and they reduce to the interface-aware stencils of a
+jump as $\delta \to 0$: one construction covers the jump, the sub-grid
+edge and the resolved edge. In one dimension the seed stencils are
+fourth order at every resolution with the errors of the jump case while
+FD4 has its knee at $h = \delta$. In two dimensions the seeded RBF-FD
+operator is stable at the standard hyperviscosity at every edge width,
+and through an edge the nodes never resolve the seeds sit at the seed
+operator's own floor, $20\times$ below the standard scheme in the
+velocity and $67\times$ in the spurious tangential velocity at
+$19{,}600$ nodes through a flat edge, and $3$ to $12\times$ below it
+through a curved one. To our knowledge no earlier scheme builds a
+stencil basis for the time-domain wave equation through a sub-grid
+smooth edge by an ODE march while leaving the rest of the scheme
+standard; the ingredients (bases from local solutions, polynomial
+Trefftz spaces, the harmonic mean) are each classical. On the node sets
+tested the rule is: seed when $\delta \le h$.
+
+The comparison is against coefficient sampling on the same nodes and
+against our implementation of the coefficient treatments of seismic
+finite differences (cell means over one and two cells, band-limited
+coefficients, a widened edge) on the same schemes, one contrast and one
+test problem; their sources analyse and run them on staggered grids. On
+these grids and node sets no coefficient treatment reaches the seeds'
+order; the best of them is second order at a jump in one dimension, and
+the seeds lie $3$ to $700$ times below it there and $3$ to $6$ times
+below it on the scattered nodes.
 
 % ===========================================================================
 \section*{Acknowledgments}
