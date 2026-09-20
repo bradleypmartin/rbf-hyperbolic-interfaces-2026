@@ -29,7 +29,9 @@ research that never got written up. A stencil crossing a material edge too
 steep for the grid to resolve is built from "seeds" continued through the
 edge by ODEs instead of monomials, on the same equispaced grid. Built and
 confirmed in 1-D on 2026-09-19, with a design note for 2-D:
-[`docs/stiff-features.md`](docs/stiff-features.md) (issue #27).
+[`docs/stiff-features.md`](docs/stiff-features.md) (issue #27). The
+arXiv-ready write-up of Part 3 is under way in [`paper/`](paper/README.md)
+(issue #51).
 
 ## Talk materials
 
@@ -83,6 +85,7 @@ clip.
 | `docs/` | `demo-outline.md` (results tables, decisions log, what happened when), `navier-stokes-notes.md` (sourced notes for Part 1), `paper-index.md` (page ranges per PDF), `stiff-features.md` and `figures/` (Part 3) |
 | `slides/` | `talk.tex` → `talk.pdf`, `notes.md` speaker script, `figures/`, `videos/` (the three clips), `clips.html` clip player, `build.sh` |
 | `papers/` | Index of reference papers with links and checksums, fetch script; PDFs are not committed |
+| `paper/` | The Part 3 manuscript: `main.tex` → `main.pdf` (tectonic), `references.bib`, `make_arxiv.py`; see its README |
 | `index.html` | GitHub Pages landing page |
 
 ## Reference papers
@@ -144,5 +147,6 @@ lists what was ported and what was not.
 
 ## License
 
-MIT. Reference papers are the property of their respective authors and
+Code: [MIT](LICENSE). Manuscript (`paper/`): [CC BY 4.0](paper/LICENSE).
+Reference papers are the property of their respective authors and
 publishers and are not redistributed here.
