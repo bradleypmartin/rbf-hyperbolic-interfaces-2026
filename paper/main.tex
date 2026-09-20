@@ -51,8 +51,10 @@
 % table fragments of #54 use it in text cells): \sci{6.2}{-8}.
 \newcommand{\sci}[2]{\ensuremath{#1 \times 10^{#2}}}
 % The table fragments of #54 (five or six numeric columns plus rates) are
-% wider than the text block at \small; every table sets this first.
-\newcommand{\tablesetup}{\footnotesize\setlength{\tabcolsep}{3pt}}
+% wider than the text block at \small; every table sets this first (it
+% also drops the operator spacing around \times, within the table only).
+\newcommand{\tablesetup}{\footnotesize\setlength{\tabcolsep}{2.5pt}%
+  \renewcommand{\sci}[2]{\ensuremath{##1{\times}10^{##2}}}}
 % Draft stubs, visible in the PDF until the owning sub-issue replaces them.
 \newcommand{\stub}[1]{\par\noindent\textit{[Stub, #1.]}\par}
 
@@ -963,8 +965,9 @@ resolves, there is no knee and standard FD4 is fourth order throughout.
   \centering
   \tablesetup
   % figures/tab_1d_knee.tex: scripts/paper_figures.py (#54) from
-  % paper/data/wave1d_stiff.json; never hand-edited.
-  \input{figures/tab_1d_knee.tex}
+  % paper/data/wave1d_stiff.json; never hand-edited. Five error columns
+  % and four rates: the widest fragment, scaled to the text width.
+  \resizebox{\textwidth}{!}{\input{figures/tab_1d_knee.tex}}
 \end{table}
 
 \begin{figure}
@@ -1054,26 +1057,460 @@ Section~\ref{sec:discussion} lists them among the limitations.
 % ===========================================================================
 \section{Seeds in two dimensions}
 \label{sec:seeds2d}
-% TRACE: notes §4.1 (design, #34), §4.2 (the elastic seeds of a straight
-% feature, #38), the operator half of §5.3 (#39), §5.6 for route (a);
-% code wave2d/seeds.py, wave2d/operators.py. Drafted by #58. Figure: 2-D seed
-% cross-sections (#54, new).
+% TRACE: notes §4.1 (design, #34: the 2-D chain, the s-polynomial ansatz,
+% the three routes for a curved feature), §4.2 (the elastic seeds of a
+% straight feature, #38: frame, the stress-rate coefficients, the
+% first-order system with the tractions as flux variables, the chain
+% matrix C = (D^2)[uv, uv], the p = 3 system with 30 seeds and 600 states,
+% the two closed forms, the rigid motions and the 27 / 20 counts, anchor and
+% r_max scaling, the jets, the jump-limit table (2.3e-2 .. 9.9e-5), the
+% residual 2e-12 with the injected errors 0.23 / 0.06, the conditioning
+% table (17-34 / 24-30 against 34 / 30 and 32 / 51), the segmented march
+% and its 4e-10, 22-40 ms per 19-node stencil), the operator half of §5.3
+% (#39: which rows, both edges in one profile, the Delta^3 rows on the
+% naive footprint with the seeds annihilated, the rejected variants in one
+% sentence each with -82 against -151, 21-25 ms / 53 ms, 1965 rows in 105 s
+% and 6719 in 331 s on 10,000 nodes, the two unbuilt optimisations, the
+% true Delta^3 as right-hand sides), §5.6 for route (a) (#42: signed
+% normal distance and the one-image rule, NormalProfile with theta, Newton
+% crossings, 1e-13 / 1e-12 checks, kappa r^2 / 2 = 1.0e-3 and 1.3e-4, 131
+% against 37 ms), §5.6.2 for route (b) and the curvilinear evaluation.
+% Code: wave2d/seeds.py (SeedChain.rhs and _initial_state are the system
+% and its data; evaluate is the stress read-off; seed_basis the jets and
+% the ablation; seed_weights the augmentation with lap = 0), wave2d/
+% operators.py (_stencils_seeing_variation, _apply_seed_rows,
+% _seed_rows_with: nearest interface by vertical offset, 19-node elastic
+% rows, hyper rows on seed_hyper_stencil = stencil_size), wave2d/domain.py
+% (varies_over, normal_distances). Tests named in the text are in
+% tests/test_wave2d_seeds.py and tests/test_wave2d_smooth_edges.py. The
+% code's flux variables (tau, sigma) are (tau, nu) here, since sigma is a
+% stress in this manuscript (§2's NOTATION), and the code's stress seeds
+% (f, g, h) are the rates of (sigma_xx, sigma_xy, sigma_yy). Drafted by #58.
+% Figure: figures/wave2d_stiff_seeds.pdf (#54, stiff_figures.seeds_2d).
+
+The chain of Section~\ref{sec:chain} is dimension-free: for any operator
+$\mathcal{L}$ the nested spaces $\{1\} \subset \ker \mathcal{L} \subset
+\{\mathcal{L} g = \mathrm{const}\} \subset \ker \mathcal{L}^2 \subset
+\cdots$ are what they were. What is not free is the choice of basis. In
+two dimensions $\ker \mathcal{L}$ is infinite-dimensional, and a space of
+``polynomial-like functions of degree $\le q$'' that reduces to the
+polynomials for constant coefficients needs a rule for which
+$\mathcal{L}$-harmonic functions play the role of $1$, $x$, $y$, $xy$,
+$x^2 - y^2, \ldots$: each harmonic polynomial needs a continuation through
+the edge that looks like it away from the edge. For a straight edge that
+rule is an ansatz, and it turns the problem back into ordinary
+differential equations in the normal coordinate. This section constructs
+the seeds of the elastic system for a straight edge, assembles them into
+stencils, and says what a curved edge does to the construction.
+
 \subsection{Design: a straight edge}
-\stub{\#58: the $x'$-polynomial ansatz turns the 2-D chain into triangular
-systems of 1-D ODEs in the normal coordinate; tangential dependence stays
-polynomial; tractions as flux variables}
+\label{sec:design2d}
+A stencil that sees an edge works in the local frame of
+Section~\ref{sec:jumpstencils}: origin at the nearest point of the edge
+centre, $x$ along the tangent and $y$ along the normal, the rotated
+fields obeying \eqref{eq:sys2d} unchanged. In this section $(x, y)$ are
+those local coordinates and $(u, v)$ and $\sigma$ the rotated fields, the
+primes of Section~\ref{sec:jumpstencils} dropped. The material depends on
+$y$ alone: exactly, for a flat edge, and for a curved one in the
+approximation of Section~\ref{sec:curved2d}. Eliminating the stresses
+from \eqref{eq:sys2d}, with $K = \lambda + 2\mu$,
+\begin{equation}
+  \label{eq:L2d}
+  \begin{aligned}
+  \rho\, u_{tt} &= \px \bigl[ K u_x + \lambda v_y \bigr]
+    + \py \bigl[ \mu (u_y + v_x) \bigr], \\
+  \rho\, v_{tt} &= \px \bigl[ \mu (u_y + v_x) \bigr]
+    + \py \bigl[ \lambda u_x + K v_y \bigr],
+  \end{aligned}
+\end{equation}
+and $\mathcal{L}(u, v)$ denotes the right-hand side divided by $\rho$.
+The three brackets are the stress rates of \eqref{eq:sys2d}, and the two
+that carry $\py$ are the tractions on the edge, $\sigma_{xy}$ and
+$\sigma_{yy}$, which are what stays continuous across a jump. That is the
+2-D form of the observation that drove the 1-D construction: the flux
+$K \phi'$, not the slope, is the smooth quantity through the edge.
+
+\begin{proposition}[Reduction to the normal coordinate]
+\label{prop:reduction}
+Let $\lambda, \mu, \rho$ depend on $y$ only, and let $u = \sum_{j=0}^{q}
+a_j(y)\, x^j$ and $v = \sum_{j=0}^{q} b_j(y)\, x^j$. Write the
+$x^j$-coefficients of the three stress rates as
+\begin{equation}
+  \label{eq:stressrates}
+  \begin{gathered}
+  F_j = K (j + 1)\, a_{j+1} + \lambda\, b_j', \qquad
+  \tau_j = \mu \bigl( a_j' + (j + 1)\, b_{j+1} \bigr), \\
+  \nu_j = \lambda (j + 1)\, a_{j+1} + K\, b_j',
+  \end{gathered}
+\end{equation}
+for $\sigma_{xx}$, $\sigma_{xy}$ and $\sigma_{yy}$ respectively, with
+$a_j = b_j = 0$ for $j > q$. Then $\rho \mathcal{L}(u, v)$ is a
+polynomial in $x$ of degree $\le q$ whose $x^j$-coefficients are
+\begin{equation}
+  \label{eq:Lcoeffs}
+  \rho\, \mathcal{L}_{1, j} = (j + 1) F_{j+1} + \tau_j', \qquad
+  \rho\, \mathcal{L}_{2, j} = (j + 1) \tau_{j+1} + \nu_j' .
+\end{equation}
+In particular the coefficients at level $j$ involve $(a, b)$ at levels
+$j$, $j + 1$ and $j + 2$ only, so an equation $\mathcal{L}(u, v) = (\text{given})$
+is a triangular system, from the top $x$-degree down, of two-component
+second-order ODEs in $y$ for the pairs $(a_j, b_j)$.
+\end{proposition}
+
+\begin{proof}
+Each bracket in \eqref{eq:L2d} is a polynomial in $x$ with coefficient
+functions of $y$, as displayed in \eqref{eq:stressrates}; $\px$ shifts the
+index and multiplies by it, $\py$ differentiates the coefficient, and
+\eqref{eq:Lcoeffs} follows by reading off. Expanding $F_{j+1}$ gives
+$\rho \mathcal{L}_{1,j} = (j + 1)(j + 2) K a_{j+2} + (j + 1) \lambda
+b_{j+1}' + \tau_j'$, which reaches level $j + 2$; $\tau_j'$ and $\nu_j'$
+involve $a_j''$, $b_j''$ and $b_{j+1}'$, $a_{j+1}'$, and nothing lower.
+\end{proof}
+
+\para{First-order form}
+As in one dimension, the chain is integrated as a first-order system that
+never differentiates the coefficients, and the tractions are the flux
+variables. Solving \eqref{eq:stressrates} for the slopes and
+\eqref{eq:Lcoeffs} for the derivatives of the tractions, the state at
+level $j$ is $(a_j, b_j, \tau_j, \nu_j)$ with
+\begin{equation}
+  \label{eq:firstorder2d}
+  \begin{aligned}
+  a_j' &= \tau_j / \mu - (j + 1)\, b_{j+1}, \\
+  b_j' &= \bigl( \nu_j - \lambda (j + 1)\, a_{j+1} \bigr) / K, \\
+  \tau_j' &= \rho\, R_{1, j} - K (j + 2)(j + 1)\, a_{j+2}
+    - \lambda (j + 1)\, b_{j+1}', \\
+  \nu_j' &= \rho\, R_{2, j} - (j + 1)\, \tau_{j+1},
+  \end{aligned}
+\end{equation}
+where $b_{j+1}'$ in the third line is the second line at level $j + 1$
+and $(R_1, R_2)$ is the right-hand side the chain prescribes, next. The
+coefficients $\lambda$, $\mu$, $\rho$ are only ever evaluated. The pair
+$(\tau_j, \nu_j)$ is the 2-D twin of $\psi_k = K \phi_k'$ in
+\eqref{eq:firstorder}.
+
 \subsection{The elastic seeds}
-\stub{\#58: all 30 seeds of one stencil marched as one 600-state system
-anchored at the evaluation node; constant-material, jump-limit, residual and
-conditioning checks}
+\label{sec:elasticseeds}
+With constant coefficients $\mathcal{L}$ maps a pair of monomials to
+pairs of lower degree,
+\begin{equation}
+  \label{eq:Lmono}
+  \begin{aligned}
+  \mathcal{L} (x^a y^b, 0) &= \frac{1}{\rho} \begin{pmatrix}
+    K a (a - 1)\, x^{a-2} y^b + \mu\, b (b - 1)\, x^a y^{b-2} \\
+    (\lambda + \mu)\, a b\, x^{a-1} y^{b-1} \end{pmatrix}, \\[4pt]
+  \mathcal{L} (0, x^a y^b) &= \frac{1}{\rho} \begin{pmatrix}
+    (\lambda + \mu)\, a b\, x^{a-1} y^{b-1} \\
+    \mu\, a (a - 1)\, x^{a-2} y^b + K b (b - 1)\, x^a y^{b-2} \end{pmatrix},
+  \end{aligned}
+\end{equation}
+that is, a matrix $C$ over the $2m$ monomial pairs $e$ ($m$ monomials to
+degree $q$, the $u$-block then the $v$-block), $\mathcal{L} e =
+\sum_{e'} C[e', e]\, e'$, which lowers the degree by two and is therefore
+strictly triangular in degree. It is the $(u, v)$ block of the square of
+the block operator of \eqref{eq:sys2d} on polynomial coefficients, the
+same object the continuity matrices of Section~\ref{sec:jumpstencils}
+are built from.
+
+\begin{definition}[Elastic seeds of a straight edge]
+\label{def:seeds2d}
+Let the evaluation node be at $(x_e, y_e)$ in the local frame and let
+$C$ be the matrix \eqref{eq:Lmono} for the material at $y_e$. The
+\emph{seeds} $S_e$, one per monomial pair $e$, are the solutions of
+\begin{equation}
+  \label{eq:chain2d}
+  \mathcal{L} S_e = \sum_{e'} C[e', e]\, S_{e'}
+\end{equation}
+of the form of Proposition~\ref{prop:reduction} in $(x - x_e, y - y_e)$,
+with the monomial's jet as initial data at $y = y_e$: for $e = (x^\alpha
+y^\beta, 0)$, $a_\alpha(y_e) = 1$ if $\beta = 0$, $a_\alpha'(y_e) = 1$ if
+$\beta = 1$, and every other $a_j$, $b_j$ and slope zero at $y_e$, with
+the mirror image for $e = (0, x^\alpha y^\beta)$; the tractions at $y_e$
+follow from the jet and the material there through
+\eqref{eq:stressrates}.
+\end{definition}
+
+This is Definition~\ref{def:seeds} read in two dimensions: $\Lu \phi_k
+= k (k - 1)\, c_e^2\, \phi_{k-2}$ is \eqref{eq:chain2d} with $C$ the
+1-D chain matrix, and the anchor conditions are the jet. The seeds of
+the lower monomials stand on the right, not the monomials, which is what
+makes the system consistent: by the triangularity of $C$ a seed only
+ever needs seeds two degrees down, and all $2m$ of them march together
+as one linear system. With constant coefficients the right-hand side of
+\eqref{eq:chain2d} is $\mathcal{L}$ of the monomial itself, by induction
+on the degree, and the linear ODE with that data has one solution, the
+monomial: the seeds are the monomials, to $2.5 \times 10^{-14}$ in the
+implementation's test. For the seed of $(x^\alpha y^\beta, \cdot)$ only
+the levels $j \le \alpha$ are ever non-zero, since nothing above them is
+driven, so a seed keeps the $x$-degree of its monomial and the medium
+enters through the $y$-structure alone. Two seeds are in closed form
+through any edge: $(y, 0)$ becomes $\bigl( \int_{y_e}^{y} \mu_e / \mu
+\, \mathrm{d}\eta,\, 0 \bigr)$ and $(0, x)$ becomes $\bigl(
+\int_{y_e}^{y} (\mu_e / \mu - 1)\, \mathrm{d}\eta,\, x \bigr)$, both with
+the constant shear traction $\mu_e$ and no other stress. That is the
+twin of $\phi_1 = K_e \int \mathrm{d}\xi / K$: the traction is what stays
+smooth, not the slope.
+
+\para{The system for degree three}
+The stencils across an edge are exact on velocities to degree $p = 3$,
+and the stress basis is generated from velocities one degree higher, as
+in the jump case, so the seeds are marched for the monomials to degree
+$q = 4$: $15$ monomials per component, $30$ seeds, $x$-degrees $0$ to
+$4$, and five levels of $(a_j, b_j, \tau_j, \nu_j)$ per seed, a linear
+system of $600$ states. It is integrated with the same explicit
+eighth-order Runge--Kutta method and tolerances as in one dimension,
+from the anchor outward to each side, restarted at every node's normal
+coordinate so that the node values are integrated rather than
+interpolated, and at the edge centres and their $\pm 10\delta$ flanks.
+The flanks matter here as they did in one dimension: a single solve
+without them differs from the segmented march by $4 \times 10^{-10}$ at
+$\delta = 10^{-4}$, where the adaptive step has to discover the edge.
+
+\para{Stress seeds and rigid motions}
+The stress seed of a velocity seed has the components $\sigma_{xx} =
+\sum_j F_j x^j$, $\sigma_{xy} = \sum_j \tau_j x^j$ and $\sigma_{yy} =
+\sum_j \nu_j x^j$, read off the marched state and the flux variables, with $b_j'$
+in $F_j$ taken from the second line of \eqref{eq:firstorder2d}, so
+nothing is differentiated numerically. As in the jump construction
+(Section~\ref{sec:jumpstencils}), the constants in $u$ and $v$ have no
+stress and the shear pair $(y, 0)$, $(0, x)$ share theirs, through any
+edge and not only for constant coefficients, so the same three columns
+are dropped: $27$ stress seeds from the $30$ velocity seeds, and the
+$20$ velocity seeds of degree $\le 3$ for the velocity block, the
+dissertation's counts.
+
+\para{Anchor, scaling and jets}
+The seeds are anchored at the evaluation node in both coordinates and
+scaled by $r_{\max}$, the distance to the farthest node of the stencil,
+so that $S_e \approx X^a Y^b$ in $(X, Y) = (x - x_e, y - y_e) / r_{\max}$
+and the material is sampled at $y_e + r_{\max} Y$. The jump basis of
+Section~\ref{sec:jumpstencils} keeps its origin at the interface point.
+Moving the origin in $x$ is a change of basis within the same span and
+changes no weight, and the two conventions are reconciled that way, so
+the jump path is untouched. Where the \emph{normal} coordinate is
+anchored is not a change of basis, because that is where the jet is
+imposed and the material is frozen in $C$; there the seeds follow the
+lesson of one dimension, that anchoring at the evaluation point is what
+keeps the interpolation block conditioned. At the anchor the velocity
+seeds have the monomials' first derivatives (only $X$ and $Y$ have one),
+and the derivatives of the stress seeds come from the state and the
+right-hand side of \eqref{eq:firstorder2d} at $Y = 0$, so the elastic
+rates of every basis function at the evaluation node are known exactly.
+One of the implementation's tests is the identity this implies: the
+velocity rate of a stress seed at the anchor, $(\partial_X \sigma_{xx} +
+\partial_Y \sigma_{xy}) / \rho_e$, is the constant term of the seed's
+column of $C$.
+
+\para{Checks}
+Three properties were checked on a 19-node stencil of a $400$-node set
+($h = 0.05$) on the row nearest the lower interface, the anchor $h / 2$
+into the band or $h / 2$ into the background. \emph{Jump limit}: as
+$\delta \to 0$ the state passes through the edge unchanged, which is
+velocity and traction continuity, and on the far side the chain holds
+with the anchor's frozen coefficients, which is what the continuity
+matrices encode; so the seeds should tend to the translated basis of the
+jump case re-expanded about the anchor, and they do, at first order in
+$\delta$: the largest difference relative to the largest basis value is
+$1.0$ to $2.3\%$ at $\delta = 10^{-3}$ and falls tenfold per decade to
+$1.0$ to $2.4 \times 10^{-4}$ at $\delta = 10^{-5}$, for the velocity and
+the stress basis and with the anchor on either side. \emph{Residual}:
+every seed, evaluated as a function of $(x, y)$ on a $25 \times 401$
+tensor grid through a $\delta = 0.01$ edge and pushed through the
+elastic operator by eighth-order finite differences in both variables,
+satisfies \eqref{eq:chain2d} with relative residual $2 \times 10^{-12}$;
+the test uses none of the module's coefficient bookkeeping, and the
+residual rises to $0.23$ if the factor $(j + 2)(j + 1)$ in
+\eqref{eq:firstorder2d} is wrong and to $0.06$ if the $\lambda (j + 1)
+b_{j+1}'$ term is dropped. \emph{Conditioning}: the 2-norm condition
+numbers of the velocity block ($38 \times 20$: two components at $19$
+nodes against $20$ seeds) and the stress block ($57 \times 27$) are $17$
+to $34$ and $24$ to $30$ for $\delta$ from $h$ down to $h / 5000$,
+against $34$ and $30$ for the polynomial jump basis re-expanded about the
+same anchor, and they tend to those values as $\delta \to 0$. No
+Chebyshev-system argument is available in two dimensions, where
+interpolation on scattered nodes can be singular even for polynomials.
+The saddle-point solve is nonsingular when the Gaussian block is
+positive definite, which it is, and the augmentation has full column
+rank; for the seeds the measured conditioning is the evidence for the
+latter, and it is all we have.
+
+\begin{figure}
+  \centering
+  % figures/wave2d_stiff_seeds.pdf: scripts/paper_figures.py (#54), from
+  % pdes_demo.stiff_figures.seeds_2d; never hand-edited.
+  \includegraphics[width=\textwidth]{wave2d_stiff_seeds}
+  \caption{Cross-sections along the normal through the anchor of four
+  elastic seeds of a 19-node stencil whose evaluation node lies $h / 2$
+  below the lower edge of the band of Section~\ref{sec:setting2d}
+  ($\lambda$, $\mu$ from $1$ to $4$, $\rho$ from $1$ to $2$), in the
+  stencil coordinate $Y = (y - y_e) / r_{\max}$ with $r_{\max} = 2.5 h$,
+  for the jump limit (computed at $\delta = 10^{-6}$), $\delta = h / 4$
+  and $\delta = 2h$, against the monomials of the anchor material
+  (dashed): the $u$ of the seed $u = Y$; the $v$ of the seed $v = Y^2$;
+  the shear traction of the seed $u = Y^2$ (labelled $g$, the
+  implementation's name for the rate of $\sigma_{xy}$); and the $u$
+  induced by the seed $v = XY$ at $X = \tfrac12$, which is zero for the
+  monomial and is the tangential coupling that the ablation of
+  Section~\ref{sec:results2d} removes. The vertical line is the edge
+  centre and the dotted lines the stencil's reach $|Y| \le 1$. As in
+  Figure~\ref{fig:seeds1d}, the $\delta = h / 4$ seeds are close to the
+  jump limit and the $\delta = 2h$ seeds bend over the whole stencil.}
+  \label{fig:seeds2d}
+\end{figure}
+
 \subsection{Stencil assembly}
-\stub{\#58: 19-node seed rows for the elastic operator; $\Delta^3$ rows on
-the naive 30-node footprint with the seeds annihilated; the seeded region
-($19\delta$) and its trim}
+\label{sec:assembly2d}
+\para{Which rows}
+The seed scheme rebuilds the rows of every node whose $19$ nearest
+nodes see different values of $\lambda$, $\mu$ or $\rho$, the 1-D rule
+of Section~\ref{sec:assembly1d} on the stencil's footprint: with exact
+inequality that reaches about $19\delta$ from each edge centre plus the
+stencil's radius, and a relative tolerance on the spread trims the tails
+(the trim of Section~\ref{sec:results2d}). The nearest interface, by
+vertical offset, sets the frame of a rebuilt row; the material profile
+along its normal carries both edges of the band, so a stencil that sees
+both is marched through both, and the triple stencils of the jump case
+are not needed.
+
+\para{Elastic rows}
+The rebuilt elastic rows are the coupled saddle-point solves of
+Section~\ref{sec:jumpstencils} with the seeds in place of the piecewise
+polynomials: the Gaussian block on the $19$ nodes is unchanged, the
+augmentation is the $38 \times 20$ block of velocity-seed values and the
+$57 \times 27$ block of stress-seed values, the right-hand sides on the
+seed columns are the elastic rates of \eqref{eq:sys2d} at the evaluation
+node, from the jets, and the material in those rates is the anchor
+material, which is the node's own. The weights are rotated back to the
+laboratory frame as before. Every stencil's seeds are its own, even on a
+flat edge, because the jet and the frozen $C$ live at its anchor.
+
+\para{Hyperviscosity rows}
+The $\Delta^3$ rows of the same nodes are built on the naive footprint
+of $30$ nodes, with the same seeds annihilated: the saddle-point solve
+imposes $\Delta^3 S_e = 0$ on every seed column, as it imposes $\Delta^3
+p = 0$ on the polynomial augmentation of a standard stencil. That is a
+second march per stencil, over the larger radius. Two things decided the
+footprint, both measured in Section~\ref{sec:results2d}. A $19$-node
+stencil carrying $20$ coupled constraints has $18$ degrees of freedom
+left for the Gaussian part of a sixth-order operator, and what comes out
+is barely a $\Delta^3$: on the $900$-node set the extreme eigenvalue of
+its $\Delta^3$ block is $-82$ against $-151$ for the standard rows, half
+the damping, and the operator built that way is unstable at the standard
+$\gamma$ once the seeded region, $19\delta$ plus the stencil radius, has
+grown to take in every row, from about $\delta = h / 2$ on that node
+set; and the alternative
+of $30$-node, degree-four stencils for the elastic rows themselves is
+stable through a resolved edge but violently unstable through a sharp
+one, as a degree-four basis across a jump is, which is presumably why
+the original work settled on $19$ nodes and degree three. Annihilating
+the seed space is a choice, not a derivation: the seeds' true sixth
+derivatives at the anchor are not zero in a varying medium, and using
+them as right-hand sides is the alternative Section~\ref{sec:discussion}
+records as future work.
+
+\para{Checks}
+Without contrast the seed weights equal the degree-three RBF-FD weights
+and the no-contrast weights of the jump path to $10^{-10}$; as
+$\delta \to 0$ they tend to the interface-aware weights at first order in
+$\delta$ on a real stencil, all four blocks, whichever side carries the
+standard monomials; every block is exact on the seed space through a
+$\delta = h / 4$ edge and the $\Delta^3$ blocks annihilate it; and the
+rebuilt rows of the assembled operator are exactly the stencils that
+see the edge, with no other entry moved. The jump path of
+Section~\ref{sec:jumpstencils} is unchanged bit for bit.
+
+\para{An ablation}
+To measure what the tangential structure of the seeds contributes,
+Section~\ref{sec:results2d} uses a variant in which only the seeds of
+the pure normal monomials $y^b$ are marched through the edge and every
+$x^a y^b$ with $a \ge 1$ is the plain monomial with the anchor
+material's stress. The plain columns come from a second chain on the
+material frozen at the anchor, since a frozen column must see frozen
+lower seeds on its right-hand side or $x^2 y^2$ would still be driven by
+the marched $y^2$. The span has the same dimension and the same jets.
+
+\para{Cost}
+A 19-node march costs $21$ to $25$\,ms and a seed row, with its 30-node
+march, $53$\,ms, in the reference implementation. On $10{,}000$ nodes
+the operator through $\delta = h / 8$ has $1965$ seed rows and builds in
+$105$\,s; through $\delta = 0.01 = h$ it has $6719$ and builds in
+$331$\,s. The marches run on a process pool and the assembled operators
+are cached, which is what the sweeps of Section~\ref{sec:results2d}
+needed. Two optimisations were not built: the 19-node stencil is a
+prefix of the 30-node one, so one march with the seeds rescaled to the
+smaller $r_{\max}$ would serve both rows; and on a flat edge every
+stencil of one fixed row shares $y_e$ and the profile, so one march with
+dense output could serve a whole row.
+
 \subsection{Curved edges}
-\stub{\#58: route (a), the seeds marched along the true normal through the
-foot point, zeroth order in curvature, the same approximation as the jump
-stencils; what route (b) would be}
+\label{sec:curved2d}
+For a curved edge the material no longer depends on the normal
+coordinate of one frame, and three routes were open at the design stage:
+(a) march the straight-edge seeds along the true normal through the
+stencil's foot point and treat the curvature as a perturbation, $\kappa h
+\ll 1$ over a stencil; (b) solve \eqref{eq:chain2d} as a small
+boundary-value problem on a patch around each stencil, on a fine local
+grid with the harmonic polynomial as boundary data, the oversampling
+construction of multiscale finite elements \cite{HouWu1997} and the
+honest ``one PDE per stencil''; or (c) compute harmonic coordinates once
+globally \cite{OwhadiZhang2007} and take polynomials in them as the
+degree-one seeds. Route (a) is what was built, at its zeroth order.
+
+\para{The medium}
+With a curved interface the blend of \eqref{eq:profile2d} is taken in
+the true signed normal distance: the foot point comes from the same
+fixed-point iteration that places the stencil frames, and the distance
+is the displacement's component along the normal there, so the foot
+point's error enters squared and the distance is exact to rounding
+wherever the iteration converges at all. The two edges of the band are
+read on one periodic image of it, the image whose centre line is
+nearest; reading each edge on its own nearest image pairs the lower edge
+of one band with the upper edge of the next around $y = 0.75$, and was
+how the first version failed its own test.
+
+\para{The seeds}
+The profile of a rebuilt row carries the tangent angle $\theta$ at its
+foot point $(x_0, y_0)$ and samples the medium along the true normal,
+$(x_0 - y \sin\theta,\, y_0 + y \cos\theta)$, with the march's stops at
+the crossings of that line with each interface and its images, by
+Newton's method from the vertical estimate. Along that line the blend
+is exactly the medium's $\tanh$ profile in $y$ for the interface the
+line is normal to (to $10^{-13}$), so the seeds of a curved-edge
+stencil are the \emph{flat} seeds of the same local coordinates (to
+$10^{-12}$ through a $\delta = 0.005$ edge on a stencil tilted by $0.08$
+radians): the ansatz extends the normal profile unchanged along the
+tangent. That is the locally flat approximation the jump stencils of
+Section~\ref{sec:jumpstencils} make, zeroth order in the curvature, and
+nothing else in the construction changes: the frames, the anchor at the
+evaluation node, the $r_{\max}$ scaling, the 19-node elastic rows and
+the 30-node $\Delta^3$ rows are those of Section~\ref{sec:assembly2d}.
+A curved march costs $3.6\times$ a flat one, $131$ against $37$\,ms per
+19-node stencil, because every material sample along the normal is a
+blend evaluation with two foot-point iterations and the march takes a
+few thousand of them.
+
+\para{What route (a) gets wrong}
+In the tangent frame a node at tangential offset $x$ from the foot
+point lies at true normal distance $y - \kappa x^2 / 2 + O(\kappa^2)$
+from the curve, while its seed value assumes $y$. Over a stencil radius
+$r \approx 2.5h$ that is $\kappa r^2 / 2$: for the sine interfaces of
+amplitude $0.02$, whose curvature reaches $\kappa = 0.02\,(2\pi)^2 =
+0.79$, it is $1.0 \times 10^{-3}$ at $2500$ nodes and $1.3 \times 10^{-4}$
+at $19{,}600$, to be compared with $\delta$: a tenth of a $\delta = 0.01$
+edge at the coarse end and $5\%$ of a $\delta = 0.0025$ edge at the fine
+end. So the geometric error of route (a) is largest where the seeds
+matter most, through the sharpest edge, and it shrinks with $n$ only as
+$h^2$. Section~\ref{sec:results2d} measures what it costs on the node
+sets we can afford, and finds route (a) at the seed operator's own floor
+on all of them, so neither (b) nor (c) was built. If a sharper edge or a
+tighter curve ever asks for more, the cheaper first step is not the
+boundary-value problem but the curvilinear evaluation of the same
+marched seeds: evaluate each seed at the node's true arclength and
+normal distance instead of its tangent coordinates, and scale the
+tangential jets at the anchor by $1 / (1 - \kappa y_e)$. That makes the
+material exact at every node at no march cost and leaves only the
+operator's curvature terms as the error; Section~\ref{sec:discussion}
+lists it first among the things to do next.
 
 % ===========================================================================
 \section{Two-dimensional results}
