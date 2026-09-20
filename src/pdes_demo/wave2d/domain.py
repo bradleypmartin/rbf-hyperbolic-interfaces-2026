@@ -459,15 +459,21 @@ def oblique_p_wave(
     background. The profile along the direction of travel is the Gaussian
     ``exp(-sharpness**2 xi**2)`` periodised.
 
-    Each point carries the P eigenvector of its *local* material, so the
-    strips are plane P waves wherever the material is uniform, band
-    included, and the initial data are an exact solution everywhere except
-    where a strip crosses an edge: with the propagation direction ``d``,
+    Every point carries the *background* material's P eigenvector, as
+    :func:`plane_p_wave` does: with the propagation direction ``d``,
     ``(u, v) = -d G``, ``f = [(lam + 2 mu) d_x**2 + lam d_y**2] G / c_p``,
     ``g = 2 mu d_x d_y G / c_p``, ``h = [lam d_x**2 + (lam + 2 mu) d_y**2]
-    G / c_p``, ``G = G(d . x - c_p t)``. ``t`` shifts the train by
-    ``c_p t`` along ``d`` with the *background* speed: the exact solution
-    at time ``t`` in a uniform medium, and meaningless otherwise.
+    G / c_p``, ``G = G(d . x - c_p t)``. So every field is the one smooth
+    profile everywhere, and the part of a strip inside the band is a
+    smooth superposition of the band's own waves. The alternative, the
+    eigenvector of the local material, would make the strips exact P waves
+    inside the band too, but the tractions g and h would then jump across
+    each edge crossing by the impedance ratio over the width delta; the
+    true dynamics resolve that into waves with delta-sharp fronts that no
+    node set with h > delta can carry, and the error of every scheme is
+    then that, not the edge (docs/stiff-features.md §5.5). ``t`` shifts the
+    train by ``c_p t`` along ``d`` with the background speed: the exact
+    solution at time ``t`` in a uniform medium, and meaningless otherwise.
     """
     xy = nodes.xy if isinstance(nodes, NodeSet) else np.asarray(nodes, dtype=float)
     m_x, m_y = (int(v) for v in direction)
@@ -475,11 +481,11 @@ def oblique_p_wave(
         raise ValueError("direction must be (m_x >= 0, m_y >= 1)")
     scale = math.hypot(m_x, m_y)
     d_x, d_y = m_x / scale, -m_y / scale
+    mat = medium.background
     # G(d . x - c_p t) with d . x = phase / scale, phase = m_x x - m_y y.
-    phase = m_x * xy[:, 0] - m_y * xy[:, 1] - scale * medium.background.c_p * t
+    phase = m_x * xy[:, 0] - m_y * xy[:, 1] - scale * mat.c_p * t
     g = pulse_train(phase, -m_y * center, sharpness / scale)
-    lam, mu, rho = medium.material_at(xy[:, 0], xy[:, 1])
-    c_p = np.sqrt((lam + 2 * mu) / rho)
+    lam, mu, c_p = mat.lam, mat.mu, mat.c_p
     state = np.zeros((len(FIELDS), xy.shape[0]))
     state[0] = -d_x * g
     state[1] = -d_y * g
