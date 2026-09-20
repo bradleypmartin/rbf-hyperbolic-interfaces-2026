@@ -5,7 +5,8 @@ notes and the results cache of #54. This script is the scripted half of that
 check: for every ratio, rate, factor and error the text quotes from
 ``paper/data/*.json`` it recomputes the value from the cache's unrounded
 records and fails if it no longer rounds to the quoted figure (half a unit in
-the quoted figure's last digit; ``<=`` and ``>=`` for bounds). Numbers the
+the quoted figure's last digit, capped at 6% for a round headline figure
+such as 200; ``<=`` and ``>=`` for bounds). Numbers the
 text quotes from the notes only (row counts, timings, scratch runs) are not
 here; their ``% TRACE`` comments say so.
 
@@ -93,6 +94,8 @@ def rounds_to(value, quoted):
     else:  # trailing zeros of an integer figure are not significant: 200, 730
         digits = mant.lstrip("-")
         unit = 10.0 ** (exponent + len(digits) - len(digits.rstrip("0")))
+        if digits != digits.rstrip("0"):  # a "200" must not pass a 25% drift
+            unit = min(unit, 0.12 * abs(q))
     return abs(value - q) <= 0.5 * unit + 1e-9 * abs(q)
 
 
