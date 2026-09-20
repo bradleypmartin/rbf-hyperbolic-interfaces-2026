@@ -544,3 +544,90 @@ manuscript owes; §6 words it.
   preprints read in P1.
 - Issues #27 (the exploration), #51 (the manuscript epic), #53 (this pass),
   #55 (places §6a), #61 (assembly; re-checks the wording against §6).
+
+## 6. Manuscript wording
+
+The paragraph and sentences below are the only novelty language the
+manuscript may use without re-opening this ledger. #55 places (a) in §1
+(`\subsection{Relation to prior work}`); #61 fixes (b) in the abstract and
+conclusions. Every `\cite` key exists in `paper/references.bib` and is [V].
+
+### 6a. Relation to prior work (§1 of the manuscript)
+
+```latex
+Three lines of prior work meet here, and the construction adds nothing to
+any of them taken alone. Stencils and elements built from local solutions
+of the operator are the fitted operators of the 1950s and 60s
+\cite{AllenSouthwell1955,Ilin1969,ScharfetterGummel1969,RoosStynesTobiska2008}
+and the exact schemes that followed \cite{Mickens1993,VizvariEtAl2020};
+the constant-flux seed in particular is the harmonic mean of Tikhonov and
+Samarskii \cite{TikhonovSamarskii1962,Samarskii2001}, the special elements
+of Babu\v{s}ka and Osborn \cite{BabuskaOsborn1983,BabuskaCalozOsborn1994},
+the multiscale elements of Hou and Wu \cite{HouWu1997} and the harmonic
+coordinates of Owhadi and Zhang \cite{OwhadiZhang2007}, whose extension to
+the acoustic wave equation \cite{OwhadiZhang2008} is the closest
+two-dimensional relative of what follows. Basis functions that are
+polynomial-in-time solutions of the wave equation are the Trefftz spaces
+of space--time discontinuous Galerkin methods
+\cite{KretzschmarMoiolaPerugiaSchnepp2016,BanjaiGeorgoulisLijoka2017,MoiolaPerugia2018};
+their quasi-Trefftz extension to variable coefficients
+\cite{ImbertGerardMoiolaStocker2023,ImbertGerardMoiolaStocker2024,ImbertGerard2025local}
+builds them by Taylor expansion at a point, the route
+Section~\ref{sec:seeds1d} shows cannot reach an edge thinner than the
+stencil. The nonsingularity of the stencil solve rests on the theory of
+Chebyshev systems \cite{Polya1922,KarlinStudden1966,Coppel1971,Muhlbach1973}.
+For a jump, the interface-aware stencils this work generalises
+\cite{Martin2016,MartinFornbergStCyr2015,MartinFornberg2017} stand beside
+the immersed interface \cite{LeVequeLi1994,ZhangLeVeque1997,SabatiniEtAl2023},
+explicit simplified interface \cite{PirauxLombard2001,LombardPiraux2004}
+and summation-by-parts \cite{MattssonNordstrom2006,DuruVirta2014,GranathWang2025}
+treatments, all of which take the jump as given; standard schemes are
+first order there \cite{Brown1984,SymesVdovina2009,VishnevskyEtAl2014}.
+The standing alternative in seismic and electromagnetic finite differences
+changes the medium rather than the stencil: coefficients averaged over a
+cell \cite{Backus1962,MuirEtAl1992,MoczoEtAl2002,KristekEtAl2017,JiangZhang2024,FarjadpourEtAl2006},
+thin structure homogenised
+\cite{CapdevilleGuillotMarigo2010a,CapdevilleGuillotMarigo2010b}, or the
+jump smoothed over a few cells
+\cite{TornbergEngquist2003,TornbergEngquist2006,KoeneWittstenRobertsson2022}.
+Those methods choose the smoothing width from the grid and accept a
+second-order error component at the interface \cite{TornbergEngquist2006};
+here the width is a property of the medium, smaller than the grid, and
+the aim is the scheme's full order through it. We found no prior instance
+of stencils on an unchanged equispaced or scattered node set whose basis
+is continued through a sub-grid smooth edge by ordinary differential
+equations, nor of the observation that the construction reduces to the
+jump stencils as $\delta \to 0$; the search is logged in the repository's
+\texttt{LITERATURE.md}. We did not compare against the smoothing and
+averaging methods, and claim nothing relative to them.
+```
+
+(About 330 words. If #55 needs the 150–250 the issue asked for, cut the
+sentence on Chebyshev systems, which §3 of the manuscript cites anyway,
+and merge the two jump-method sentences; keep the last three sentences
+verbatim, they carry the obligations of §1a K6 and §1b O1.)
+
+### 6b. Claim sentences (abstract and conclusions)
+
+Bucket §1b, worded as "no prior instance found":
+
+- *Abstract-safe.* "The seeds are the $t = 0$ profiles of polynomial-in-time
+  solutions, continued through the edge by ordinary differential equations
+  rather than by Taylor expansion, and they reduce to the interface-aware
+  stencils of a jump as $\delta \to 0$: one construction covers the jump,
+  the sub-grid edge and the resolved edge."
+- *Conclusions.* "To our knowledge no earlier scheme builds a stencil basis
+  for the time-domain wave equation through a sub-grid smooth edge by an
+  ODE march while leaving the rest of the scheme standard; the ingredients
+  (bases from local solutions, polynomial Trefftz spaces, the harmonic mean)
+  are each classical. On the node sets tested the rule is: seed when
+  $\delta \le h$."
+- *Required caveat wherever the rule is stated as a headline.* "The
+  comparison is against coefficient sampling on the same nodes; the
+  smoothing and averaging methods of seismic finite differences were not
+  run, and their second-order interface error is a proven property of a
+  different scheme, not a measurement made here."
+
+Not to be used: "novel", "new method", "first", "outperforms existing
+interface methods", "arbitrary contrast", "any order" (only FD4 / degree 3
+were run).
