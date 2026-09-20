@@ -500,7 +500,7 @@ K6 (iii) records the result and its scope; §6 words it.
   Open for Karlin–Studden; zbMATH Open plus the Crossref reference-book
   record for Samarskii 2001; the Crossref book record plus zbMATH for
   Roos–Stynes–Tobiska; the dissertation's own title page.
-- Corrections made from the records: `ImbertGerardMoiolaStocker2024` is the
+- Corrections made from the records: `ImbertGerardMoiolaPerinatiStocker2025` is the
   IMA JNA 45(6) 2025 paper with Perinati as third author (key kept for the
   section drafts; #61 may rename); Owhadi–Zhang 2007 and 2008 given their
   DOIs (10.1002/cpa.20163, 10.1016/j.cma.2008.08.012); Allen–Southwell,
@@ -611,7 +611,7 @@ polynomial-in-time solutions of the wave equation are the Trefftz spaces
 of space--time discontinuous Galerkin methods
 \cite{KretzschmarMoiolaPerugiaSchnepp2016,BanjaiGeorgoulisLijoka2017,MoiolaPerugia2018};
 their quasi-Trefftz extension to variable coefficients
-\cite{ImbertGerardMoiolaStocker2023,ImbertGerardMoiolaStocker2024,ImbertGerard2025local}
+\cite{ImbertGerardMoiolaStocker2023,ImbertGerardMoiolaPerinatiStocker2025,ImbertGerard2025local}
 builds them by Taylor expansion at a point, the route
 Section~\ref{sec:seeds1d} shows cannot reach an edge thinner than the
 stencil. The nonsingularity of the stencil solve rests on the theory of
@@ -638,14 +638,22 @@ of stencils on an unchanged equispaced or scattered node set whose basis
 is continued through a sub-grid smooth edge by ordinary differential
 equations, nor of the observation that the construction reduces to the
 jump stencils as $\delta \to 0$; the search is logged in the repository's
-\texttt{LITERATURE.md}. We did not compare against the smoothing and
-averaging methods, and claim nothing relative to them.
+\texttt{LITERATURE.md}. We ran the smoothing and averaging treatments on
+both schemes, as our implementation of each on one problem at one
+contrast (Sections~\ref{sec:results1d} and~\ref{sec:results2d}): none
+reaches the seeds' order, the best of them is second order at a jump in
+one dimension, and the seeds lie $3$ to $730$ times below the best
+treatment there and $3$ to $6$ times below it on the scattered nodes. We
+claim nothing beyond that measurement.
 ```
 
 (About 330 words. If #55 needs the 150–250 the issue asked for, cut the
 sentence on Chebyshev systems, which §3 of the manuscript cites anyway,
 and merge the two jump-method sentences; keep the last three sentences
-verbatim, they carry the obligations of §1a K6 and §1b O1.)
+verbatim, they carry the obligations of §1a K6 and §1b O1. #55 took both
+cuts; #69 replaced the closing "did not compare" sentence with the
+measured statement, and #61 brought this copy into line with the
+manuscript's §1.1, which is the text above.)
 
 ### 6b. Claim sentences (abstract and conclusions)
 
@@ -670,7 +678,7 @@ Bucket §1b, worded as "no prior instance found":
   test problem; their sources analyse and run them on staggered grids. On
   these grids and node sets no coefficient treatment reaches the seeds'
   order; the best of them is second order at a jump in one dimension, and
-  the seeds lie 3 to 700 times below it there and 3 to 6 times below it on
+  the seeds lie 3 to 730 times below it there and 3 to 6 times below it on
   the scattered nodes." (Replaces the "not run" wording of 2026-09-20
   morning; #69.)
 

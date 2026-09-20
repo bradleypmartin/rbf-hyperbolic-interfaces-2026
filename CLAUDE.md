@@ -109,7 +109,12 @@ measured statement with its scope; T3 Schoenberg–Muir stays excluded).
 #60 §7 drafted (limitations that cross-reference §2.4 and add what
 the experiments leave open, future work in the order to do it with the
 curvilinear evaluation first, conclusions quoting `LITERATURE.md` §6b
-verbatim). Open, in dependency order: #61 assembly, #62 arXiv packaging.
+verbatim). #61 assembly (2026-09-20): every number re-checked against the
+notes and the cache, the cache-backed ones asserted by
+`scripts/paper_numbers.py`; the notes' floor-row rates corrected from the
+cache; notation list in §2; `\nocite{*}` gone; floats barriered per §6
+subsection; UTF-8 surnames fix the `amsalpha` labels; ledger §6a
+synchronised with §1.1. Open: #62 arXiv packaging.
 `docs/stiff-features.md` stays canonical: the manuscript quotes it, every
 number traces to a notes section or the results cache, and a `% TRACE`
 comment per section names the source. Figures and tables come from
