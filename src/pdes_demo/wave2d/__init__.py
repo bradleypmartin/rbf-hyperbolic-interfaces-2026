@@ -10,7 +10,7 @@ Same split as ``wave1d``:
 - ``exact``: references for the flat-interface plane-wave problem: the ray
   sum for a jump, the 1-D spectral solver for smooth edges
 - ``spectral``: Fourier-in-x reference for oblique incidence on flat smooth
-  edges (Part 3)
+  edges, product-grid reference for curved smooth edges (Part 3)
 - ``resample``: one-sided interpolation to pixel grids and other node sets
 - ``seeds``: ODE-continued elastic seed bases for stiff smooth edges (Part 3)
 """
@@ -32,11 +32,12 @@ from .neighbors import minimal_image, periodic_knn, stencil_offsets, wrap
 from .operators import Operators, build_operators, hyperviscosity_gamma
 from .resample import pixel_grid, resample_matrix
 from .simulate import Snapshots2D, energy, run, stable_dt
-from .spectral import ModeState, run_fourier
+from .spectral import GridState, ModeState, run_fourier, run_fourier_2d
 
 __all__ = [
     "FIELDS",
     "ElasticMaterial",
+    "GridState",
     "LayeredMedium2D",
     "ModeState",
     "NodeSet",
@@ -57,6 +58,7 @@ __all__ = [
     "resample_matrix",
     "run",
     "run_fourier",
+    "run_fourier_2d",
     "spectral_plane_wave",
     "stable_dt",
     "stencil_offsets",
