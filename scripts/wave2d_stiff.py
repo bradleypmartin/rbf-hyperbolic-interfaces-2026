@@ -171,6 +171,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="truncation error of the operators on the reference state, per row group",
     )
+    parser.add_argument(
+        "--seed-rtol",
+        type=float,
+        default=0.0,
+        help="seed only the rows whose stencil sees a relative material spread "
+        "above this (0: any spread, tails to 19 delta; 1e-3 trims to 3.8 delta)",
+    )
     parser.add_argument("--t-end", type=float, default=1.0)
     parser.add_argument("--sharpness", type=float, default=15.0)
     parser.add_argument("--center", type=float, default=0.875)
@@ -194,6 +201,9 @@ def parse_args() -> argparse.Namespace:
     args.direction = tuple(args.direction)
     args.oblique = args.direction != (0, 1)
     args.curved = args.amplitude != 0.0
+    # u is exactly 0 only for the flat pulse at normal incidence; otherwise
+    # the u column is the relative error in u.
+    args.u_error = args.oblique or args.curved
     if args.oblique and 0.0 in args.widths:
         parser.error("oblique incidence has no jump reference; use widths > 0")
     if args.oblique and args.curved:
@@ -455,6 +465,7 @@ def _ops_path(
     )
     tag += "_abl" if mode == "ablate" else ""
     tag += geometry_tag(args)
+    tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
     return args.out_dir / (
         f"wave2d_stiff_ops_n{nodes.n}_seed{args.seed}_w{medium.edge_width:g}{tag}.npz"
     )
@@ -487,6 +498,7 @@ def operators_for(
         medium,
         mode="aware",
         seed_tangential=mode != "ablate",
+        seed_rtol=args.seed_rtol,
         workers=args.workers,
     )
     np.savez(
@@ -543,12 +555,12 @@ def errors_for(
     ref = reference
     if ref is None:
         ref = reference_at(nodes, medium, args, args.t_end)
-    u = rel_error(state[0], ref[0]) if args.oblique else float(np.abs(state[0]).max())
+    u = rel_error(state[0], ref[0]) if args.u_error else float(np.abs(state[0]).max())
     return {"v": rel_error(state[1], ref[1]), "h": rel_error(state[4], ref[4]), "u": u}
 
 
 def u_label(args: argparse.Namespace) -> str:
-    return "u err" if args.oblique else "max|u|"
+    return "u err" if args.u_error else "max|u|"
 
 
 def truncation_errors(
@@ -599,13 +611,13 @@ def print_table(
     args: argparse.Namespace,
 ) -> None:
     modes = list(results)
-    rated = "vhu" if args.oblique else "vh"
+    rated = "vhu" if args.u_error else "vh"
     head = "      N  h/delta"
     for mode in modes:
         m = MODE_SHORT[mode]
         for f in "vh":
             head += f" | {m + ' ' + f:>9s} {'rate':>4s}"
-        head += f" {u_label(args):>7s}" + (" rate" if args.oblique else "")
+        head += f" {u_label(args):>7s}" + (" rate" if args.u_error else "")
     for name in floors:
         head += f" | {name + ' v':>8s} {name + ' u':>9s}"
     print(head)
@@ -623,7 +635,7 @@ def print_table(
                 rate = f"{r[(mode, f)][i - 1]:4.1f}" if i else "    "
                 cells += f" | {results[mode][i][f]:9.2e} {rate}"
             cells += f" {results[mode][i]['u']:7.1e}"
-            if args.oblique:
+            if args.u_error:
                 cells += f" {r[(mode, 'u')][i - 1]:4.1f}" if i else "     "
             line += cells
         for name in floors:
@@ -765,7 +777,7 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
         fig.legend(handles, labels, loc="outside lower center", ncol=2, fontsize=9)
     axes_u[0].set_ylabel(
         f"relative error in u at t = {args.t_end:g}"
-        if args.oblique
+        if args.u_error
         else "max |u| (exact: 0)"
     )
     title = "Same nodes, same time step: the edge is only as sharp as delta"
@@ -780,6 +792,7 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
     tag = "_naive" if args.modes == ["naive"] else ""
     tag += "" if args.sharpness == 15.0 else f"_s{args.sharpness:g}"
     tag += direction_tag(args) + geometry_tag(args)
+    tag += f"_r{args.seed_rtol:g}" if args.seed_rtol else ""
     out = args.out_dir / f"wave2d_stiff{tag}.png"
     fig.savefig(out, dpi=160)
     print(f"\nwrote {out}")
@@ -893,7 +906,7 @@ def snapshot(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             im_e = ax_e.imshow(image(to_grid @ diff[mode][k]), **error_kw)
             style_map(ax_e, medium)
             rel = rel_error(runs[mode].state[k][1], refs[k][1])
-            if args.oblique:
+            if args.u_error:
                 rel_u = rel_error(runs[mode].state[k][0], refs[k][0])
                 u_line, u_print = f"rel. error in u {rel_u:.1%}", f"u {rel_u:.2e}"
             else:
