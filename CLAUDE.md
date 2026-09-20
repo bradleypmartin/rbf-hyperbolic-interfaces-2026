@@ -114,7 +114,18 @@ notes and the cache, the cache-backed ones asserted by
 `scripts/paper_numbers.py`; the notes' floor-row rates corrected from the
 cache; notation list in §2; `\nocite{*}` gone; floats barriered per §6
 subsection; UTF-8 surnames fix the `amsalpha` labels; ledger §6a
-synchronised with §1.1. Open: #62 arXiv packaging.
+synchronised with §1.1. #62 packaging (2026-09-20): `make_arxiv.py`
+stages the `tab_*.tex` fragments too, strips whole-line comments, runs
+`paper_numbers.py` and `paper_figures.py --check`, rebuilds the staged
+tree and compares its text with `main.pdf`, and checks the accented
+labels render; the stub gave way to the acknowledgments (Fornberg) and a
+*Tool and computational resource disclosure* section in the form of the
+Leiden Declaration (Claude Fable 5.1 via Claude Code for the derivation,
+the code and the drafting; GPT-5.6 Sol and GPT-6 Astra as referees;
+Claude Sonnet on the code); §1 item 6 links the `manuscript-v1` tag; the
+decisions (math.NA + physics.comp-ph, endorsement, CC BY 4.0, date,
+length) and a survey of recent disclosures are in `paper/README.md`.
+Left to Brad: the submission and the tag.
 `docs/stiff-features.md` stays canonical: the manuscript quotes it, every
 number traces to a notes section or the results cache, and a `% TRACE`
 comment per section names the source. Figures and tables come from
@@ -181,7 +192,7 @@ src/pdes_demo/   library code
 scripts/         drivers that write figures and clips to outputs/;
                  check_slide_quotes.py; paper_figures.py (the manuscript's
                  figures and tables from paper/data/, #54)
-tests/           pytest, 237 tests; every numerical routine has one
+tests/           pytest, 245 tests; every numerical routine has one
 docs/            demo-outline.md, navier-stokes-notes.md, paper-index.md,
                  stiff-features.md (Part 3) with its figures in figures/
 slides/          talk.tex → talk.pdf (committed), notes.md (speaker script with
@@ -242,7 +253,8 @@ uv run python scripts/check_slide_quotes.py   # every \q{} in talk.tex is in the
 ./papers/fetch_papers.sh                      # public papers, checksum-checked
 (cd paper && tectonic main.tex)               # the manuscript → paper/main.pdf
 (cd paper && tectonic --keep-intermediates main.tex && uv run python make_arxiv.py)
-                                              # arXiv tarball (needs main.bbl)
+                                              # arXiv tarball: repo checks, comment
+                                              # stripping, rebuild-and-compare gate, ~1 min
 ```
 
 Clip renders are listed in `slides/README.md`. Both demo drivers take
