@@ -555,7 +555,12 @@ def errors_for(
     ref = reference
     if ref is None:
         ref = reference_at(nodes, medium, args, args.t_end)
-    u = rel_error(state[0], ref[0]) if args.u_error else float(np.abs(state[0]).max())
+    # A reference without u (the floors' uniform-medium pulse) gets the
+    # largest spurious |u| instead of a relative error.
+    if args.u_error and np.linalg.norm(ref[0]) > 0:
+        u = rel_error(state[0], ref[0])
+    else:
+        u = float(np.abs(state[0]).max())
     return {"v": rel_error(state[1], ref[1]), "h": rel_error(state[4], ref[4]), "u": u}
 
 
@@ -722,9 +727,10 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
             ms=5,
             lw=1.4,
         )
-        ax_u.loglog(
-            ns, [e["u"] for e in floor], "s--", color=INK_SECONDARY, ms=5, lw=1.4
-        )
+        if not args.curved:  # the curved floors' u is spurious, not an error
+            ax_u.loglog(
+                ns, [e["u"] for e in floor], "s--", color=INK_SECONDARY, ms=5, lw=1.4
+            )
         if "sfloor" in floors:
             kw = dict(color=AWARE, ms=5, lw=1.4, ls=":", marker="s", mfc="none")
             ax.loglog(
@@ -733,7 +739,8 @@ def sweep(args: argparse.Namespace, node_sets: dict[int, NodeSet]) -> None:
                 label="seed operator, no contrast (seed floor)",
                 **kw,
             )
-            ax_u.loglog(ns, [e["u"] for e in floors["sfloor"]], **kw)
+            if not args.curved:
+                ax_u.loglog(ns, [e["u"] for e in floors["sfloor"]], **kw)
         guides = [("naive", 2, "2nd order")]
         if "aware" in args.modes:
             guides.append(("aware", 4, "4th order"))
