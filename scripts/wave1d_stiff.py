@@ -16,7 +16,18 @@ those records, so ``scripts/paper_figures.py`` can redraw them in print
 style without this run. ``--style print --format pdf`` draws them that way
 here.
 
+``--comparators`` (issue #69) also runs the standard scheme on a changed
+medium, the standing alternative to an interface stencil: the edge widened
+to ``max(delta, h)`` and ``max(delta, 2h)`` (``widen1``, ``widen2``), the
+cell-averaged compliance and density of Tornberg & Engquist (2006) over
+one cell and over two (``cell``, ``cell2``; on this cell-centred grid a jump
+sits on a cell boundary, so the one-cell average never reaches a node at
+delta = 0) and the band-limited ones of Koene et al. (2022) (``bandlimit``),
+all from :mod:`pdes_demo.wave1d.treatments`, each measured against the
+true medium's reference and written to the cache as further modes.
+
     uv run python scripts/wave1d_stiff.py
+    uv run python scripts/wave1d_stiff.py --comparators
     uv run python scripts/wave1d_stiff.py --widths 0 0.001 --ns 100 200 400 800 1600
     uv run python scripts/wave1d_stiff.py --style print --format pdf \\
         --data-dir paper/data
@@ -40,11 +51,18 @@ from pdes_demo.plotting import (
     use_print_style,
 )
 from pdes_demo.results_cache import ResultsCache
-from pdes_demo.stiff_figures import DEMO_LABELS_1D, convergence_1d, seeds_1d
+from pdes_demo.stiff_figures import (
+    DEMO_LABELS_1D,
+    comparators_1d,
+    convergence_1d,
+    seeds_1d,
+)
 from pdes_demo.wave1d import LayeredMedium, exact_solution, periodic_grid, run
 from pdes_demo.wave1d.spectral import interpolate, reference_size, run_spectral
+from pdes_demo.wave1d.treatments import TreatedMedium, widened
 
 REF_DT = 5e-5
+COMPARATORS = ("widen1", "widen2", "cell", "cell2", "bandlimit")
 
 
 def parse_args() -> argparse.Namespace:
@@ -56,6 +74,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--t-end", type=float, default=1.0)
     parser.add_argument("--sharpness", type=float, default=60.0)
     parser.add_argument("--center", type=float, default=-0.6)
+    parser.add_argument(
+        "--comparators",
+        action="store_true",
+        help="also run the coefficient treatments of #69 through the standard "
+        f"scheme ({', '.join(COMPARATORS)})",
+    )
     parser.add_argument("--snapshot-n", type=int, default=100)
     parser.add_argument("--snapshot-width", type=float, default=0.0025)
     parser.add_argument("--out-dir", type=Path, default=Path("outputs"))
@@ -116,12 +140,26 @@ def reference_at(
     return interpolate(f, grid, x)
 
 
+def run_medium(grid, medium: LayeredMedium, mode: str) -> tuple:
+    """``(medium, scheme)`` the run uses for ``mode``: the true medium with
+    the naive or seed scheme, or a treated medium with the naive scheme."""
+    if mode in ("naive", "aware"):
+        return medium, mode
+    if mode.startswith("widen"):
+        return widened(medium, grid.h, int(mode[len("widen") :])), "naive"
+    if mode.startswith("cell"):
+        cells = float(mode[len("cell") :] or 1)
+        return TreatedMedium(medium, cells * grid.h, kernel="box"), "naive"
+    return TreatedMedium(medium, grid.h, kernel="sinc"), "naive"
+
+
 def rel_error(n: int, medium: LayeredMedium, mode: str, args: argparse.Namespace):
     grid = periodic_grid(n)
+    medium_run, scheme = run_medium(grid, medium, mode)
     snaps = run(
         grid,
-        medium,
-        mode=mode,
+        medium_run,
+        mode=scheme,
         t_end=args.t_end,
         n_snapshots=1,
         pulse_center=args.center,
@@ -139,6 +177,7 @@ def rates(ns: np.ndarray, errors: list[float]) -> np.ndarray:
 def convergence_figure(args: argparse.Namespace, cache: ResultsCache) -> None:
     """The sweep: errors and rates into ``cache``, printed, then drawn."""
     ns = np.array(args.ns, dtype=float)
+    modes = ["naive", "aware"] + (list(COMPARATORS) if args.comparators else [])
     for width in args.widths:
         medium = LayeredMedium(edge_width=width)
         title = (
@@ -147,11 +186,10 @@ def convergence_figure(args: argparse.Namespace, cache: ResultsCache) -> None:
         print(f"\n{title}")
         t0 = time.perf_counter()
         errors = {
-            mode: [rel_error(n, medium, mode, args) for n in args.ns]
-            for mode in ("naive", "aware")
+            mode: [rel_error(n, medium, mode, args) for n in args.ns] for mode in modes
         }
         print(f"  ({time.perf_counter() - t0:.1f}s)")
-        print("      N   h/delta      naive   rate      aware   rate")
+        print("      N   h/delta " + "".join(f"{m:>11}   rate" for m in modes))
         r = {mode: rates(ns, errors[mode]) for mode in errors}
         for mode in errors:
             cache.add_errors(
@@ -165,18 +203,24 @@ def convergence_figure(args: argparse.Namespace, cache: ResultsCache) -> None:
             )
         for i, n in enumerate(args.ns):
             h_over = f"{2 / n / width:8.2f}" if width else "     inf"
-            rn = f"{r['naive'][i - 1]:5.1f}" if i else "     "
-            ra = f"{r['aware'][i - 1]:5.1f}" if i else "     "
-            print(
-                f"  {n:5d}  {h_over}  {errors['naive'][i]:9.2e} {rn}  "
-                f"{errors['aware'][i]:9.2e} {ra}"
+            cells = "".join(
+                f"  {errors[m][i]:9.2e} " + (f"{r[m][i - 1]:5.1f}" if i else "     ")
+                for m in modes
             )
+            print(f"  {n:5d}  {h_over}{cells}")
     out = convergence_1d(
         cache,
         args.out_dir / f"wave1d_stiff_convergence.{args.format}",
         print_mode=args.style == "print",
     )
     print(f"\nwrote {out}")
+    if args.comparators:
+        out = comparators_1d(
+            cache,
+            args.out_dir / f"wave1d_stiff_comparators.{args.format}",
+            print_mode=args.style == "print",
+        )
+        print(f"wrote {out}")
 
 
 def snapshot_figure(args: argparse.Namespace, cache: ResultsCache) -> None:

@@ -7,6 +7,7 @@ from pdes_demo.stiff_tables import (
     rates_cell,
     sci,
     table_1d,
+    table_1d_comparators,
     table_2d,
     table_spectra,
     table_truncation,
@@ -46,6 +47,7 @@ def _cache_2d(u_field: str = "max_u") -> ResultsCache:
         (0.0025, "naive", [8.9e-2, 4.8e-2]),
         (0.0025, "aware", [3.0e-2, 7.7e-3]),
         (0.0025, "sfloor", [2.7e-2, 6.7e-3]),
+        (0.0025, "widen1", [4.5e-1, 3.0e-1]),
     ]:
         cache.add_errors(ns, v, [1.7], h=h, delta=delta, mode=mode, field="v")
         cache.add_errors(ns, v, [1.7], h=h, delta=delta, mode=mode, field=u_field)
@@ -168,3 +170,27 @@ def test_table_spectra_adds_run_columns_only_when_measured() -> None:
     row = r"$h/8$ & seeds & $985$ & \sci{+6.3}{-2} & 1.00030 & 0.995 & "
     assert row + r"\sci{1.70}{-3} & \sci{3.0}{-2} \\" in text
     assert r"jump & naive & $0$ & \sci{+3.5}{-3} & 1.00001 & -- & -- & -- \\" in text
+
+
+def test_table_1d_comparators_lists_the_treated_media_and_skips_absent_ones() -> None:
+    cache = ResultsCache.new("scripts/wave1d_stiff.py", {})
+    ns = [100, 200]
+    h = [2 / n for n in ns]
+    for mode, errs in [
+        ("naive", [7.1e-2, 3.2e-2]),
+        ("aware", [3.9e-3, 2.5e-4]),
+        ("cell", [7.1e-2, 3.2e-2]),
+        ("cell2", [1.3e-2, 2.9e-3]),
+        ("widen1", [8.5e-2, 4.3e-2]),
+    ]:
+        cache.add_errors(ns, errs, [1.0], h=h, delta=0.0, mode=mode, field="f")
+    text = table_1d_comparators(cache, "paper/data/wave1d_stiff.json")
+    body = [ln for ln in text.splitlines() if ln.endswith(r"\\")][1:]
+    # naive, cell, cell2, aware: the band-limited rows are absent, the
+    # widened ones are not asked for.
+    assert len(body) == 4
+    assert "cell mean, $2h$" in body[2] and "interface-aware" in body[3]
+    assert "widened" not in text
+    # The knee table ignores the comparator modes.
+    knee = [ln for ln in table_1d(cache, "x").splitlines() if ln.endswith(r"\\")]
+    assert len(knee) == 3

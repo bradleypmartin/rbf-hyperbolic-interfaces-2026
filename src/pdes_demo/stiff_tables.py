@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .results_cache import ResultsCache
 
-MODE_ORDER = ("naive", "aware", "ablate", "sfloor")
+MODE_ORDER = ("naive", "aware", "ablate", "widen1", "widen2", "sfloor")
 VARIANT_LABELS = {
     "naive": "naive",
     "aware": "interface-aware",
@@ -64,14 +64,26 @@ def delta_label(width: float | None) -> str:
     return "$0$ (jump)" if width == 0 else f"${width:g}$"
 
 
+COMPARATOR_LABELS = {
+    "widen1": "widened, $h$",
+    "widen2": "widened, $2h$",
+    "cell": "cell mean, $h$",
+    "cell2": "cell mean, $2h$",
+    "bandlimit": "band-limited",
+}
+
+
 def mode_label(mode: str, width: float | None, one_d: bool = False) -> str:
     if mode == "naive":
         return "standard FD4" if one_d else "naive"
     if mode == "aware":
         return "interface-aware" if width == 0 else "seeds"
-    return {"ablate": "ablation", "sfloor": "seed floor", "floor": "floor (uniform)"}[
-        mode
-    ]
+    return {
+        "ablate": "ablation",
+        "sfloor": "seed floor",
+        "floor": "floor (uniform)",
+        **COMPARATOR_LABELS,
+    }[mode]
 
 
 def tabular(
@@ -117,6 +129,30 @@ def table_1d(cache: ResultsCache, source: str) -> str:
             )
     header = [r"$\delta$", "scheme", *n_header(ns), "rates"]
     return tabular(header, rows, "ll" + "r" * len(ns) + "l", source)
+
+
+def table_1d_comparators(
+    cache: ResultsCache,
+    source: str,
+    modes: tuple[str, ...] = ("naive", "cell", "cell2", "bandlimit", "aware"),
+) -> str:
+    """Notes §2.1 (#69): the standard scheme on the treated media against the
+    standard scheme on the true one and the seeds, per edge width."""
+    ns = _ns(cache)
+    rows: list[list[str] | None] = []
+    for width in _widths(cache):
+        for mode in modes:
+            recs = cache.select("error", delta=width, mode=mode, field="f")
+            if not recs:
+                continue
+            rows.append(
+                [delta_label(width), mode_label(mode, width, one_d=True)]
+                + [sci(r["error"]) for r in recs]
+                + [rates_cell(recs)]
+            )
+        rows.append(None)
+    header = [r"$\delta$", "medium, scheme", *n_header(ns), "rates"]
+    return tabular(header, rows[:-1], "ll" + "r" * len(ns) + "l", source)
 
 
 def table_2d(

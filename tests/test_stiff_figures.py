@@ -16,6 +16,7 @@ from pdes_demo.plotting import use_demo_style, use_print_style
 from pdes_demo.results_cache import ResultsCache
 from pdes_demo.stiff_figures import (
     SEED_MEMBERS_2D,
+    comparators_1d,
     convergence_1d,
     convergence_2d,
     seed_sections_2d,
@@ -148,3 +149,25 @@ def test_seed_sections_jump_limit_has_the_traction_slope_ratio() -> None:
     assert np.abs(induced[below]).max() < 1e-8
     assert np.abs(induced[above]).max() > 1e-3
     assert len(SEED_MEMBERS_2D) == 4
+
+
+@pytest.mark.parametrize("print_mode", [False, True])
+def test_comparator_figure_renders_with_and_without_the_treated_modes(
+    tmp_path: Path, print_mode
+) -> None:
+    cache = _cache_1d()
+    out = comparators_1d(cache, tmp_path / "bare.pdf", print_mode=print_mode)
+    assert out.exists() and out.stat().st_size > 1000
+    ns = [100, 200, 400]
+    h = [2 / n for n in ns]
+    for mode, errs in [
+        ("cell", [5.7e-2, 1.9e-2, 3.9e-3]),
+        ("cell2", [1.3e-2, 2.6e-3, 5.9e-4]),
+        ("bandlimit", [5.3e-2, 1.8e-2, 3.8e-3]),
+    ]:
+        for delta in (0.0, 0.0025, 0.01):
+            cache.add_errors(
+                ns, errs, [1.6, 2.3], h=h, delta=delta, mode=mode, field="f"
+            )
+    out = comparators_1d(cache, tmp_path / "full.pdf", print_mode=print_mode)
+    assert out.exists() and out.stat().st_size > 1000

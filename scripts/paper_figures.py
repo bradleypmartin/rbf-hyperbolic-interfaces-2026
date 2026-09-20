@@ -28,9 +28,16 @@ from pathlib import Path
 
 from pdes_demo.plotting import use_print_style
 from pdes_demo.results_cache import ResultsCache
-from pdes_demo.stiff_figures import convergence_1d, convergence_2d, seeds_1d, seeds_2d
+from pdes_demo.stiff_figures import (
+    comparators_1d,
+    convergence_1d,
+    convergence_2d,
+    seeds_1d,
+    seeds_2d,
+)
 from pdes_demo.stiff_tables import (
     table_1d,
+    table_1d_comparators,
     table_2d,
     table_spectra,
     table_truncation,
@@ -42,19 +49,29 @@ DATA = ROOT / "paper" / "data"
 FIGURES = ROOT / "paper" / "figures"
 OUTPUTS = ROOT / "outputs"
 
-# Cache file -> the convergence figure drawn from it.
+# Figure -> (cache file, drawer). The drawer takes (cache, out, print_mode=True).
 CONVERGENCE = {
-    "wave1d_stiff.json": ("wave1d_stiff_convergence.pdf", convergence_1d),
-    "wave2d_stiff.json": ("wave2d_stiff_convergence.pdf", convergence_2d),
-    "wave2d_stiff_d12.json": ("wave2d_stiff_oblique_convergence.pdf", convergence_2d),
-    "wave2d_stiff_a0.02.json": ("wave2d_stiff_convergence_curved.pdf", convergence_2d),
+    "wave1d_stiff_convergence.pdf": ("wave1d_stiff.json", convergence_1d),
+    "wave1d_stiff_comparators.pdf": ("wave1d_stiff.json", comparators_1d),
+    "wave2d_stiff_convergence.pdf": ("wave2d_stiff.json", convergence_2d),
+    "wave2d_stiff_oblique_convergence.pdf": ("wave2d_stiff_d12.json", convergence_2d),
+    "wave2d_stiff_convergence_curved.pdf": ("wave2d_stiff_a0.02.json", convergence_2d),
 }
 
 # Fragment -> (cache file, writer). The writer takes (cache, source).
 TABLES = {
     "tab_1d_knee.tex": ("wave1d_stiff.json", table_1d),
+    "tab_1d_comparators.tex": ("wave1d_stiff.json", table_1d_comparators),
     "tab_2d_flat_v.tex": ("wave2d_stiff.json", lambda c, s: table_2d(c, "v", s)),
     "tab_2d_flat_h.tex": ("wave2d_stiff.json", lambda c, s: table_2d(c, "h", s)),
+    "tab_2d_flat_cmp_v.tex": (
+        "wave2d_stiff_cmp.json",
+        lambda c, s: table_2d(c, "v", s),
+    ),
+    "tab_2d_curved_cmp_v.tex": (
+        "wave2d_stiff_cmp_a0.02.json",
+        lambda c, s: table_2d(c, "v", s),
+    ),
     "tab_2d_flat_u.tex": (
         "wave2d_stiff.json",
         lambda c, s: table_2d(c, "max_u", s, rates=False),
@@ -165,7 +182,7 @@ def from_cache(out_dir: Path) -> list[Path]:
     """Everything the cache alone can produce; missing caches are reported
     and skipped so the script works while a run is still pending."""
     written = []
-    for name, (fig_name, draw) in CONVERGENCE.items():
+    for fig_name, (name, draw) in CONVERGENCE.items():
         path = DATA / name
         if not path.exists():
             print(f"  skip {fig_name}: no {path.relative_to(ROOT)}")
