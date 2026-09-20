@@ -1794,3 +1794,116 @@ the tables' 3.1×.
 
 ![Pressure pulse through a band with curved smooth edges at 10,000 nodes: the reference, its curl, and the two error maps](figures/wave2d_stiff_snapshot_curved.png)
 
+#### 5.6.1 Two follow-ups: δ = 0.0025, and trimming the seeded rows
+
+**δ = 0.0025** (`--widths 0.0025`, h/δ from 8 to 2.9, the flat sweep's
+sharpest column; reference 2048 × 4096, 12,874 s, the driver's default
+n_x = n_y/2 at this n_y; seeded rows 982, 1608, 2748, 4918, the flat
+counts). The case the geometric estimate at the top of this section
+singled out: κr²/2 is 40%, 20%, 10%, 5% of δ at the four n.
+
+| δ = 0.0025 | operator | v at 2500 … 19600 | rates | h at 19600 | u at 19600 |
+| --- | --- | --- | --- | --- | --- |
+| curved | naive | 9.2e-2, 4.6e-2, 2.4e-2, 1.19e-2 | 2.1, 1.9, 2.1 | 1.16e-2 | 2.0e-2 |
+| curved | seeds | 2.9e-2, 8.1e-3, 2.9e-3, 9.5e-4 | 3.8, 2.9, 3.3 | 8.0e-4 | 4.0e-3 |
+| curved | seed floor | 2.7e-2, 6.7e-3, 1.93e-3, 7.1e-4 | 4.0, 3.5, 3.0 | | |
+| flat (§5.4) | seeds | 3.0e-2, 7.7e-3, 2.1e-3, 6.4e-4 | 4.1, 3.7, 3.5 | 6.7e-4 | |
+| flat (§5.4) | naive | 8.9e-2, 4.8e-2, 2.7e-2, 1.3e-2 | 1.9, 1.6, 2.2 | 1.2e-2 | |
+| | floor | 5.3e-2, 1.81e-2, 4.8e-3, 1.30e-3 | 3.2, 3.9, 3.8 | | |
+
+Truncation on the reference state, seeds' edge rows 1.08e-2, 3.6e-3,
+1.07e-3, 3.3e-4 (rates 3.2, 3.6, 3.4) against bulk rows 2.5e-3, 8.3e-4,
+2.4e-4, 7.0e-5: ratios 4.3, 4.4, 4.5, 4.8; the naive edge rows 5.9e-2,
+4.8e-2, 3.6e-2, 2.2e-2 (0.6, 0.9, 1.5), 5–66× the seeds'.
+
+Three things. First, the headline: through an edge the nodes never
+resolve, on curved interfaces, the seeds are 3.2×, 5.7×, 8.2×, 12.5×
+below the naive scheme in v (14× in h, 5× in u at 19,600), at rates
+3.3–3.8 against the naive 1.9–2.1, and at 19,600 nodes their 9.5e-4 is
+below the naive scheme's resolution floor of 1.30e-3 with no edge at
+all: the §5.4 result on the geometry it was meant for. Second, this is
+where route (a)'s geometry first shows. The curved seeds are 1.0×,
+1.05×, 1.4×, 1.5× the flat seeds at the four n, they sit at 1.05×,
+1.2×, 1.5×, 1.34× their own floor where at δ = 0.005 they sat at
+0.8–1.2×, and the seed rows' truncation ratio to the bulk rows *rises*
+with n (4.3 → 4.8) where at δ = 0.005 it fell (3.6 → 2.8): a term that
+shrinks as h² against one that shrinks as h^3.5. Taking the excess over
+the seed floor in quadrature, the geometric contribution at 19,600
+nodes is about 6·10⁻⁴, half the naive floor and level with the seed
+floor; it would lead at the next node set. Third, the estimate at the
+top of the section was the right size: 5% of δ in the material at
+the far nodes costs the seeds 50% of their error at 19,600 nodes, and
+40% of δ at 2500 nodes costs nothing because the resolution error is
+30× larger there.
+
+**Trimmed seeds** (`--seed-rtol 1e-3`, δ = 0.005): seed only the rows
+whose 19-node stencil sees more than 10⁻³ of the contrast, which is
+the tanh tails to 3.8δ instead of 19δ: 601, 977, 1585, 2746 rows (24%
+down to 14% of the nodes) instead of 1320, 2452, 4631, 8553. Everything
+else as above (the seed floor is undefined under a trim: a 10⁻⁶
+contrast seeds no row).
+
+| δ = 0.005 | operator | v at 2500 … 19600 | rates | h at 19600 | u at 19600 |
+| --- | --- | --- | --- | --- | --- |
+| tails to 19δ | seeds | 2.6e-2, 4.5e-3, 2.0e-3, 8.8e-4 | 5.2, 2.3, 2.5 | 6.1e-4 | 2.6e-3 |
+| tails to 3.8δ | seeds, trimmed | 3.2e-2, 1.00e-2, 3.2e-3, 9.4e-4 | 3.4, 3.2, 3.6 | 8.6e-4 | 3.9e-3 |
+| | naive | 8.1e-2, 3.2e-2, 6.3e-3, 1.90e-3 | 2.8, 4.5, 3.5 | 1.79e-3 | 6.0e-3 |
+| | floor | 5.3e-2, 1.81e-2, 4.8e-3, 1.30e-3 | 3.2, 3.9, 3.8 | | |
+
+The trim does what the floor bullet predicted for the *rate*: 3.4,
+3.2, 3.6 all the way, no fine-end decay, and the trimmed seeds' edge
+rows keep 3.4–4.0 in the truncation probe (1.15e-2, 3.7e-3, 9.3e-4,
+2.9e-4 on the rows nearest the edge, 5–34× below the naive rows there).
+It does not lower the *error* on these node sets: at 19,600 nodes the
+two are equal in v (9.4e-4 against 8.8e-4, both below the naive floor's
+1.30e-3), and at every coarser n the untrimmed seeds are 1.2–2.2× better
+in v and 1.5× better in u throughout, because the 19-node degree-3 rows
+have the smaller error constant there (the seed floor sits below the
+naive floor at 4900 and 10,000 nodes) and the wide seeded region gets
+that constant on half the domain. So the fine-end rate of the untrimmed
+seeds is confirmed to be the seeded region's own resolution and not the
+edge, the trim is the lever that restores the order beyond 19,600 nodes
+(extrapolating the two rates, the trimmed seeds lead by 40% at 40,000
+nodes), and where to put the seeded region's boundary between 3.8δ and
+19δ is a tuning question for larger node sets, outside this issue.
+`outputs/wave2d_stiff_a0.02_r0.001.png` is the figure.
+
+#### 5.6.2 The route (b) decision, and acceptance
+
+**Decision on route (b).** Not needed on these node sets, on the
+evidence above: through δ = 0.005 and 0.01 the route (a) seeds sit at
+the seed operator's own floor at every n, their rows' truncation error
+on the true curved solution converges at the bulk rows' rate, through δ = 0.0025 the geometry
+first shows, as 1.4–1.5× the flat seeds' error at 10,000 and 19,600
+nodes, a contribution level with the seed floor and half the naive
+floor (§5.6.1),
+and the curved sweep reproduces the flat one. The floor route (a) does
+impose is the geometric one estimated at the top of this section,
+κr²/2 against δ, and it is below the resolution floor of these node
+sets at every width the sweep ran. What would make (b) necessary is a
+curvature radius comparable to the stencil, or a δ so small that κr²/2δ
+is order one at a resolution the node set can still afford, and neither
+is the Part 2 geometry. If it is ever needed, the cheaper first step is
+not the per-stencil boundary-value problem but the curvilinear
+evaluation of the same seeds: keep the ODE marches, evaluate each seed
+at the node's true (arclength, normal distance) instead of its tangent
+coordinates, and scale the tangential jets at the anchor by
+1/(1 − κy_e); that makes the material exact at every node and leaves
+only the operator's curvature terms as the error, at no march cost.
+It was not built because nothing here asked for it.
+
+**Acceptance.** (1) Route (a) convergence at amplitude 0.02 with the
+error floor stated and compared with the curved-jump floor: the tables
+above; the seeds' floor is the seed operator's own (measured), the
+curved jump path's is the resolution floor (measured), and route (a)'s
+geometric floor is below both. (2) Spectrum at n = 2500 with the
+standard γ, curved: the flat spectrum. (3) The decision, above, with
+the truncation probe as the evidence. (4) The clip, under `outputs/`,
+not committed. Two things this issue did not do: the oblique train on
+the curved geometry (the product-grid reference takes any initial
+state, so it is a driver flag away, but §5.5 already showed what the
+converted-S floor does at 26.6°), and the seeded-width tuning of
+§5.6.1. Runtime: the references took 45 min to build, plus 3.6 h for
+the 2048 × 4096 grid of δ = 0.0025, and are cached; the 24 curved seed
+operators about an hour on 6–12 workers; the sweep 12 min from the
+caches, the spectra 23 min, the clip 21 min.

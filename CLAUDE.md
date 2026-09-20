@@ -68,8 +68,11 @@ floor at every n (3.6th order to 19,600 nodes); through δ = 0.005 the
 curved seeds sit at the seed operator's own floor at every n, 2.2–7×
 below naive, and through δ = 0.01 the curved numbers equal the flat ones,
 crossover at h = δ as before; the seed rows' truncation error on the
-true curved solution converges at the bulk rate, so route (b) is not
-needed at these widths; the spectra at 2500 nodes are the flat ones.
+true curved solution converges at the bulk rate; through δ = 0.0025 the
+seeds are 3–12× below naive and route (a)'s geometry first shows (1.5×
+the flat seeds at 19,600 nodes, level with the seed floor), so route
+(b) is not needed on these node sets and would start to be beyond
+them at δ ≤ h/3; the spectra at 2500 nodes are the flat ones.
 The fine-end rate of the seeds (2.3–2.6) is the 19-node degree-3 rows
 covering the 19δ tails, not the edge (`--seed-rtol` trims them).
 Derivation in `docs/stiff-features.md` §4, results in §5 (§5.6 curved).
