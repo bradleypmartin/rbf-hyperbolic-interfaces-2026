@@ -118,12 +118,15 @@ def run(
     pulse_sharpness: float = 23.0,
     operators: Operators | None = None,
     align_snapshots: bool = False,
+    initial: np.ndarray | None = None,
 ) -> Snapshots2D:
     """Build operators (unless given), set the plane pulse, integrate to ``t_end``.
 
     ``t_end`` is hit exactly by shrinking the step so an integer number of
     steps lands on it. ``gamma_scale`` multiplies the MATLAB hyperviscosity
-    amplitude of :func:`hyperviscosity_gamma`.
+    amplitude of :func:`hyperviscosity_gamma`. ``initial`` ``(5, n)``
+    replaces the plane pulse (the oblique train of
+    :func:`~.domain.oblique_p_wave`, for one).
 
     With ``align_snapshots`` the step count is rounded up to a multiple of
     ``n_snapshots``, so the stored times are exactly ``j t_end / n_snapshots``
@@ -145,7 +148,12 @@ def run(
     dt = t_end / n_steps
     store_every = 1 if n_snapshots is None else max(1, n_steps // n_snapshots)
 
-    state0 = plane_p_wave(nodes, medium, pulse_center, pulse_sharpness)
+    if initial is None:
+        state0 = plane_p_wave(nodes, medium, pulse_center, pulse_sharpness)
+    else:
+        state0 = np.asarray(initial, dtype=float)
+        if state0.shape != (len(FIELDS), nodes.n):
+            raise ValueError(f"initial state must have shape (5, {nodes.n})")
     times, states = rk4(state0, operator, dt, n_steps, store_every)
     return Snapshots2D(t=times, state=states, dt=dt, gamma=gamma)
 
