@@ -52,6 +52,9 @@ STYLE_2D = {
     "sfloor": dict(color=AWARE, marker="s", ls=":", mfc="none"),
     "widen1": dict(color=INK_SECONDARY, marker="^", ls="--", mfc="none"),
     "widen2": dict(color=INK, marker="v", ls=":", mfc="none"),
+    "cell": dict(color=INK_SECONDARY, marker="^", ls="--", mfc="none"),
+    "cell2": dict(color=INK_SECONDARY, marker="s", ls="-"),
+    "bandlimit": dict(color=INK, marker="D", ls=":", mfc="none"),
 }
 DEMO_LABELS_2D = {
     "naive": "standard RBF-FD (naive)",
@@ -61,6 +64,9 @@ DEMO_LABELS_2D = {
     "sfloor": "seed operator, no contrast (seed floor)",
     "widen1": "naive, edge widened to max(delta, h)",
     "widen2": "naive, edge widened to max(delta, 2h)",
+    "cell": "naive, cell mean over h",
+    "cell2": "naive, cell mean over 2h",
+    "bandlimit": "naive, band-limited",
 }
 PRINT_LABELS_2D_ALL = {
     "naive": PRINT_LABELS_2D["naive"],
@@ -70,6 +76,9 @@ PRINT_LABELS_2D_ALL = {
     "sfloor": "seed floor (no contrast)",
     "widen1": r"naive, edge widened to $\max(\delta, h)$",
     "widen2": r"naive, edge widened to $\max(\delta, 2h)$",
+    "cell": "naive, cell mean over $h$",
+    "cell2": "naive, cell mean over $2h$",
+    "bandlimit": "naive, band-limited",
 }
 DEMO_LABELS_1D = {"aware": "seed stencils (ODE-continued)", "naive": LABELS["naive"]}
 

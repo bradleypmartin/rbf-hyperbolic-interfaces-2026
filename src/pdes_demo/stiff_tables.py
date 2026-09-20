@@ -16,7 +16,17 @@ from pathlib import Path
 
 from .results_cache import ResultsCache
 
-MODE_ORDER = ("naive", "aware", "ablate", "widen1", "widen2", "sfloor")
+MODE_ORDER = (
+    "naive",
+    "aware",
+    "ablate",
+    "widen1",
+    "widen2",
+    "cell",
+    "cell2",
+    "bandlimit",
+    "sfloor",
+)
 VARIANT_LABELS = {
     "naive": "naive",
     "aware": "interface-aware",

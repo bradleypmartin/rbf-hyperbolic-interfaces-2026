@@ -93,6 +93,7 @@ def test_table_2d_orders_modes_and_puts_the_floor_last() -> None:
         "$0$ (jump) & interface-aware",
         "$0.0025$ & naive",
         "$0.0025$ & seeds",
+        "$0.0025$ & widened, $h$",
         "$0.0025$ & seed floor",
         "floor & naive, uniform",
     ]
