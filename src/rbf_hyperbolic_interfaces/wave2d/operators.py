@@ -119,7 +119,7 @@ def build_operators(
     50 ms; ``workers`` > 1 spreads them over that many processes (the march
     is Python-bound, so it scales with the cores), same weights to rounding.
     ``seed_tangential=False`` keeps the marched seeds for the pure normal
-    monomials only (:func:`~.seeds.seed_basis`, the #41 ablation).
+    monomials only (:func:`~.seeds.seed_basis`, the demo#41 ablation).
     """
     if mode not in ("naive", "aware"):
         raise ValueError(f"unknown mode {mode!r}")

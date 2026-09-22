@@ -1,4 +1,4 @@
-"""Fourier pseudo-spectral reference (issue #30)."""
+"""Fourier pseudo-spectral reference (issue demo#30)."""
 
 import numpy as np
 import pytest

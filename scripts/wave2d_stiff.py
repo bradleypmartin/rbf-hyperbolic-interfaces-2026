@@ -7,7 +7,7 @@ Seeds: ``build_operators(mode="aware")``, the ODE-continued seed stencils of
 ``wave2d/seeds.py`` on every row that sees the edge (at delta = 0 that is
 Part 2's interface-aware operator). Plane P-wave at normal incidence by
 default; ``--direction m_x m_y`` sends the plane-wave train of
-``oblique_p_wave`` at the angle atan(m_x / m_y) to the edge normal (#41),
+``oblique_p_wave`` at the angle atan(m_x / m_y) to the edge normal (demo#41),
 where the seeds' x'-dependent columns act for the first time and P-to-S
 conversion appears. Errors in v, h and u at t = 1 against the ray sum
 (delta = 0, normal incidence), the 1-D pseudo-spectral reference mapped
@@ -21,7 +21,7 @@ on the same nodes in a uniform medium, the pure resolution error;
 through a contrast of 1e-6 (seeds equal to monomials) against the exact
 uniform-medium solution. ``--modes ablate`` runs the seeds with the
 x'-dependent columns replaced by monomials (``seed_tangential=False``), the
-ablation of #41. Fixed delta per panel, as in ``wave1d_stiff.py``: the
+ablation of demo#41. Fixed delta per panel, as in ``wave1d_stiff.py``: the
 knee, if any, shows as n crosses h = delta.
 
 A seed row costs two ODE marches, about 50 ms, and a resolved edge seeds
@@ -32,14 +32,14 @@ independent, so the oblique runs reuse the normal-incidence ones. Delete
 the ``wave2d_stiff_ops_*`` files after any change to the seed construction.
 
 ``--amplitude 0.02`` bends both interfaces into the sine curves of Part 2's
-curved case (#42): the seeds of every row are the straight-feature seeds
+curved case (demo#42): the seeds of every row are the straight-feature seeds
 along the true normal through the stencil's foot point, route (a) of the
 issue. References: for delta > 0 the product-grid Fourier solver of
 ``wave2d/spectral.py: run_fourier_2d`` (``--ref-nx``, ``--ref-ny``, cached
 under ``outputs/`` per snapshot time; ``--ref-cfl`` halves the step for a
 self-convergence check), for delta = 0 the jump-aware operator on a
 ``--ref-n``-node set of its own, resampled one-sided onto the sweep's nodes
-as ``wave2d_convergence.py`` does. ``--truncation`` adds the probe of #41:
+as ``wave2d_convergence.py`` does. ``--truncation`` adds the probe of demo#41:
 the elastic operator applied to the reference state at t_end on the nodes
 against the exact rate from the reference's derivatives, per row group.
 Normal incidence only.
@@ -50,13 +50,13 @@ wave (and, at oblique incidence or on a curved edge, its curl, which maps
 the S waves), then each method's error map, at ``--snapshot-times``.
 
     uv run python scripts/wave2d_stiff.py                      # both modes, 4 widths
-    uv run python scripts/wave2d_stiff.py --modes naive        # the #37 baseline
+    uv run python scripts/wave2d_stiff.py --modes naive        # the demo#37 baseline
     uv run python scripts/wave2d_stiff.py --widths 0 0.0025 --ns 2500 4900
     uv run python scripts/wave2d_stiff.py --snapshot-only
     uv run python scripts/wave2d_stiff.py --direction 1 2 --widths 0.0025 0.01 \\
-        --modes naive aware ablate --seed-floor           # the #41 oblique sweep
+        --modes naive aware ablate --seed-floor           # the demo#41 oblique sweep
     uv run python scripts/wave2d_stiff.py --amplitude 0.02 --widths 0 0.005 0.01 \\
-        --seed-floor --truncation --snapshot-width 0.005  # the #42 curved sweep
+        --seed-floor --truncation --snapshot-width 0.005  # the demo#42 curved sweep
 """
 
 import argparse
@@ -139,7 +139,7 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         default=["naive", "aware"],
         choices=["naive", "aware", "ablate", *COMPARATORS],
-        help="schemes; the comparators of #69 run the naive operator on a treated "
+        help="schemes; the comparators of demo#69 run the naive operator on a treated "
         "medium against the true medium's reference: the edge widened to "
         "max(delta, h) / max(delta, 2h) (widen1 / widen2), the cell means of the "
         "wave moduli (harmonic) and density over h / 2h (cell / cell2), and the "
@@ -480,7 +480,7 @@ def initial_state(
     nodes: NodeSet, medium: LayeredMedium2D, args: argparse.Namespace
 ) -> np.ndarray | None:
     """``None`` at normal incidence (``run`` sets the plane pulse itself, so
-    the #40 numbers are reproduced bit for bit), the train otherwise."""
+    the demo#40 numbers are reproduced bit for bit), the train otherwise."""
     if not args.oblique:
         return None
     return oblique_p_wave(nodes, medium, args.direction, args.center, args.sharpness)
@@ -512,7 +512,7 @@ def _ops_path(
 
 
 def run_medium(nodes: NodeSet, medium: LayeredMedium2D, mode: str):
-    """The medium a comparator mode of #69 runs the naive operator on: the
+    """The medium a comparator mode of demo#69 runs the naive operator on: the
     edge widened to what the node spacing resolves (``widen1``, ``widen2``;
     a resolved edge is left alone, so the run then equals the naive one), or
     the coefficients averaged over one or two cells or band-limited

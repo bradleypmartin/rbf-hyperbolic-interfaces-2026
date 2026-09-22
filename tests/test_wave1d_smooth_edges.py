@@ -1,4 +1,4 @@
-"""Smooth-edged layer (issue #29): a tanh edge of width ``edge_width``."""
+"""Smooth-edged layer (issue demo#29): a tanh edge of width ``edge_width``."""
 
 import numpy as np
 import pytest

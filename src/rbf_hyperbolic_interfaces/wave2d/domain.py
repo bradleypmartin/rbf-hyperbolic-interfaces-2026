@@ -14,12 +14,12 @@ flat interfaces at y = 0.25 and 0.5; §3.4.2 and the MATLAB use amplitude
 component parallel to it is not.
 
 With ``edge_width > 0`` the two interfaces are smooth tanh transitions of
-that scale in the normal distance instead of jumps (issue #27, 2-D chain
-from #36): lam, mu and rho are blended between the background and the band
+that scale in the normal distance instead of jumps (issue demo#27, 2-D chain
+from demo#36): lam, mu and rho are blended between the background and the band
 material, so the Lame parameters vary smoothly and ``c_p``, ``c_s`` follow.
 ``edge_width = 0`` is the jump, bit for bit. The normal distance is the
 vertical offset for a flat interface and the true signed distance to the
-curve, through its foot point, for a curved one (#42).
+curve, through its foot point, for a curved one (demo#42).
 
 Node sets follow ``EWE2DRbfPrep.m``: fixed hex-staggered rows that straddle
 each interface orthogonally (Brad's empirical stability requirement), with
@@ -179,7 +179,7 @@ class LayeredMedium2D:
 
         For ``edge_width > 0`` each edge is a tanh step of that scale in the
         signed normal distance to the interface: the vertical offset
-        ``y - y0`` for a flat interface (this branch, unchanged since #36),
+        ``y - y0`` for a flat interface (this branch, unchanged since demo#36),
         :meth:`SineInterface.signed_distance` through :meth:`band_fraction`
         for a curved one. The band profile, a step up at the lower
         interface and down at the upper, is summed over its periodic images
@@ -520,7 +520,7 @@ def oblique_p_wave(
     sharpness: float = 23.0,
     t: float = 0.0,
 ) -> np.ndarray:
-    """State ``(5, n)`` of a plane P-wave train at an oblique angle (issue #41).
+    """State ``(5, n)`` of a plane P-wave train at an oblique angle (issue demo#41).
 
     ``direction = (m_x, m_y)`` is the wave vector's direction on the integer
     lattice: the crests are the lines ``m_x x - m_y y = const``, the train

@@ -1,4 +1,4 @@
-"""Oblique incidence on flat smooth edges (#41): the plane-wave train, the
+"""Oblique incidence on flat smooth edges (demo#41): the plane-wave train, the
 Fourier-in-x reference, and the tangential-seed ablation."""
 
 import numpy as np

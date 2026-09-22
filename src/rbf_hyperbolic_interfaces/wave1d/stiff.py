@@ -1,4 +1,4 @@
-"""Seed stencils for stiff smooth edges (issue #27, #31).
+"""Seed stencils for stiff smooth edges (issue demo#27, demo#31).
 
 Between a jump (dissertation ch. 2, ``operators.interface_weights``) and a
 smoothly varying material lies the "twilight zone": an edge of width
@@ -6,7 +6,7 @@ smoothly varying material lies the "twilight zone": an edge of width
 Standard stencils sample the coefficients at the nodes and see a jump they
 handle badly; the interface machinery has no jump to translate across.
 
-Brad's construction (issue #27) keeps the equispaced grid and replaces the
+Brad's construction (issue demo#27) keeps the equispaced grid and replaces the
 monomials ``1, x, x**2, ...`` of a stencil that sees the edge by *seeds*:
 functions that look like those monomials at the evaluation point and are
 continued through the edge by ODEs that say what the PDE allows. They are

@@ -19,7 +19,7 @@ interface.
     uv run python scripts/wave2d_demo.py --amplitude 0.02 --edge-width 0.005   # Part 3
 
 ``--edge-width delta`` smooths the curved interfaces into tanh edges of that
-width (Part 3, #42): the aware solver is then the seed-stencil operator and
+width (Part 3, demo#42): the aware solver is then the seed-stencil operator and
 the reference the product-grid Fourier solution of ``wave2d/spectral.py``,
 evaluated at the nodes frame by frame.
 """

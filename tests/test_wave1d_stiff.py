@@ -1,4 +1,4 @@
-"""ODE-continued seed stencils for stiff smooth edges (issues #31, #32)."""
+"""ODE-continued seed stencils for stiff smooth edges (issues demo#31, demo#32)."""
 
 import numpy as np
 import pytest

@@ -1,4 +1,4 @@
-"""Coefficient treatments: the standard scheme on a changed medium (issue #69).
+"""Coefficient treatments: the standard scheme on a changed medium (issue demo#69).
 
 The standing alternative to an interface stencil in seismic and
 electromagnetic finite differences changes the medium, not the stencil: the
@@ -32,7 +32,7 @@ a jump is integrated exactly and a tanh edge to rounding. Away from the
 edges the average of a constant is that constant to rounding, so the
 treated medium equals the true one where the pulse starts.
 
-Widening the edge (the T0 comparator of #69) is not a kernel: it is the same
+Widening the edge (the T0 comparator of demo#69) is not a kernel: it is the same
 tanh profile with ``edge_width = max(delta, m h)``, which blends ``c`` and
 ``rho`` linearly, i.e. it regularises ``a`` rather than ``1/a``, the case
 Tornberg & Engquist (2006, §4.1) predict stays first order.

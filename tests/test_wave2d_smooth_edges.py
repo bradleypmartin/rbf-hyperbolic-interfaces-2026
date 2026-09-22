@@ -1,5 +1,5 @@
-"""Smooth flat edges in 2-D, the normal-incidence spectral reference (#36) and
-the seed-aware operator (#39, #40)."""
+"""Smooth flat edges in 2-D, the normal-incidence spectral reference (demo#36) and
+the seed-aware operator (demo#39, demo#40)."""
 
 import numpy as np
 import pytest
@@ -40,7 +40,7 @@ def _rel(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def test_zero_edge_width_is_the_jump_medium_bit_for_bit() -> None:
-    # The pre-#36 lookup was np.where(in_layer, layer, background); the
+    # The pre-demo#36 lookup was np.where(in_layer, layer, background); the
     # blend must reproduce it exactly, not just to a tolerance.
     nodes = make_node_set(FLAT, 900, repulsion_steps=10)
     medium = LayeredMedium2D(layer=ODD_RATIO, edge_width=0.0)
@@ -153,7 +153,8 @@ def test_rejections_and_guards() -> None:
             upper=SineInterface(0.5, 0.02),
             edge_width=0.06,
         )
-    # A curved band takes a smooth edge since #42 (tests/test_wave2d_curved_edges.py).
+    # A curved band takes a smooth edge since demo#42
+    # (tests/test_wave2d_curved_edges.py).
     LayeredMedium2D(
         lower=SineInterface(0.25, 0.02), upper=SineInterface(0.5, 0.02), edge_width=0.01
     )
@@ -297,7 +298,7 @@ def test_matches_a_resolved_naive_2d_run_to_its_resolution_floor() -> None:
     assert jump_err > 3 * _rel(naive[1], ref[1]), jump_err
 
 
-# --- the seed-aware operator (#39) -----------------------------------------------
+# --- the seed-aware operator (demo#39) -------------------------------------------
 
 
 def test_seed_rows_are_the_stencils_that_see_the_edge_and_nothing_else_moves() -> None:
@@ -377,7 +378,7 @@ def test_seed_aware_operator_is_exact_on_a_resolved_plane_wave() -> None:
     assert ops.interface_nodes.size > nodes.n // 3
 
 
-# --- the flat sweep (#40) --------------------------------------------------------
+# --- the flat sweep (demo#40) ----------------------------------------------------
 
 
 def test_seed_stencils_beat_naive_through_an_edge_between_the_rows() -> None:

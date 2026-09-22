@@ -1,4 +1,4 @@
-"""Elastic seed bases for a straight stiff feature (issue #38; Part 3, 2-D chain).
+"""Elastic seed bases for a straight stiff feature (issue demo#38; Part 3, 2-D chain).
 
 The 2-D twin of :mod:`rbf_hyperbolic_interfaces.wave1d.stiff`. A stencil whose nodes see
 a material edge too steep for the node spacing keeps its Gaussian RBF part and
@@ -11,7 +11,7 @@ continued through the edge by what the elastic operator allows. They are the
 Everything happens in the local frame of :mod:`.interface`: origin at the
 closest edge-centre point, ``x'`` tangential, ``y'`` normal, rotated fields
 obeying eq. 32 unchanged, and the material depending on ``y'`` only: exact
-for a flat edge, and for a curved one (#42, route (a)) the material along
+for a flat edge, and for a curved one (demo#42, route (a)) the material along
 the normal through the foot point, which the ansatz then extends
 unchanged along ``x'``, zeroth order in the curvature like the jump
 stencils of :mod:`.interface`. Eliminating the stresses gives the
@@ -48,7 +48,7 @@ mu (u_y + v_x), lam u_x + (lam + 2 mu) v_y)`` come from the marched state and
 the flux variables, and the three rigid-motion columns are dropped as in
 ``interface_basis`` (27 stress functions for ``p = 3``).
 
-Conventions, reconciled with :func:`.interface.interface_weights` (#38): the
+Conventions, reconciled with :func:`.interface.interface_weights` (demo#38): the
 seeds are anchored at the *evaluation node* in both coordinates and scaled by
 ``r_max``, the distance to the farthest stencil node, so ``S ~ X^a Y^b`` in
 ``(X, Y) = (x' - x_e, y' - y_e) / r_max`` and the interpolation block is
@@ -138,11 +138,11 @@ class NormalProfile:
     of :func:`.interface.closest_point`: the point at ``y'`` is
     ``(x0 - y' sin theta, y0 + y' cos theta)``, the vertical line through
     the foot point for a flat interface (``theta = 0``, bit for bit the
-    #38 profile). With the medium's blend a function of the signed normal
+    demo#38 profile). With the medium's blend a function of the signed normal
     distance, the material along this line is exactly the medium's own
     edge profile in ``y'`` for the interface the line is normal to, out
     to its radius of curvature; the other interface's edge is crossed
-    obliquely and enters through its true distance (route (a) of #42).
+    obliquely and enters through its true distance (route (a) of demo#42).
     """
 
     medium: LayeredMedium2D
@@ -426,7 +426,7 @@ def seed_basis(
     ``operators._local_frames`` provides. ``profile`` gives the material
     along the normal through that foot point.
 
-    ``tangential=False`` is the ablation of issue #41: only the seeds of
+    ``tangential=False`` is the ablation of issue demo#41: only the seeds of
     the pure ``y'^b`` monomials are marched through the edge; every
     ``x'^a y'^b`` with ``a >= 1`` is the plain monomial with the anchor
     material's stress, in both components, from a second chain on

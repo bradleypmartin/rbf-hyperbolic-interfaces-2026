@@ -1,23 +1,23 @@
-% Manuscript for Part 3 (epic #51): the seed stencils of docs/stiff-features.md,
-% written up for arXiv. Scaffold from #52; each section is drafted by the
+% Manuscript for Part 3 (epic demo#51): the seed stencils of docs/stiff-features.md,
+% written up for arXiv. Scaffold from demo#52; each section is drafted by the
 % sub-issue named in its TRACE block.
 %
 % SOURCE-OF-TRUTH RULE: docs/stiff-features.md (the notes) stays canonical.
 % This manuscript QUOTES the notes; it never becomes a second source of truth.
 % Every number in this file must trace to a notes section or to the results
-% cache of #54, and the assembly pass (#61) re-checks all of them. A TRACE
-% comment names the notes section and the #27 sub-issue each part quotes.
+% cache of demo#54, and the assembly pass (demo#61) re-checks all of them. A TRACE
+% comment names the notes section and the demo#27 sub-issue each part quotes.
 %
-% Section map (structure decided in the #51 grooming, 2026-09-20):
-%   §1  Introduction              notes §1.1, §1.5, §3 (via #53)            #55
-%   §2  Setting                   notes §1.1; dissertation / JCP 2017        #55
-%   §3  Seeds in one dimension    notes §1.2–1.5 (#28, #31)                  #56
-%   §4  1-D results               notes §2 (#32)                             #57
-%   §5  Seeds in two dimensions   notes §4.1–4.2, §5.3 operator half         #58
-%                                 (#34, #38, #39)
-%   §6  2-D results               notes §5.2–5.6 (#37, #39–#42)              #59
-%   §7  Discussion                #27 comments, notes §5.3, §5.6.1–5.6.2     #60
-%   Figures and tables #54 · Literature #53 · Assembly #61 · arXiv #62
+% Section map (structure decided in the demo#51 grooming, 2026-09-20):
+%   §1  Introduction              notes §1.1, §1.5, §3 (via demo#53)            demo#55
+%   §2  Setting                   notes §1.1; dissertation / JCP 2017        demo#55
+%   §3  Seeds in one dimension    notes §1.2–1.5 (demo#28, demo#31)                  demo#56
+%   §4  1-D results               notes §2 (demo#32)                             demo#57
+%   §5  Seeds in two dimensions   notes §4.1–4.2, §5.3 operator half         demo#58
+%                                 (demo#34, demo#38, demo#39)
+%   §6  2-D results               notes §5.2–5.6 (demo#37, demo#39–demo#42)              demo#59
+%   §7  Discussion                demo#27 comments, notes §5.3, §5.6.1–5.6.2     demo#60
+%   Figures and tables demo#54 · Literature demo#53 · Assembly demo#61 · arXiv demo#62
 %
 % Build: tectonic main.tex   (see paper/README.md)
 \documentclass[11pt]{amsart}
@@ -28,13 +28,13 @@
 \usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
 \graphicspath{{figures/}}
 % arXiv builds with pdfTeX. The only non-ASCII input is the two accented
-% surnames of main.bbl (Pólya, Mühlbach, UTF-8 since #61), which TeX Live
+% surnames of main.bbl (Pólya, Mühlbach, UTF-8 since demo#61), which TeX Live
 % >= 2018 reads natively; this makes the encoding explicit there. Tectonic
 % (XeTeX) takes the other branch and needs nothing. make_arxiv.py refuses
 % any character outside what pdfTeX's utf8 encoding maps.
 \usepackage{iftex}
 \ifPDFTeX\usepackage[utf8]{inputenc}\fi
-% Floats stay near the text that first cites them (#61): a \FloatBarrier
+% Floats stay near the text that first cites them (demo#61): a \FloatBarrier
 % before each results subsection of Section 6 (a barrier at every
 % \section costs float-only pages), and the fractions let text share a
 % page with a float.
@@ -64,15 +64,15 @@
 % period and no space above).
 \newcommand{\para}[1]{\par\smallskip\noindent\textit{#1}.\enspace}
 % Scientific notation for quoted measurements, in text or in math (the
-% table fragments of #54 use it in text cells): \sci{6.2}{-8}.
+% table fragments of demo#54 use it in text cells): \sci{6.2}{-8}.
 \newcommand{\sci}[2]{\ensuremath{#1 \times 10^{#2}}}
-% The table fragments of #54 (five or six numeric columns plus rates) are
+% The table fragments of demo#54 (five or six numeric columns plus rates) are
 % wider than the text block at \small; every table sets this first (it
 % also drops the operator spacing around \times, within the table only).
 \newcommand{\tablesetup}{\footnotesize\setlength{\tabcolsep}{2.5pt}%
   \renewcommand{\sci}[2]{\ensuremath{##1{\times}10^{##2}}}}
 
-% Title fixed by #61.
+% Title fixed by demo#61.
 \title[Seed stencils for sub-grid material edges]{Seed stencils: high-order
 finite differences and RBF-FD through material edges too steep for the grid}
 \author{Bradley P. Martin}
@@ -85,7 +85,7 @@ finite differences and RBF-FD through material edges too steep for the grid}
 
 % ---------------------------------------------------------------------------
 % ABSTRACT. From the notes' summaries (README of the notes, CLAUDE.md);
-% revised by #55, wording fixed by #61. Every claim below is in the notes:
+% revised by demo#55, wording fixed by demo#61. Every claim below is in the notes:
 %   knee at h = delta, seeds fourth order at every n     notes §2
 %   ECT well-posedness, jump limit                        notes §1.3–1.4
 %   straight edge -> triangular ODE systems               notes §4.1–4.2
@@ -139,8 +139,8 @@ geometry penalty through the sharpest edge on the finest of them.
 % spurious u at 19,600 nodes; crossover at h ≈ delta; 1.4–2.0x worse on a
 % resolved edge; the rule), §5.5 (1.4–1.9x at 26.6°; the ablation worse than
 % naive; rates 2.5, 2.3, 1.9), §5.6 (curved: jump stencils at the floor,
-% seeds 2.2–7x and 3–12x below naive). Drafted by #55. The prior-work
-% paragraph is #53's (LITERATURE.md §6a, placed 2026-09-20): cite, don't claim.
+% seeds 2.2–7x and 3–12x below naive). Drafted by demo#55. The prior-work
+% paragraph is demo#53's (LITERATURE.md §6a, placed 2026-09-20): cite, don't claim.
 
 High-order finite differences for wave propagation are in good shape at
 both ends of the range of media. When the material parameters vary
@@ -273,7 +273,7 @@ already make.
 
 \subsection{Relation to prior work}
 \label{sec:priorwork}
-% Placed from LITERATURE.md §6a (#53), trimmed as that section allows: the
+% Placed from LITERATURE.md §6a (demo#53), trimmed as that section allows: the
 % Chebyshev-systems sentence is dropped (Section 3.3 cites them) and the two
 % jump-method sentences are merged; the last three sentences are verbatim,
 % they carry the obligations of LITERATURE.md §1a K6 and §1b O1. Any change
@@ -354,14 +354,14 @@ records the limitations and what we would do next.
 % centre 0.875, t = 1, rel_error, rates in h = n^{-1/2}); the dissertation
 % §2.1 (eq. 1–3, 22–28) and §3.3, JCP 2017 pp. 23–33 (Type 3 stencils,
 % eq. 42, 30/4 and 19/3, the curvature remark), quoted not re-derived;
-% CLAUDE.md's port notes for the scope. Drafted by #55.
+% CLAUDE.md's port notes for the scope. Drafted by demo#55.
 %
-% NOTATION fixed here for the later sections (#56–#60): n nodes, h the
+% NOTATION fixed here for the later sections (demo#56–demo#60): n nodes, h the
 % spacing (2/n in 1-D, n^{-1/2} in 2-D), delta the edge width; 1-D fields
 % (u, f), K = rho c^2, L_u and L_f; 2-D velocities (u, v) and stresses
 % sigma_xx, sigma_xy, sigma_yy (the code's f, g, h; h is reserved for the
 % spacing), K = lambda + 2 mu; the local frame (x', y') with y' normal;
-% the anchor x_e; seeds phi_k in 1-D. The notation list is #61's.
+% the anchor x_e; seeds phi_k in 1-D. The notation list is demo#61's.
 
 \para{Notation}
 The symbols the sections share, fixed here:
@@ -668,8 +668,8 @@ contrast. Section~\ref{sec:discussion} returns to both restrictions.
 % at the edge centres and ±10 delta, DOP853 at rtol 1e-13 / atol 1e-15;
 % stiff_weights: A w = e_1, w / h_s), wave1d/operators.py (aware_rows,
 % varies_over: rows whose nodes see different materials, about 19 delta).
-% Tests: tests/test_wave1d_stiff.py. Drafted by #56 (#28, #31). Figure:
-% figures/wave1d_stiff_seeds.pdf from #54.
+% Tests: tests/test_wave1d_stiff.py. Drafted by demo#56 (demo#28, demo#31). Figure:
+% figures/wave1d_stiff_seeds.pdf from demo#54.
 
 Fix a stencil of the grid of Section~\ref{sec:setting1d}: nodes
 $x_1 < \cdots < x_p$, $p = 5$ for FD4, and an evaluation point $x_e$,
@@ -762,7 +762,7 @@ three edge widths.
 
 \begin{figure}
   \centering
-  % figures/wave1d_stiff_seeds.pdf: scripts/paper_figures.py (#54), from
+  % figures/wave1d_stiff_seeds.pdf: scripts/paper_figures.py (demo#54), from
   % rbf_hyperbolic_interfaces.stiff_figures; never hand-edited.
   \includegraphics[width=\textwidth]{wave1d_stiff_seeds}
   \caption{The $u$ seeds $\phi_1, \ldots, \phi_4$ of one five-point
@@ -950,13 +950,13 @@ conservative: in one dimension seeding a resolved edge costs nothing
 % ===========================================================================
 \section{One-dimensional results}
 \label{sec:results1d}
-% TRACE: notes §2 (#32), scripts/wave1d_stiff.py. Errors, rates and the
-% snapshot maxima are #54's cache, paper/data/wave1d_stiff.json; the table
+% TRACE: notes §2 (demo#32), scripts/wave1d_stiff.py. Errors, rates and the
+% snapshot maxima are demo#54's cache, paper/data/wave1d_stiff.json; the table
 % is figures/tab_1d_knee.tex from it. Two numbers are read from the cache's
 % unrounded errors rather than the notes' rounded table: the seed-to-jump
 % agreement (within 0.3% at delta = 0.0025, within 2% at delta = 0.01;
 % the notes say "three digits at every n", which the table's own 1.57e-5
-% against 1.58e-5 at n = 400 contradicts; #61), and the factor 850 / average
+% against 1.58e-5 at n = 400 contradicts; demo#61), and the factor 850 / average
 % rate 4.9 over the two doublings past the knee (the notes say
 % "fourth-order-ish after"). The pulse width (e^-1 width 2 / sqrt 60, 13
 % spacings at n = 100) is wave1d/domain.py: gaussian, exp(-60 (x + 0.6)^2);
@@ -964,12 +964,12 @@ conservative: in one dimension seeding a resolved edge costs nothing
 % Reference sizes 8192 / 2048 / 1024 are wave1d/spectral.py: reference_size
 % at tol 1e-14 (the outputs/ cache names carry them); dt = 5e-5 and "about
 % 1e-10" are notes §2. The truncation-error numbers (sharpness-600 profile)
-% are notes §2 ONLY and not in the cache (the breadcrumb on #57 allowed
+% are notes §2 ONLY and not in the cache (the breadcrumb on demo#57 allowed
 % either; a `truncation` record in scripts/wave1d_stiff.py is the follow-up
-% if #61 wants them scriptable). The spectrum numbers (8e-8 at delta =
+% if demo#61 wants them scriptable). The spectrum numbers (8e-8 at delta =
 % 0.005, n = 400; about 1e-13 otherwise) are notes §2's caveats paragraph;
 % tests/test_wave1d_stiff.py: test_semi_discrete_operator_has_no_growing_modes
-% keeps the delta = 0.005 case. Drafted by #57.
+% keeps the delta = 0.005 case. Drafted by demo#57.
 
 The experiment of this section is the one-dimensional test of the
 prediction that closes Section~\ref{sec:ect}: standard FD4 loses its order
@@ -1044,7 +1044,7 @@ resolves, there is no knee and standard FD4 is fourth order throughout.
   \label{tab:knee1d}
   \centering
   \tablesetup
-  % figures/tab_1d_knee.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_1d_knee.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave1d_stiff.json; never hand-edited. Five error columns
   % and four rates: the widest fragment, scaled to the text width.
   \resizebox{\textwidth}{!}{\input{figures/tab_1d_knee.tex}}
@@ -1052,7 +1052,7 @@ resolves, there is no knee and standard FD4 is fourth order throughout.
 
 \begin{figure}
   \centering
-  % figures/wave1d_stiff_convergence.pdf: scripts/paper_figures.py (#54),
+  % figures/wave1d_stiff_convergence.pdf: scripts/paper_figures.py (demo#54),
   % from rbf_hyperbolic_interfaces.stiff_figures.convergence_1d and the cache; never
   % hand-edited.
   \includegraphics[width=\textwidth]{wave1d_stiff_convergence}
@@ -1106,7 +1106,7 @@ pulse itself.
 \begin{figure}
   \centering
   % figures/wave1d_stiff_snapshot.pdf: scripts/wave1d_stiff.py --style
-  % print --format pdf, through scripts/paper_figures.py --all (#54);
+  % print --format pdf, through scripts/paper_figures.py --all (demo#54);
   % never hand-edited.
   \includegraphics[width=\textwidth]{wave1d_stiff_snapshot}
   \caption{Stress $f$ at $t = 1$ on $100$ nodes through edges of width
@@ -1135,7 +1135,7 @@ above four; the construction does not change for any of them, and
 Section~\ref{sec:discussion} lists them among the limitations.
 
 \para{The standing alternative: the standard scheme on a changed medium}
-% TRACE: notes §2.1 (#69). Tornberg–Engquist 2006 §4.1, eq. 18–22 and §5,
+% TRACE: notes §2.1 (demo#69). Tornberg–Engquist 2006 §4.1, eq. 18–22 and §5,
 % eq. 37–39 (papers/ index); Koene et al. 2022 §3.2–3.3. Numbers from
 % paper/data/wave1d_stiff.json (modes widen1, widen2, cell, cell2,
 % bandlimit); the ratios quoted are computed from the cache.
@@ -1215,7 +1215,7 @@ that analyse and run them on staggered grids.
   \label{tab:comparators1d}
   \centering
   \tablesetup
-  % figures/tab_1d_comparators.tex: scripts/paper_figures.py (#54, #69)
+  % figures/tab_1d_comparators.tex: scripts/paper_figures.py (demo#54, demo#69)
   % from paper/data/wave1d_stiff.json; never hand-edited.
   \resizebox{\textwidth}{!}{\input{figures/tab_1d_comparators.tex}}
 \end{table}
@@ -1223,7 +1223,7 @@ that analyse and run them on staggered grids.
 \begin{figure}
   \centering
   % figures/wave1d_stiff_comparators.pdf: scripts/paper_figures.py from
-  % paper/data/wave1d_stiff.json (#69); never hand-edited.
+  % paper/data/wave1d_stiff.json (demo#69); never hand-edited.
   \includegraphics[width=\textwidth]{wave1d_stiff_comparators}
   \caption{Table~\ref{tab:comparators1d} drawn: error against $n$ for
   the sampled medium, the three treated media and the seeds, per edge
@@ -1236,9 +1236,9 @@ that analyse and run them on staggered grids.
 % ===========================================================================
 \section{Seeds in two dimensions}
 \label{sec:seeds2d}
-% TRACE: notes §4.1 (design, #34: the 2-D chain, the s-polynomial ansatz,
+% TRACE: notes §4.1 (design, demo#34: the 2-D chain, the s-polynomial ansatz,
 % the three routes for a curved feature), §4.2 (the elastic seeds of a
-% straight feature, #38: frame, the stress-rate coefficients, the
+% straight feature, demo#38: frame, the stress-rate coefficients, the
 % first-order system with the tractions as flux variables, the chain
 % matrix C = (D^2)[uv, uv], the p = 3 system with 30 seeds and 600 states,
 % the two closed forms, the rigid motions and the 27 / 20 counts, anchor and
@@ -1246,11 +1246,11 @@ that analyse and run them on staggered grids.
 % residual 2e-12 with the injected errors 0.23 / 0.06, the conditioning
 % table (17-34 / 24-30 against 34 / 30 and 32 / 51), the segmented march
 % and its 4e-10, 22-40 ms per 19-node stencil), the operator half of §5.3
-% (#39: which rows, both edges in one profile, the Delta^3 rows on the
+% (demo#39: which rows, both edges in one profile, the Delta^3 rows on the
 % naive footprint with the seeds annihilated, the rejected variants in one
 % sentence each with -82 against -151, 21-25 ms / 53 ms, 1965 rows in 105 s
 % and 6719 in 331 s on 10,000 nodes, the two unbuilt optimisations, the
-% true Delta^3 as right-hand sides), §5.6 for route (a) (#42: signed
+% true Delta^3 as right-hand sides), §5.6 for route (a) (demo#42: signed
 % normal distance and the one-image rule, NormalProfile with theta, Newton
 % crossings, 1e-13 / 1e-12 checks, kappa r^2 / 2 = 1.0e-3 and 1.3e-4, 131
 % against 37 ms), §5.6.2 for route (b) and the curvilinear evaluation.
@@ -1264,8 +1264,8 @@ that analyse and run them on staggered grids.
 % tests/test_wave2d_seeds.py and tests/test_wave2d_smooth_edges.py. The
 % code's flux variables (tau, sigma) are (tau, nu) here, since sigma is a
 % stress in this manuscript (§2's NOTATION), and the code's stress seeds
-% (f, g, h) are the rates of (sigma_xx, sigma_xy, sigma_yy). Drafted by #58.
-% Figure: figures/wave2d_stiff_seeds.pdf (#54, stiff_figures.seeds_2d).
+% (f, g, h) are the rates of (sigma_xx, sigma_xy, sigma_yy). Drafted by demo#58.
+% Figure: figures/wave2d_stiff_seeds.pdf (demo#54, stiff_figures.seeds_2d).
 
 The chain of Section~\ref{sec:chain} is dimension-free: for any operator
 $\mathcal{L}$ the nested spaces $\{1\} \subset \ker \mathcal{L} \subset
@@ -1434,7 +1434,7 @@ monomials.
 
 \begin{figure}
   \centering
-  % figures/wave2d_stiff_seeds.pdf: scripts/paper_figures.py (#54), from
+  % figures/wave2d_stiff_seeds.pdf: scripts/paper_figures.py (demo#54), from
   % rbf_hyperbolic_interfaces.stiff_figures.seeds_2d; never hand-edited.
   \includegraphics[width=\textwidth]{wave2d_stiff_seeds}
   \caption{Cross-sections along the normal through the anchor of four
@@ -1705,20 +1705,20 @@ lists it first among the things to do next.
 % ===========================================================================
 \section{Two-dimensional results}
 \label{sec:results2d}
-% TRACE: notes §5.1 (#36: the mapped 1-D reference and its checks), §5.2
-% (#37: the naive baseline, the two pulses, the floor, the spurious u), §5.3
-% (#39: the stability question, the variants on 900 nodes, the accuracy
+% TRACE: notes §5.1 (demo#36: the mapped 1-D reference and its checks), §5.2
+% (demo#37: the naive baseline, the two pulses, the floor, the spurious u), §5.3
+% (demo#39: the stability question, the variants on 900 nodes, the accuracy
 % check of the variants, the 2500-node acceptance run, the t = 3 energies),
-% §5.4 (#40: the flat sweep, the seed floor, the crossover, the rule, the
-% still), §5.5 (#41: the train, the Fourier-in-x reference, the ablation,
+% §5.4 (demo#40: the flat sweep, the seed floor, the crossover, the rule, the
+% still), §5.5 (demo#41: the train, the Fourier-in-x reference, the ablation,
 % the six measurements behind the order, the still), §5.6 with
-% §5.6.1–5.6.2 (#42: the product-grid and 122,500-node references and their
+% §5.6.1–5.6.2 (demo#42: the product-grid and 122,500-node references and their
 % bars, the curved sweep, the truncation probe, delta = 0.0025, the trim,
 % the curved spectra, the still, the route (b) decision, the costs).
 % Scripts: scripts/wave2d_stiff.py (--direction 1 2, --amplitude 0.02,
 % --seed-floor, --truncation, --seed-rtol), scripts/wave2d_stiff_eigenvalues.py
 % (--n 2500, --amplitude 0.02, --variants). Every error, rate, truncation,
-% snapshot and spectrum number is #54's cache (paper/data/wave2d_stiff.json,
+% snapshot and spectrum number is demo#54's cache (paper/data/wave2d_stiff.json,
 % _d12, _a0.02, _a0.02_r0.001, _eigenvalues_n2500, _eigenvalues_n2500_a0.02,
 % _eigenvalues_n900_variants) and the tables are the tab_2d_*.tex and
 % tab_spectra_*.tex fragments from it. Ratios in the text are computed from
@@ -1728,13 +1728,13 @@ lists it first among the things to do next.
 % from 10,000 nodes on (notes: "from 4900 nodes on"); ablation over seeds in
 % u 1.3x at 2500 nodes (notes 1.4x); seeds 3.7–5.7x worse in u on the
 % resolved edge (notes 4–5x); the oblique lead in u at 4900 nodes 1.3x (notes
-% 1.4x) and in v at delta = 0.01 1.4–1.7x (1.747 at the top; #61); untrimmed over trimmed in u up to 1.5x (notes
+% 1.4x) and in v at delta = 0.01 1.4–1.7x (1.747 at the top; demo#61); untrimmed over trimmed in u up to 1.5x (notes
 % "1.5x throughout"); seed-row truncation rates 3.2–3.9 and bulk 3.1–3.7
 % (notes 3.4–4.1 and 3.2–3.7); the oblique still's u error 3.6% (notes
 % 3.7%); the curved naive scheme within 17% of the flat one at delta = 0.01
 % (notes: "to two digits", which holds for the seeds). Rates of the floor
 % rows and the seed-floor rows are the cache's, which differ from the notes'
-% hand-derived ones by up to 0.2 (#61 reconciles). Notes-only, not in the
+% hand-derived ones by up to 0.2 (demo#61 reconciles). Notes-only, not in the
 % cache: the dissertation-pulse baseline and the tanh(h / 2 delta) values
 % (§5.2), the seed-row counts, the flat seed floor (§5.4: 2.7e-2 .. 6.9e-4
 % through a 1e-6 contrast) and the 19/3-everywhere errors (§5.4), the
@@ -1742,7 +1742,7 @@ lists it first among the things to do next.
 % of the variants (§5.3), the t = 3 energies (§5.3), the six oblique
 % diagnostics (§5.5, scratch runs of 2026-09-19), the reference checks and
 % costs (§5.1, §5.5, §5.6), the trimmed rows' truncation (§5.6.1). Drafted
-% by #59.
+% by demo#59.
 
 This section is the two-dimensional test of the construction of
 Section~\ref{sec:seeds2d}, on the flat and curved geometries of
@@ -1953,7 +1953,7 @@ would show little.
   \label{tab:flat2d_v}
   \centering
   \tablesetup
-  % figures/tab_2d_flat_v.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_flat_v.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff.json; never hand-edited.
   \input{figures/tab_2d_flat_v.tex}
 \end{table}
@@ -1965,7 +1965,7 @@ would show little.
   \label{tab:flat2d_u}
   \centering
   \tablesetup
-  % figures/tab_2d_flat_u.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_flat_u.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff.json; never hand-edited.
   \input{figures/tab_2d_flat_u.tex}
 \end{table}
@@ -2063,7 +2063,7 @@ right-hand sides, was never needed.
   \label{tab:variants900}
   \centering
   \tablesetup
-  % figures/tab_spectra_n900_variants.tex: scripts/paper_figures.py (#54)
+  % figures/tab_spectra_n900_variants.tex: scripts/paper_figures.py (demo#54)
   % from paper/data/wave2d_stiff_eigenvalues_n900_variants.json; never
   % hand-edited.
   \input{figures/tab_spectra_n900_variants.tex}
@@ -2104,7 +2104,7 @@ Section~\ref{sec:curvedresults}, row for row the same.
   \label{tab:spectra2500}
   \centering
   \tablesetup
-  % figures/tab_spectra_n2500.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_spectra_n2500.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff_eigenvalues_n2500.json; never hand-edited.
   % Eight columns: the widest 2-D fragment, scaled to the text width like
   % Table~\ref{tab:knee1d}.
@@ -2115,7 +2115,7 @@ Section~\ref{sec:curvedresults}, row for row the same.
   \centering
   % figures/wave2d_stiff_eigenvalues_n2500.pdf: scripts/wave2d_stiff_eigenvalues.py
   % --n 2500 --style print --format pdf, through scripts/paper_figures.py
-  % --all (#54); never hand-edited.
+  % --all (demo#54); never hand-edited.
   \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{wave2d_stiff_eigenvalues_n2500}
   \caption{Spectra of the naive (top) and seed (bottom) operators on
   the $2500$-node flat set through edges of width $\delta = h / 8$,
@@ -2136,7 +2136,7 @@ on every row that sees the edge.
 
 \begin{figure}
   \centering
-  % figures/wave2d_stiff_convergence.pdf: scripts/paper_figures.py (#54),
+  % figures/wave2d_stiff_convergence.pdf: scripts/paper_figures.py (demo#54),
   % from rbf_hyperbolic_interfaces.stiff_figures.convergence_2d and the cache; never
   % hand-edited.
   \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{wave2d_stiff_convergence}
@@ -2228,7 +2228,7 @@ $\delta = 0.04$ the two schemes agree to within $1\%$, so nothing is
 gained by seeding it.
 
 \para{The standing alternative, on the scattered nodes}
-% TRACE: notes §5.7 (#69): paper/data/wave2d_stiff_cmp.json (flat) and
+% TRACE: notes §5.7 (demo#69): paper/data/wave2d_stiff_cmp.json (flat) and
 % wave2d_stiff_cmp_a0.02.json (curved), modes widen1, widen2, cell, cell2,
 % bandlimit; the seeds' numbers from wave2d_stiff.json and
 % wave2d_stiff_a0.02.json; the ratios are computed from the caches. The
@@ -2291,7 +2291,7 @@ Cartesian grids.
   \centering
   \tablesetup
   % figures/tab_2d_flat_cmp_v.tex and tab_2d_curved_cmp_v.tex:
-  % scripts/paper_figures.py (#54, #69) from paper/data/wave2d_stiff_cmp.json
+  % scripts/paper_figures.py (demo#54, demo#69) from paper/data/wave2d_stiff_cmp.json
   % and wave2d_stiff_cmp_a0.02.json; never hand-edited.
   \input{figures/tab_2d_flat_cmp_v.tex}
   \par\medskip
@@ -2318,7 +2318,7 @@ loss at $0.04$.
   \label{tab:flat2d_syy}
   \centering
   \tablesetup
-  % figures/tab_2d_flat_h.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_flat_h.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff.json (the code's h is sigma_yy); never
   % hand-edited.
   \input{figures/tab_2d_flat_h.tex}
@@ -2342,7 +2342,7 @@ the pulse itself.
   \centering
   % figures/wave2d_stiff_snapshot.pdf: scripts/wave2d_stiff.py
   % --snapshot-only --style print --format pdf, through
-  % scripts/paper_figures.py --all (#54); never hand-edited.
+  % scripts/paper_figures.py --all (demo#54); never hand-edited.
   \includegraphics[width=\textwidth]{wave2d_stiff_snapshot}
   \caption{The pulse on $10{,}000$ nodes through flat edges of width
   $\delta = h / 4$ at $t = 1$ (the band between the dashed lines): the
@@ -2431,7 +2431,7 @@ decides whether the tangential columns are worth their march.
 \begin{figure}
   \centering
   % figures/wave2d_stiff_oblique_convergence.pdf: scripts/paper_figures.py
-  % (#54), from rbf_hyperbolic_interfaces.stiff_figures.convergence_2d and the cache;
+  % (demo#54), from rbf_hyperbolic_interfaces.stiff_figures.convergence_2d and the cache;
   % never hand-edited.
   \includegraphics[width=\textwidth]{wave2d_stiff_oblique_convergence}
   \caption{The oblique sweep of Tables~\ref{tab:oblique2d_v}
@@ -2502,7 +2502,7 @@ result as it is.
   \label{tab:oblique2d_v}
   \centering
   \tablesetup
-  % figures/tab_2d_oblique_v.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_oblique_v.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff_d12.json; never hand-edited.
   \input{figures/tab_2d_oblique_v.tex}
 \end{table}
@@ -2513,7 +2513,7 @@ result as it is.
   \label{tab:oblique2d_u}
   \centering
   \tablesetup
-  % figures/tab_2d_oblique_u.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_oblique_u.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff_d12.json; never hand-edited.
   \input{figures/tab_2d_oblique_u.tex}
 \end{table}
@@ -2527,7 +2527,7 @@ result as it is.
   \label{tab:oblique2d_syy}
   \centering
   \tablesetup
-  % figures/tab_2d_oblique_h.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_oblique_h.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff_d12.json (the code's h is sigma_yy); never
   % hand-edited.
   \input{figures/tab_2d_oblique_h.tex}
@@ -2548,7 +2548,7 @@ about half the naive one everywhere, which is the ratio of the tables.
   \centering
   % figures/wave2d_stiff_oblique_snapshot.pdf: scripts/wave2d_stiff.py
   % --direction 1 2 --snapshot-only --style print --format pdf, through
-  % scripts/paper_figures.py --all (#54); never hand-edited.
+  % scripts/paper_figures.py --all (demo#54); never hand-edited.
   \includegraphics[width=\textwidth]{wave2d_stiff_oblique_snapshot}
   \caption{The train at $26.6^\circ$ on $10{,}000$ nodes through flat
   edges of width $\delta = h / 4$ at $t = 1$: the reference $|v|$, its
@@ -2619,7 +2619,7 @@ changed nothing that these node sets can see.
 \begin{figure}
   \centering
   % figures/wave2d_stiff_convergence_curved.pdf: scripts/paper_figures.py
-  % (#54), from rbf_hyperbolic_interfaces.stiff_figures.convergence_2d and the cache;
+  % (demo#54), from rbf_hyperbolic_interfaces.stiff_figures.convergence_2d and the cache;
   % never hand-edited.
   \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{wave2d_stiff_convergence_curved}
   \caption{The curved sweep of Tables~\ref{tab:curved2d_v}
@@ -2670,7 +2670,7 @@ born at the edge, does not carry.
   \label{tab:curved2d_v}
   \centering
   \tablesetup
-  % figures/tab_2d_curved_v.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_curved_v.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff_a0.02.json; never hand-edited.
   \input{figures/tab_2d_curved_v.tex}
 \end{table}
@@ -2684,7 +2684,7 @@ born at the edge, does not carry.
   \label{tab:curved2d_u}
   \centering
   \tablesetup
-  % figures/tab_2d_curved_u.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_curved_u.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff_a0.02.json; never hand-edited.
   \input{figures/tab_2d_curved_u.tex}
 \end{table}
@@ -2697,7 +2697,7 @@ born at the edge, does not carry.
   \label{tab:curved2d_syy}
   \centering
   \tablesetup
-  % figures/tab_2d_curved_h.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_curved_h.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff_a0.02.json (the code's h is sigma_yy); never
   % hand-edited.
   \input{figures/tab_2d_curved_h.tex}
@@ -2747,7 +2747,7 @@ because the resolution error there is $30\times$ larger.
   \label{tab:truncation2d}
   \centering
   \tablesetup
-  % figures/tab_2d_curved_truncation.tex: scripts/paper_figures.py (#54)
+  % figures/tab_2d_curved_truncation.tex: scripts/paper_figures.py (demo#54)
   % from paper/data/wave2d_stiff_a0.02.json; never hand-edited.
   \input{figures/tab_2d_curved_truncation.tex}
 \end{table}
@@ -2784,7 +2784,7 @@ seeded region's boundary is a tuning question for larger node sets
   \label{tab:trim2d}
   \centering
   \tablesetup
-  % figures/tab_2d_curved_trim_v.tex: scripts/paper_figures.py (#54) from
+  % figures/tab_2d_curved_trim_v.tex: scripts/paper_figures.py (demo#54) from
   % paper/data/wave2d_stiff_a0.02_r0.001.json; never hand-edited.
   \input{figures/tab_2d_curved_trim_v.tex}
 \end{table}
@@ -2812,7 +2812,7 @@ footprint on the seed rows.
   \label{tab:spectra2500curved}
   \centering
   \tablesetup
-  % figures/tab_spectra_n2500_curved.tex: scripts/paper_figures.py (#54)
+  % figures/tab_spectra_n2500_curved.tex: scripts/paper_figures.py (demo#54)
   % from paper/data/wave2d_stiff_eigenvalues_n2500_a0.02.json; never
   % hand-edited.
   \input{figures/tab_spectra_n2500_curved.tex}
@@ -2822,7 +2822,7 @@ footprint on the seed rows.
   \centering
   % figures/wave2d_stiff_eigenvalues_n2500_curved.pdf:
   % scripts/wave2d_stiff_eigenvalues.py --n 2500 --amplitude 0.02 --style
-  % print --format pdf, through scripts/paper_figures.py --all (#54);
+  % print --format pdf, through scripts/paper_figures.py --all (demo#54);
   % never hand-edited.
   \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{wave2d_stiff_eigenvalues_n2500_curved}
   \caption{Spectra of the naive (top) and seed (bottom) operators on the
@@ -2851,7 +2851,7 @@ the naive one, which is the tables' $3.1\times$.
   \centering
   % figures/wave2d_stiff_snapshot_curved.pdf: scripts/wave2d_stiff.py
   % --amplitude 0.02 --snapshot-only --style print --format pdf, through
-  % scripts/paper_figures.py --all (#54); never hand-edited.
+  % scripts/paper_figures.py --all (demo#54); never hand-edited.
   \includegraphics[width=\textwidth]{wave2d_stiff_snapshot_curved}
   \caption{The pulse on $10{,}000$ nodes through curved edges of width
   $\delta = h / 2$ at $t = 1$ (the interfaces dashed): the reference
@@ -2895,19 +2895,19 @@ minutes. A curved march costs $3.6\times$ a flat one
 % ===========================================================================
 \section{Discussion}
 \label{sec:discussion}
-% TRACE: #27's comments (2026-09-19 and 2026-09-20: the flat translation
+% TRACE: demo#27's comments (2026-09-19 and 2026-09-20: the flat translation
 % symmetry, one march per stencil, nothing beyond FD4 and one contrast,
 % route (a)'s geometric floor and the curvilinear evaluation), notes §2
 % (the caveats: contrast, layers thinner than 19 delta, order; the
 % 1e-5 h threshold), §5.3 (the true Delta^3 of the seeds, the two unbuilt
 % optimisations, the costs), §5.6 (the seed floor's rate, the seeded
 % region's share of the nodes), §5.6.1 (the trim, the 40 % extrapolation),
-% §5.6.2 (route (b), the curvilinear evaluation, the two things #42 did
+% §5.6.2 (route (b), the curvilinear evaluation, the two things demo#42 did
 % not do, the reference costs), §5.7 and LITERATURE.md K6 (the scope of
 % the comparison, T3 not built, the K6 (ii) hypothesis), §3 (Mühlbach's
 % recurrence); the forward references of Sections 4, 5.3, 5.4 and 6. The
 % conclusions quote LITERATURE.md §6b verbatim (the abstract-safe
-% sentence, the conclusions sentence, the required caveat). Drafted by #60.
+% sentence, the conclusions sentence, the required caveat). Drafted by demo#60.
 
 \subsection{Limitations}
 \label{sec:limitations}
@@ -3122,7 +3122,7 @@ below it on the scattered nodes.
 
 % ===========================================================================
 \section*{Acknowledgments}
-% Decisions of 2026-09-20 (#51, recorded in paper/README.md by #62): sole
+% Decisions of 2026-09-20 (demo#51, recorded in paper/README.md by demo#62): sole
 % human author; Bengt Fornberg acknowledged for the 2016-era work this
 % extends; the AI assistance stated plainly, in the section that follows.
 The author thanks Bengt Fornberg, with whom the 2016-era work this
@@ -3131,7 +3131,7 @@ interface treatment of \cite{MartinFornberg2017}.
 
 % ===========================================================================
 \section*{Tool and computational resource disclosure}
-% Form (#62, checked 2026-09-20): arXiv's policy on generative-AI language
+% Form (demo#62, checked 2026-09-20): arXiv's policy on generative-AI language
 % tools (info.arxiv.org/help/moderation: report any significant use; each
 % author takes full responsibility for all contents irrespective of how
 % they were generated; no tool is an author) and the "Tool and
@@ -3140,7 +3140,7 @@ interface treatment of \cite{MartinFornberg2017}.
 % IMU) asks authors to include. The headings follow the Declaration's items
 % as recent math.AP submissions apply them; the survey is in
 % paper/README.md. Every statement below is checked against the
-% repository's history (PRs #1–#76).
+% repository's history (PRs demo#1–demo#76).
 Following arXiv's policy on generative AI language tools and the Leiden
 Declaration on Artificial Intelligence and Mathematics (2 June 2026), the
 author discloses the following.
@@ -3192,7 +3192,7 @@ Responsibility for the correctness of the arguments and results and for
 the accuracy of the citations rests with the author alone. No automated
 tool is an author.
 
-% #61 removed the scaffold's \nocite{*}: entries of references.bib that no
+% demo#61 removed the scaffold's \nocite{*}: entries of references.bib that no
 % \cite reaches (kept for LITERATURE.md) do not print.
 \bibliographystyle{amsalpha}
 \bibliography{references}

@@ -1,8 +1,8 @@
 # LITERATURE.md — the novelty ledger for the seed stencils
 
-> **STATUS: LITERATURE AND NOVELTY PASS #53 RUN 2026-09-20 (P1–P5 below).**
+> **STATUS: LITERATURE AND NOVELTY PASS demo#53 RUN 2026-09-20 (P1–P5 below).**
 > Upgrades `docs/stiff-features.md` §3, the 2026-09-19 afternoon scan, into
-> the house ledger: the claim of Part 3 (issue #27, manuscript epic #51) is
+> the house ledger: the claim of Part 3 (issue demo#27, manuscript epic demo#51) is
 > itemised in §1 and every item sits in the bucket the record supports;
 > §2 logs what was searched, with what, and what came back; §3 is the
 > verification rule; §4 the standing hazards; §6 the wording the manuscript
@@ -15,7 +15,7 @@
 > unchanged equispaced FD or scattered-node RBF-FD scheme, together with the
 > identification of the jump stencils as its δ → 0 limit and the empirical
 > rule *seed when δ ≤ h*. The standing alternative, smoothing or averaging
-> the medium (§1a K6), **was run head to head** in #69 (notes §2.1 and
+> the medium (§1a K6), **was run head to head** in demo#69 (notes §2.1 and
 > §5.7: cell means over one and two cells, band-limited coefficients and
 > the widened edge, in 1-D and on the scattered nodes), as our
 > implementation of each treatment on one problem at one contrast; §6b
@@ -29,7 +29,7 @@ novelty claim, any new comparison method, and any new regime measured
 a directed refuter pass and log it in §2 (date, tool, query, result).
 Re-run P3's Q1 (the quasi-Trefftz group posted four preprints in 2025–26)
 and P4's seismology sweep before any external circulation, including the
-arXiv upload (#62).
+arXiv upload (demo#62).
 
 **Cite, don't claim.** The manuscript cites this ledger's §1a items as
 prior work and words §1b items as "no prior instance found", never as
@@ -150,7 +150,7 @@ Marigo, GJI 181 (2010) [V] and 182 (2010) [V], non-periodic homogenization
 for the seismic wave equation), or by a *smoothed* one: the regularisation
 line of Tornberg & Engquist (JSC 19 (2003) [V]; *Regularization for
 accurate numerical wave propagation in discontinuous media*, MAA 13 (2006)
-247–274 [V, fetched and read in full for #69, `papers/`: the Yee scheme "is
+247–274 [V, fetched and read in full for demo#69, `papers/`: the Yee scheme "is
 improved from first to second order by modifying the material coefficients
 close to the material interface", and the fourth-order scheme keeps "a
 second order error component originating from the discontinuities"; §4.1
@@ -160,12 +160,12 @@ their staggered fourth-order scheme only with its temporal correction
 terms masked within 3h/2 of the jump]; JCP 227 (2008) [V]),
 FDTD subpixel smoothing (Farjadpour et al. 2006), and the anti-aliased
 interfaces that Koene, Wittsten & Robertsson (GJI 229 (2022) [V;
-arXiv:2104.08206v2 fetched and §3.2–3.4 read for #69, `papers/`: density
+arXiv:2104.08206v2 fetched and §3.2–3.4 read for demo#69, `papers/`: density
 and compliance band-limited to the grid Nyquist, the anti-aliased step
 ½ + Si(πz/h)/π, the windowed low-pass filter]) compare head to head with
 Schoenberg–Muir equivalent media:
 anti-aliasing wins in acoustic media, the equivalent medium in elastic
-media. *Framing the manuscript owes (the #53 issue's fourth sweep):* in all
+media. *Framing the manuscript owes (the demo#53 issue's fourth sweep):* in all
 of these the smoothing width or averaging cell is a **numerical** choice
 tied to h, and the price is a second-order error component at the
 interface. The seed problem is the inverse: δ is a property of the medium,
@@ -174,7 +174,7 @@ edge for every δ ≤ h. So (i) the "twilight zone" of notes §1.1 is
 precisely the medium these methods manufacture and then accept
 second-order error from; (ii) a seeded scheme applied to such a smoothed
 medium would remove that error component, which is a hypothesis, not a
-result; (iii) **the head-to-head was run in #69** (notes §2.1 and §5.7,
+result; (iii) **the head-to-head was run in demo#69** (notes §2.1 and §5.7,
 manuscript §4 and §6): Tornberg–Engquist's regularised coefficients as
 cell means of compliance and density over one cell (their eq. 18 and 22;
 on the 1-D cell-centred grid a jump sits on a cell boundary, so this
@@ -237,7 +237,7 @@ the chain is the kernel of an operator in Pólya form, hence an ECT system
 (K4), hence the stencil solve is nonsingular on any distinct nodes. This
 is an *application* of textbook theorems and the manuscript states it as a
 proposition proved by citation (Pólya 1922; Karlin–Studden 1966; Coppel
-1971), as #56 asks. The Newton-form remainder O(h⁴ ∂ₓL² u) with a
+1971), as demo#56 asks. The Newton-form remainder O(h⁴ ∂ₓL² u) with a
 δ-independent constant on solutions (notes §1.4) is likewise Mühlbach
 1973 applied.
 
@@ -259,7 +259,7 @@ the true normal (route (a)); the rule **seed when δ ≤ h**. Ours as scoped:
 degree 3, one contrast, ≤ 19,600 nodes, tanh edges, doubly periodic,
 compared against naive coefficient sampling and against our implementation
 of the cell-averaged and band-limited coefficients and the widened edge
-(§1a K6 (iii), discharged as scoped by #69). The 2-D relative to name is
+(§1a K6 (iii), discharged as scoped by demo#69). The 2-D relative to name is
 Owhadi–Zhang 2008.
 
 **O6. Diagnostics.** The spurious u at normal incidence as a 10× sharper
@@ -271,7 +271,7 @@ methodological remarks; no claim rests on them and none was searched.
 
 - Three dimensions; contrasts other than c 1 → 2; orders above FD4 /
   degree 3; bands thinner than a stencil; variable Lamé parameters — own
-  exclusions (#27), not literature gaps.
+  exclusions (demo#27), not literature gaps.
 - Computational electromagnetics beyond the two FDTD entries (conformal and
   contour-path FDTD, dielectric-interface FDTD analyses): W11 only.
 - Finite-volume and lattice-Boltzmann treatments of discontinuous
@@ -486,7 +486,7 @@ WebSearch and fetches:
 
 **Verdict.** The alternative is real, current, and second-order-limited at
 the interface by construction where analysed (Tornberg–Engquist 2006). It
-was not compared against in #27–#42; **#69 (2026-09-20) ran the
+was not compared against in demo#27–demo#42; **demo#69 (2026-09-20) ran the
 comparison** in 1-D (notes §2.1) and on the scattered nodes (notes §5.7),
 with both sources fetched and read (`papers/`, `docs/paper-index.md`). §1a
 K6 (iii) records the result and its scope; §6 words it.
@@ -502,7 +502,7 @@ K6 (iii) records the result and its scope; §6 words it.
   Roos–Stynes–Tobiska; the dissertation's own title page.
 - Corrections made from the records: `ImbertGerardMoiolaPerinatiStocker2025` is the
   IMA JNA 45(6) 2025 paper with Perinati as third author (key kept for the
-  section drafts; #61 may rename); Owhadi–Zhang 2007 and 2008 given their
+  section drafts; demo#61 may rename); Owhadi–Zhang 2007 and 2008 given their
   DOIs (10.1002/cpa.20163, 10.1016/j.cma.2008.08.012); Allen–Southwell,
   Il'in and Scharfetter–Gummel titles confirmed as the records' own; Symes–
   Vdovina pages 363–371 per the record (the dissertation and JCP print
@@ -570,8 +570,8 @@ K6 (iii) records the result and its scope; §6 words it.
   pages were not fetched directly (Crossref filled in metadata; one OUP page
   answered a WebFetch); intlpress 403'd; mathnet.ru reset the connection.
 - **Bibliography labels.** With `amsalpha`, the unbraced accents that avoid
-  tectonic's BibTeX hang (#52) render the single-author labels for
-  Mühlbach and Pólya oddly (`M7̈3`). A #61 decision: another style, or
+  tectonic's BibTeX hang (demo#52) render the single-author labels for
+  Mühlbach and Pólya oddly (`M7̈3`). A demo#61 decision: another style, or
   `alpha`, or accept.
 
 ## 5. Cross-references
@@ -582,14 +582,14 @@ K6 (iii) records the result and its scope; §6 words it.
   (left unchanged; where this pass adds to it, the addition is here).
 - `docs/paper-index.md` — page maps for the dissertation and the two
   preprints read in P1.
-- Issues #27 (the exploration), #51 (the manuscript epic), #53 (this pass),
-  #55 (places §6a), #61 (assembly; re-checks the wording against §6).
+- Issues demo#27 (the exploration), demo#51 (the manuscript epic), demo#53 (this pass),
+  demo#55 (places §6a), demo#61 (assembly; re-checks the wording against §6).
 
 ## 6. Manuscript wording
 
 The paragraph and sentences below are the only novelty language the
-manuscript may use without re-opening this ledger. #55 places (a) in §1
-(`\subsection{Relation to prior work}`); #61 fixes (b) in the abstract and
+manuscript may use without re-opening this ledger. demo#55 places (a) in §1
+(`\subsection{Relation to prior work}`); demo#61 fixes (b) in the abstract and
 conclusions. Every `\cite` key exists in `paper/references.bib` and is [V].
 
 ### 6a. Relation to prior work (§1 of the manuscript)
@@ -647,12 +647,12 @@ treatment there and $3$ to $6$ times below it on the scattered nodes. We
 claim nothing beyond that measurement.
 ```
 
-(About 330 words. If #55 needs the 150–250 the issue asked for, cut the
+(About 330 words. If demo#55 needs the 150–250 the issue asked for, cut the
 sentence on Chebyshev systems, which §3 of the manuscript cites anyway,
 and merge the two jump-method sentences; keep the last three sentences
-verbatim, they carry the obligations of §1a K6 and §1b O1. #55 took both
-cuts; #69 replaced the closing "did not compare" sentence with the
-measured statement, and #61 brought this copy into line with the
+verbatim, they carry the obligations of §1a K6 and §1b O1. demo#55 took both
+cuts; demo#69 replaced the closing "did not compare" sentence with the
+measured statement, and demo#61 brought this copy into line with the
 manuscript's §1.1, which is the text above.)
 
 ### 6b. Claim sentences (abstract and conclusions)
@@ -680,9 +680,9 @@ Bucket §1b, worded as "no prior instance found":
   order; the best of them is second order at a jump in one dimension, and
   the seeds lie 3 to 730 times below it there and 3 to 6 times below it on
   the scattered nodes." (Replaces the "not run" wording of 2026-09-20
-  morning; #69.)
+  morning; demo#69.)
 
 Not to be used: "novel", "new method", "first", "outperforms existing
 interface methods", "beats smoothing / averaging methods" (only our
 implementations, one scheme per dimension, one contrast, one problem;
-#69), "arbitrary contrast", "any order" (only FD4 / degree 3 were run).
+demo#69), "arbitrary contrast", "any order" (only FD4 / degree 3 were run).

@@ -1,4 +1,4 @@
-"""Smooth curved edges (#42): the signed-distance medium, the seed profile along
+"""Smooth curved edges (demo#42): the signed-distance medium, the seed profile along
 the true normal, route (a) seed operators, and the product-grid reference."""
 
 import numpy as np
@@ -92,9 +92,9 @@ def test_curved_blend_reduces_to_the_flat_one_as_the_amplitude_vanishes() -> Non
         assert not tiny.is_flat
         err = np.abs(tiny.layer_fraction(x, y) - flat.layer_fraction(x, y)).max()
         assert err < tol, (amp, err)
-    # The flat branch itself is untouched: the smooth flat medium of #36
+    # The flat branch itself is untouched: the smooth flat medium of demo#36
     # samples the same values as before to the bit (the cached operators of
-    # #40 depend on it), spot-checked against the closed form it implements.
+    # demo#40 depend on it), spot-checked against the closed form it implements.
     d = 0.01
     y0 = np.mod(y, 1.0)
     expected = np.zeros_like(y)

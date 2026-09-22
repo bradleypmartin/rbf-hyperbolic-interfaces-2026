@@ -1,4 +1,4 @@
-"""Coefficient treatments on scattered nodes (issue #69, T2)."""
+"""Coefficient treatments on scattered nodes (issue demo#69, T2)."""
 
 import numpy as np
 import pytest

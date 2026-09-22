@@ -1,4 +1,4 @@
-"""Spectra of the seed-aware elastic operator across edge widths (#39).
+"""Spectra of the seed-aware elastic operator across edge widths (demo#39).
 
 Does RBF-FD stability (Delta^3 hyperviscosity at the MATLAB gamma, straddling
 rows) survive seed-augmented stencils? For each edge width the operator is
@@ -8,7 +8,7 @@ the RK4 amplification at CFL 0.5 are reported next to the jump-aware operator.
 ``--variants`` adds the configurations the study tried and rejected
 (``docs/stiff-features.md`` §5.3). ``--run`` integrates the wide plane pulse
 to ``t_end`` for every case and reports the energy ratio and the spurious u.
-``--amplitude 0.02`` bends the interfaces (#42): same spectra on the curved
+``--amplitude 0.02`` bends the interfaces (demo#42): same spectra on the curved
 node set, with the seeds along the true normals; ``--run`` then reports the
 energy ratio and the spurious u only (the curved reference lives in
 ``wave2d_stiff.py --amplitude``).

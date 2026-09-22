@@ -1,4 +1,4 @@
-"""Fourier pseudo-spectral reference solution for smooth-edged layers (#30).
+"""Fourier pseudo-spectral reference solution for smooth-edged layers (demo#30).
 
 The ray-sum exact solution only covers jump edges. With ``edge_width > 0``
 the coefficients are smooth and periodic, so a Fourier pseudo-spectral

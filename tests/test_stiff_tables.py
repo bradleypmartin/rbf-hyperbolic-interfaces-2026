@@ -1,4 +1,4 @@
-"""Table fragments of #54 on a synthetic cache: formatting and layout, no sweeps."""
+"""Table fragments of demo#54 on a synthetic cache: formatting and layout, no sweeps."""
 
 import pytest
 

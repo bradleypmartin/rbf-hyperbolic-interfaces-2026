@@ -1,4 +1,4 @@
-"""The results cache of #54: schema, round trip, selection. No sweeps run here."""
+"""The results cache of demo#54: schema, round trip, selection. No sweeps run here."""
 
 import json
 from argparse import Namespace

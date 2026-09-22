@@ -11,7 +11,7 @@ Two flavours with identical sparsity:
   edges of a thin layer chains the construction across both interfaces.
   For a medium with smooth edges (``edge_width > 0``) the same mode uses
   the ODE-continued seeds of :mod:`.stiff` in every stencil whose nodes see
-  a varying material (issue #27).
+  a varying material (issue demo#27).
 
 The construction, following the dissertation:
 

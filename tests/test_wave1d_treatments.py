@@ -1,4 +1,4 @@
-"""Coefficient treatments of the naive scheme's medium (issue #69)."""
+"""Coefficient treatments of the naive scheme's medium (issue demo#69)."""
 
 import numpy as np
 import pytest

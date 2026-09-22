@@ -8,9 +8,9 @@ chosen time step. Dense eigenvalue solves, so keep n small (900 nodes is
 4500 eigenvalues and takes a few seconds; 2500 nodes takes minutes).
 
 With ``--edge-width delta`` the interfaces are smooth tanh edges (Part 3,
-#37): flat, coefficients sampled at the stencil centres. ``--mode aware``
+demo#37): flat, coefficients sampled at the stencil centres. ``--mode aware``
 rebuilds the interface rows: the piecewise-polynomial stencils for a jump,
-the seed stencils for a smooth edge (#39). ``scripts/wave2d_stiff_eigenvalues.py``
+the seed stencils for a smooth edge (demo#39). ``scripts/wave2d_stiff_eigenvalues.py``
 runs the comparison across widths.
 
     uv run python scripts/wave2d_eigenvalues.py

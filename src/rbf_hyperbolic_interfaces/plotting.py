@@ -56,7 +56,7 @@ PRINT_LABELS_2D = {"aware": "seeds", "naive": "naive RBF-FD"}
 
 
 def use_print_style() -> None:
-    """Print chrome for the manuscript's figures (#54): white background,
+    """Print chrome for the manuscript's figures (demo#54): white background,
     serif with Computer Modern mathtext, 8 pt, thin recessive axes. The
     palette (blue = seeds / interface-aware, orange = naive, the aqua and
     violet maps) is unchanged; only the chrome differs from the deck.

@@ -1,4 +1,4 @@
-"""The figures of #54 drawn from a synthetic cache, and the 2-D seed sections.
+"""The figures of demo#54 drawn from a synthetic cache, and the 2-D seed sections.
 
 The drawing tests render both layouts into a temporary directory (a broken
 record set or layout raises). The section test is numerical: frozen

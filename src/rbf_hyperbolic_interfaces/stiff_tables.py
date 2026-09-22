@@ -1,4 +1,4 @@
-"""LaTeX table fragments of the Part 3 manuscript from the results cache (#54).
+"""LaTeX table fragments of the Part 3 manuscript from the results cache (demo#54).
 
 Each writer takes a :class:`~rbf_hyperbolic_interfaces.results_cache.ResultsCache` and
 returns a booktabs ``tabular`` fragment for ``\\input``, headed by a
@@ -146,7 +146,7 @@ def table_1d_comparators(
     source: str,
     modes: tuple[str, ...] = ("naive", "cell", "cell2", "bandlimit", "aware"),
 ) -> str:
-    """Notes §2.1 (#69): the standard scheme on the treated media against the
+    """Notes §2.1 (demo#69): the standard scheme on the treated media against the
     standard scheme on the true one and the seeds, per edge width."""
     ns = _ns(cache)
     rows: list[list[str] | None] = []

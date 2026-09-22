@@ -1,7 +1,7 @@
-"""Check every cache-backed number the manuscript quotes (issue #61).
+"""Check every cache-backed number the manuscript quotes (issue demo#61).
 
 The assembly pass re-checked each number in ``paper/main.tex`` against the
-notes and the results cache of #54. This script is the scripted half of that
+notes and the results cache of demo#54. This script is the scripted half of that
 check: for every ratio, rate, factor and error the text quotes from
 ``paper/data/*.json`` it recomputes the value from the cache's unrounded
 records and fails if it no longer rounds to the quoted figure (half a unit in

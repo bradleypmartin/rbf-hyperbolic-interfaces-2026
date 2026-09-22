@@ -20,7 +20,7 @@ background's ``Z_p`` giving unit amplitude in v.
 ``h_t`` share ``v_y`` and both f and h start at zero inside the layer (the
 ray sum enforces negligible tails there). :func:`spectral_plane_wave` is
 the Fourier pseudo-spectral solver for smooth edges (``edge_width > 0``,
-issue #36) on the pointwise image of the 2-D medium, fed the exact image of
+issue demo#36) on the pointwise image of the 2-D medium, fed the exact image of
 the 2-D initial state, with f recovered from ``f_t = lam v_y`` exactly.
 """
 

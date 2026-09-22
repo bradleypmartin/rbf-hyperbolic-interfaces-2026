@@ -1,4 +1,4 @@
-"""The packaging transforms of paper/make_arxiv.py (#62).
+"""The packaging transforms of paper/make_arxiv.py (demo#62).
 
 The script is not a package; it is loaded from its path. The rebuild gate
 itself (tectonic, pdftotext) is exercised by running the script, not here.

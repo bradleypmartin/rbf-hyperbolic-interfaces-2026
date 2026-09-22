@@ -1,4 +1,4 @@
-"""Elastic seed bases (#38) and seed-augmented weights (#39) for a straight
+"""Elastic seed bases (demo#38) and seed-augmented weights (demo#39) for a straight
 stiff feature."""
 
 import numpy as np
@@ -292,7 +292,7 @@ def test_seed_blocks_are_conditioned_like_the_polynomial_block(nodes) -> None:
         assert np.linalg.cond(np.concatenate(seeds.fgh)) < 2 * cond_fgh, width
 
 
-# --- the weights (#39) -------------------------------------------------------------
+# --- the weights (demo#39) ---------------------------------------------------------
 
 BLOCKS = ("fgh_from_uv", "uv_from_fgh", "hyper_uv", "hyper_fgh")
 

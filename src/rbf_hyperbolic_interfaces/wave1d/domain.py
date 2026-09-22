@@ -10,7 +10,7 @@ The medium is a background material everywhere except one layer
 layer edges are the interfaces where naive finite differences break down.
 
 With ``edge_width > 0`` the two edges are smooth tanh transitions of that
-scale instead of jumps (issue #27): the same layer, swept from the
+scale instead of jumps (issue demo#27): the same layer, swept from the
 dissertation's discontinuity through the "twilight zone" of edges too steep
 for a grid to resolve, to a gentle transition every scheme handles.
 """

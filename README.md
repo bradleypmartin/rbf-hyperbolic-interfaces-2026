@@ -29,13 +29,13 @@ research that never got written up. A stencil crossing a material edge too
 steep for the grid to resolve is built from "seeds" continued through the
 edge by ODEs instead of monomials, on the same equispaced grid. Built and
 confirmed in 1-D on 2026-09-19, with a design note for 2-D:
-[`docs/stiff-features.md`](docs/stiff-features.md) (issue #27). The
-arXiv write-up of Part 3 is in [`paper/`](paper/README.md) (issue #51:
+[`docs/stiff-features.md`](docs/stiff-features.md) (issue demo#27). The
+arXiv write-up of Part 3 is in [`paper/`](paper/README.md) (issue demo#51:
 drafted, assembled and packaged for submission on 2026-09-20, with the
 pre-submission decisions and the AI-assistance disclosure recorded in its
 README); [`LITERATURE.md`](LITERATURE.md) is its novelty ledger, where
 the claim is itemised and every "not found" is tied to the search that
-produced it (#53).
+produced it (demo#53).
 
 ## Talk materials
 

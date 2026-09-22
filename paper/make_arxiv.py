@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble and verify a self-contained arXiv upload for the manuscript (#62).
+"""Assemble and verify a self-contained arXiv upload for the manuscript (demo#62).
 
 arXiv builds from the uploaded source tree and does **not** run BibTeX, so the
 upload carries the built ``main.bbl``. From ``paper/`` this script stages
@@ -22,7 +22,7 @@ markers are refused, the staged tree is rebuilt in a scratch copy and its
 text compared with the committed ``main.pdf`` (comment stripping is exactly
 the transform that fails silently: a ``%`` ending a line eats the newline,
 ``\\%`` is a literal percent), and the accented bibliography labels
-(``[Pó22]``, ``[Mü73]``, UTF-8 in the ``.bbl`` since #61) are checked to
+(``[Pó22]``, ``[Mü73]``, UTF-8 in the ``.bbl`` since demo#61) are checked to
 render. Any failure stops the packaging.
 
     tectonic --keep-intermediates main.tex   # produces main.bbl
@@ -56,7 +56,7 @@ FIG_DIR = HERE / "figures"
 # Environments in which '%' is content rather than a comment. None are used;
 # the stripper refuses rather than guess if one ever appears.
 VERBATIM_ENVS = ("verbatim", "Verbatim", "lstlisting", "alltt", "minted")
-# Draft markers that must not ship (the scaffold's \stub macro, #52).
+# Draft markers that must not ship (the scaffold's \stub macro, demo#52).
 DRAFT_MARKERS = ("\\stub", "\\todo", "[Stub,")
 COMMENT_LINE = re.compile(r"^\s*%")
 INCLUDEGRAPHICS = re.compile(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}")

@@ -1,4 +1,4 @@
-# Stiff smooth edges: seed stencils (Part 3, issue #27)
+# Stiff smooth edges: seed stencils (Part 3, issue demo#27)
 
 Exploration started 2026-09-19, after the talk's material was frozen. Not
 part of the presentation. Brad's question from a research-group session
@@ -15,15 +15,15 @@ is the dissertation's interface construction with the jump replaced by the
 edge profile. Code: `src/rbf_hyperbolic_interfaces/wave1d/stiff.py` (the seeds and the
 weights), `spectral.py` (the reference solution), `domain.py`
 (`LayeredMedium(edge_width=...)`), `scripts/wave1d_stiff.py` (the figures),
-`tests/test_wave1d_stiff.py`. The 2-D proof of concept (#36–#42, flat
+`tests/test_wave1d_stiff.py`. The 2-D proof of concept (demo#36–demo#42, flat
 first) is under way: `LayeredMedium2D(edge_width=...)` and the
-normal-incidence reference `wave2d/exact.py: spectral_plane_wave` from #36,
+normal-incidence reference `wave2d/exact.py: spectral_plane_wave` from demo#36,
 tested in `tests/test_wave2d_smooth_edges.py`; the elastic seeds of a
-straight edge, `wave2d/seeds.py` from #38, derived in section 4.2 and
+straight edge, `wave2d/seeds.py` from demo#38, derived in section 4.2 and
 tested in `tests/test_wave2d_seeds.py`; results go into section 5 as they
 land.
 
-## 1. Formulation (#28)
+## 1. Formulation (demo#28)
 
 ### 1.1 Setting
 
@@ -58,7 +58,7 @@ solutions are the functions that play the role of polynomials for this
 operator: with constant coefficients L_u = c² ∂ₓ², and ker ∂ₓ²ᵐ is exactly
 the polynomials of degree < 2m.
 
-Brad's bullets in #27 (with the correction ∂ₜᵏu = C rather than 0) are this
+Brad's bullets in demo#27 (with the correction ∂ₜᵏu = C rather than 0) are this
 construction, read one seed at a time. Anchored at the stencil's evaluation
 point x_e:
 
@@ -178,7 +178,7 @@ default contrast), because the seeds are exact for a different
 five-dimensional space; both stencils are fourth-order on solutions there
 and the experiment finds them indistinguishable end to end.
 
-## 2. Results (#32, `scripts/wave1d_stiff.py`, 2026-09-19)
+## 2. Results (demo#32, `scripts/wave1d_stiff.py`, 2026-09-19)
 
 Setup: the default layer `[0, 0.5)` with c: 1 → 2, ρ: 1 → 1, edges of
 width δ; a right-going Gaussian stress pulse with sharpness 60 (about 7
@@ -209,7 +209,7 @@ from 0.5 down for δ = 0.04.
 
 ![Error vs resolution for four edge widths](figures/wave1d_stiff_convergence.png)
 
-**Verdict on the hypothesis of #27: confirmed on both counts.**
+**Verdict on the hypothesis of demo#27: confirmed on both counts.**
 
 - *Standard FD4 looks low-order through an unresolved edge and recovers
   fourth order once the grid resolves it.* At δ = 0.0025 the naive error
@@ -273,7 +273,7 @@ in every run here. Nothing was tried for sharper contrasts, layers thinner
 than 19δ, or higher orders than FD4; the construction does not change for
 any of them.
 
-### 2.1 The standing alternative: the standard scheme on a changed medium (#69, `--comparators`, 2026-09-20)
+### 2.1 The standing alternative: the standard scheme on a changed medium (demo#69, `--comparators`, 2026-09-20)
 
 The comparison the ledger (`LITERATURE.md` §1a K6) said the write-up owed.
 In seismic and electromagnetic finite differences an interface is routinely
@@ -310,7 +310,7 @@ solution) as the table above, with the coefficients the naive scheme
 samples replaced by
 
 - *widened, h / 2h*: the true tanh profile with `edge_width = max(δ, mh)`,
-  m = 1, 2, the T0 bound of #69. It blends c and ρ linearly, so it is the
+  m = 1, 2, the T0 bound of demo#69. It blends c and ρ linearly, so it is the
   "regularise a itself" case Tornberg & Engquist warn about; a resolved
   edge (mh ≤ δ) is left alone;
 - *cell mean, h / 2h*: the compliance and the density averaged over
@@ -390,7 +390,7 @@ knee: 5.7× below naive at h = 8δ, 11× at 4δ and 2δ, then 4.7× and 4.9×
 *above* naive at h = δ and δ/2, where the naive scheme is fourth order and
 the averaged medium is not the true one. The seeds are 3.2× below the
 two-cell mean at h = 8δ, 10× at 4δ, 37× at 2δ, 146× at δ and 580× at δ/2:
-the gap widens toward the knee, the opposite of the outcome #69 named as
+the gap widens toward the knee, the opposite of the outcome demo#69 named as
 the one that would change the story (averaged FD4 matching the seeds near
 h ≈ δ). The widened edges are worse than naive wherever they act (widened
 h: 1.03×, 1.1×, 1.7× at h = 8δ, 4δ, 2δ; widened 2h: 2.2×, 2.6×, 5.1×, and
@@ -425,7 +425,7 @@ that one method beats another in general. In 2-D only the widened edge was
 run (section 5.7): there the changed medium's own error dominates and it is
 worse than sampling at every n where it acts.
 
-## 3. Related work (#33)
+## 3. Related work (demo#33)
 
 Brad's question: the construction came from intuition about these
 problems around 2013; are similar approaches known? An afternoon's scan on
@@ -569,12 +569,12 @@ observation that this is one construction from the jump (algebra) to the
 resolved edge (Fornberg) with the ODE march in between. That is a
 statement about a few hours of searching, not a claim of novelty.
 
-## 4. Two dimensions: the seeds (#34, #38)
+## 4. Two dimensions: the seeds (demo#34, demo#38)
 
-### 4.1 Design (#34)
+### 4.1 Design (demo#34)
 
-A design note answering the three questions in #27, written before any 2-D
-code; §4.2 is what #38 then built. The 2-D acoustic operator
+A design note answering the three questions in demo#27, written before any 2-D
+code; §4.2 is what demo#38 then built. The 2-D acoustic operator
 L = (1/ρ) ∇·(K ∇) is the first target; the elastic system of `wave2d` adds
 bookkeeping, not ideas.
 
@@ -618,7 +618,7 @@ data, which is the multiscale-FEM / oversampling construction (Hou–Wu) and
 the honest "PDE per stencil"; (c) compute the harmonic coordinates F once
 globally (Owhadi–Zhang), use polynomials in F as the degree-one seeds and
 the chain for the rest. For an edge whose curvature radius is many h,
-(a) should be enough; (b) is the robust fallback. This is #42.
+(a) should be enough; (b) is the robust fallback. This is demo#42.
 
 **Characteristics away from the interface?** No. Away from the feature
 the material is constant, the seeds are the monomials, and nothing
@@ -649,7 +649,7 @@ matrix operator of linear elasticity acting on (u, v); the straight-feature
 reduction still holds because the isotropic operator keeps its form under
 the rotation into the feature's frame.
 
-### 4.2 The elastic seeds of a straight feature (#38, `wave2d/seeds.py`)
+### 4.2 The elastic seeds of a straight feature (demo#38, `wave2d/seeds.py`)
 
 **Frame and operator.** As in `wave2d/interface.py`: origin at the
 closest edge-centre point, x' tangential, y' normal, and the rotated
@@ -802,7 +802,7 @@ are polynomials of degree ≤ 4), and compares with ρ Σ C S, the chain
 matrix having been checked against its closed form separately. The
 relative residual is 2 × 10⁻¹². An earlier version of this test rebuilt
 the xʲ coefficient formulas the way `rhs` does and so could not see a
-derivation error shared by the two; the adversarial review of PR #46
+derivation error shared by the two; the adversarial review of PR demo#46
 showed that by injecting one. The present test drops from 2 × 10⁻¹² to
 0.23 when the (j+2)(j+1) factor is wrong and to 0.06 when the λ (j+1) b'
 term is dropped.
@@ -841,7 +841,7 @@ symmetry in x' (every stencil in one fixed row shares y_e and the
 material profile, so one march with dense output could serve a whole
 row); that is an optimisation for later, not now.
 
-**What #39 gets.** `seed_basis(local, profile, degree)` takes the frame
+**What demo#39 gets.** `seed_basis(local, profile, degree)` takes the frame
 `operators._local_frames` already builds (node 0 the evaluation node,
 origin at the foot point) and a `NormalProfile` from
 `normal_profile(medium, interface, x0)`, and returns the velocity seeds
@@ -849,23 +849,23 @@ origin at the foot point) and a `NormalProfile` from
 jets at the anchor: the exact shapes `interface_weights` consumes through
 `eval_side` and `deriv_e`, so the seed-augmented weights are the same
 coupled saddle-point solve with the polynomial block swapped. One open
-point for #39: the polynomial branch also imposes Δ³ p = 0 on its
+point for demo#39: the polynomial branch also imposes Δ³ p = 0 on its
 augmentation (exact for degree ≤ 3). The seeds' sixth derivatives at the
 anchor are not zero in a varying medium (they carry the material's
 derivatives through the ODE), but hyperviscosity is a stabiliser, not
 part of the discretised operator, and the natural choice is to let it
 annihilate the seed space as it annihilates the polynomial one, i.e.
 impose zero. Whether that is right is an eigenvalue question and belongs
-with the spectrum study of #39 (§5.3: it is, provided the Δ³ row has the
+with the spectrum study of demo#39 (§5.3: it is, provided the Δ³ row has the
 naive stencil's footprint).
 
-## 5. Two dimensions: results (#36–)
+## 5. Two dimensions: results (demo#36–)
 
 The 2-D chain runs flat first (Brad, 2026-09-19): the principles and the
 RBF-FD stability question get settled on the flat two-interface problem of
-Part 2, which has an independent reference, before curvature enters (#42).
+Part 2, which has an independent reference, before curvature enters (demo#42).
 
-### 5.1 Smooth flat edges and the normal-incidence reference (#36, PR #43)
+### 5.1 Smooth flat edges and the normal-incidence reference (demo#36, PR demo#43)
 
 `LayeredMedium2D(edge_width=δ)` smooths both interfaces of the band
 `[0.25, 0.5)` into tanh transitions of scale δ in the vertical offset,
@@ -894,7 +894,7 @@ solution by 0.33. The shortcut f = λ/(λ+2μ) h of the jump case is off by
 (λ = μ on both sides), and 2·10⁻¹⁴, 10⁻⁹, 7·10⁻⁶ at δ = 0.01, 0.02, 0.04
 for a band with a different ratio.
 
-### 5.2 Naive baseline: is there a knee in 2-D? (#37, `scripts/wave2d_stiff.py`)
+### 5.2 Naive baseline: is there a knee in 2-D? (demo#37, `scripts/wave2d_stiff.py`)
 
 Setup: the flat band with the default contrast, plain RBF-FD everywhere
 (30-node stencils, degree-4 augmentation, Δ³ hyperviscosity at the MATLAB
@@ -971,18 +971,18 @@ Wider pulse, error in v and the largest spurious |u| (the exact u is 0):
   +8.2·10⁻⁵ for δ = 2h; RK4 amplification 1.0004, 1.0004, 1.0000. As
   expected: only the centre-sampled coefficients change.
 
-**Consequences for #38–#40.** The seed stencils can at most remove the
+**Consequences for demo#38–demo#40.** The seed stencils can at most remove the
 excess over the floor: 8–20% in v at δ = 0.01, a factor 10 at δ = 0.0025
 (an edge 3–8× thinner than the node spacing), and in spurious u a factor
 3–6 at δ = 0.01 and 11–190× for the jump-like cases. So the flat
-convergence study of #40 should report max |u| and the δ = 0.0025 column
+convergence study of demo#40 should report max |u| and the δ = 0.0025 column
 as its primary evidence, use the wider pulse, and treat the δ = 0.01
 v-curve as a secondary check; a "knee plot" in v alone would show little. The 2-D naive scheme is not first order through
 an unresolved edge the way 1-D FD4 was: the fixed rows straddling the edge
 centre keep the coefficient sampling symmetric, and RBF-FD's error through
 a jump is already the "second order, large constant" of Part 2.
 
-### 5.3 Seed-augmented stencils and the stability question (#39, `scripts/wave2d_stiff_eigenvalues.py`)
+### 5.3 Seed-augmented stencils and the stability question (demo#39, `scripts/wave2d_stiff_eigenvalues.py`)
 
 **What was built.** `wave2d/seeds.py: seed_weights` is the coupled
 saddle-point solve of `interface_weights` with the seeds of §4.2 in place
@@ -991,7 +991,7 @@ block (`gaussian_rows`) and the solve-and-rotate step (`coupled_weights`)
 for any augmenting basis, the seed values at the nodes are the
 augmentation, the elastic right-hand sides come from the jets at the
 anchor, and the hyperviscosity rows impose Δ³ = 0 on the seed space
-(Brad's decision on #39). The jump path is unchanged bit for bit.
+(Brad's decision on demo#39). The jump path is unchanged bit for bit.
 `build_operators(mode="aware")` on a medium with `edge_width > 0` rebuilds
 every row whose 19-node stencil sees varying material (the 1-D rule,
 `LayeredMedium2D.varies_over`, exact inequality by default and `seed_rtol`
@@ -1117,7 +1117,7 @@ seed-augmented stencils, at the standard γ and with the straddling rows
 kept, provided the hyperviscosity row of a seed stencil has the footprint
 γ was tuned for. Hyperviscosity annihilating the seed space is the right
 choice (it was the only variant tried that both annihilates and is
-stable), and the alternative in #38's open point, the seeds' true sixth
+stable), and the alternative in demo#38's open point, the seeds' true sixth
 derivatives, was never needed.
 
 **Acceptance run on 2500 nodes** (`--n 2500 --run --floor`, 12,500
@@ -1154,7 +1154,7 @@ weakly excited mode near the +0.1 rightmost eigenvalue, far below what
 max |R| = 1.0004 would allow (10% per unit time), confined to the regime
 where every row is a seed row, and the item to fix, with a slightly
 larger γ on the seed rows or the 30-node degree-4 stencils that are
-stable there, if #40 ever seeds a resolved edge.
+stable there, if demo#40 ever seeds a resolved edge.
 
 Where the seeds earn their keep is as sharp as the spectrum is uniform.
 At δ = h/8 they cut the spurious u from 9.5·10⁻³ to 1.7·10⁻³ (the floor
@@ -1168,7 +1168,7 @@ is the worse scheme: u 5.9·10⁻³ against 1.2·10⁻³, v 7.5·10⁻² against
 degree-4 seed stencils are the accurate ones there (on 900 nodes u is
 3.5× below naive at δ = h/2 and at the naive level at 1.9h), and they are
 the ones that blow up on a sharp edge (their run at δ = h/8 reaches 10¹⁴).
-So the seeds are for the twilight zone, δ ≲ h/4, and #40 should either
+So the seeds are for the twilight zone, δ ≲ h/4, and demo#40 should either
 not seed a resolved edge (a rule on the variation per node spacing, not
 `seed_rtol`, which trims tails but not the contiguous region) or find
 what makes a degree-4 seed basis unstable across a sharp feature, since
@@ -1193,20 +1193,20 @@ hyperviscosity would act on the seed part of the solution with strength
 edge structure, strong exactly when the edge is unresolved. That is the
 behaviour the seeds exist to remove, so the expectation is a stable
 operator (more damping, not less) that damps the resolved physics at
-the edge; the comparison is a half-day item on #40 if the spectrum or
+the edge; the comparison is a half-day item on demo#40 if the spectrum or
 the errors ever call for it.
 
 **Cost.** One march per 19-node stencil is 21–25 ms; with the second,
 30-node march a seed row costs 53 ms. On 10,000 nodes (the clip
 resolution) δ = h/8 has 1965 seed rows and builds in 105 s (49 s with the
 19-node Δ³ rows); δ = 0.01 = h has 6719 rows and builds in 331 s.
-The two optimisations for #40, if it hurts: the 19-node
+The two optimisations for demo#40, if it hurts: the 19-node
 stencil is the prefix of the 30-node one, so one march with the seeds
 rescaled to the smaller r_max (column scalings, the span is unchanged)
 serves both; and the flat case's translation symmetry (§4.2). Neither is
 built.
 
-### 5.4 The flat δ sweep: naive vs seeds vs the spectral reference (#40, `scripts/wave2d_stiff.py`)
+### 5.4 The flat δ sweep: naive vs seeds vs the spectral reference (demo#40, `scripts/wave2d_stiff.py`)
 
 The 2-D twin of the 1-D knee plot of section 2. Setup as §5.2 (the flat
 band, the wide pulse of sharpness 15 centred at 0.875, t = 1, the Part 2
@@ -1371,7 +1371,7 @@ beyond it, hence the rule. (2) The naive knee: at h = δ, in spurious u;
 in v the floor hides it as §5.2 predicted. (3) Figures under
 `docs/figures/`, this section, the regression test, runtime above.
 
-### 5.5 Oblique incidence: the x'-dependent seeds act (#41, `scripts/wave2d_stiff.py --direction 1 2`)
+### 5.5 Oblique incidence: the x'-dependent seeds act (demo#41, `scripts/wave2d_stiff.py --direction 1 2`)
 
 At normal incidence the solution is independent of x', u ≡ 0, and the
 seeds of x'ᵃ y'ᵇ with a ≥ 1 could only show through the weights, never
@@ -1427,7 +1427,7 @@ the stencils, and costs minutes (13 modes at n_y = 4096 for δ = 0.0025,
 20,000 steps at Δt = 5·10⁻⁵, 220 s; 40 s at δ = 0.01), less than one
 78,400-node seed run, so option (ii), the 4× finer seed run, was not
 needed; its y-direction machinery is what the product-grid reference of
-#42 will build on. Checks (`tests/test_wave2d_oblique.py`): the train
+demo#42 will build on. Checks (`tests/test_wave2d_oblique.py`): the train
 is the exact translate in a uniform medium to 10⁻¹⁰ and has zero curl
 (a P wave); at normal incidence the solver agrees with the mapped 1-D
 reference of §5.1 to 10⁻¹⁰, two independent code paths; through an
@@ -1590,7 +1590,7 @@ half the naive one everywhere, which is the ratio of the tables.
 
 ![P train at 26.6 degrees through a band with smooth edges at 10,000 nodes: the reference, its curl, and the two error maps](figures/wave2d_stiff_oblique_snapshot.png)
 
-**For the curved case (#42).** A downward plane pulse on the sine
+**For the curved case (demo#42).** A downward plane pulse on the sine
 interface of amplitude 0.02 meets it at up to 7.2° from the normal, so
 "normal incidence" there is locally oblique and the x'-dependent seeds
 act; mode conversion is weak at 7° and the converted S content, hence
@@ -1623,7 +1623,7 @@ nodes) costs a minute of reference and marches; the driver is the
 record. Runtime of the default oblique sweep: 500 s with the operators
 cached, of which 260 s are the two references (cached thereafter).
 
-### 5.6 The curved feature: route (a) seeds along the true normal (#42, `scripts/wave2d_stiff.py --amplitude 0.02`)
+### 5.6 The curved feature: route (a) seeds along the true normal (demo#42, `scripts/wave2d_stiff.py --amplitude 0.02`)
 
 The last of the 2-D chain and the case Brad wanted to go to first: both
 interfaces bent into the sine curves of Part 2's curved study
@@ -1650,7 +1650,7 @@ the first version failed its own test. The images at ±1 are placed at
 d ± 1, the flat rule, which is off by up to a percent of a distance
 that is at least 0.375, where the tails are below 10⁻¹⁶ for δ ≤ 0.01.
 The flat branch of `layer_fraction` is untouched, so the flat seed
-operators cached by #40 rebuild bit for bit (checked against the
+operators cached by demo#40 rebuild bit for bit (checked against the
 n = 2500, δ = 0.01 cache before anything else was changed), and the
 jump medium (δ = 0) is untouched too.
 
@@ -1659,7 +1659,7 @@ of its foot point and samples the medium along the true normal,
 (x₀ − y' sin θ, y₀ + y' cos θ); the ODE stops (edge centres and their
 ±10δ flanks) come from Newton on the line's intersection with each
 interface and its images (`crossings`; the closed form is kept for
-θ = 0 so the flat profile is bit for bit the #38 one). Along that line
+θ = 0 so the flat profile is bit for bit the demo#38 one). Along that line
 the blend is exactly the medium's tanh step in y' for the interface
 the line is normal to (`test_normal_profile_is_the_edge_profile_in_the_normal_coordinate`,
 10⁻¹³), so the seeds of a curved-edge stencil are the *flat* seeds of
@@ -1696,9 +1696,9 @@ even on a flat edge, and the per-stencil march stays.
 **The references.** Two, one per column type, as planned on the issue:
 
 - δ > 0: `wave2d/spectral.py: run_fourier_2d`, the 2-D extension of the
-  #41 solver. The x-modes mix on a curved medium, so the five real
+  demo#41 solver. The x-modes mix on a curved medium, so the five real
   fields live on an n_x × n_y product grid (x at j/n_x, y cell-centred,
-  the #41 conventions), derivatives by FFT along each axis (`scipy.fft`
+  the demo#41 conventions), derivatives by FFT along each axis (`scipy.fft`
   on all cores), the material multiplied in physical space, RK4 at
   Δt = cfl / (c_max √(n_x² + n_y²)) with cfl = 0.5 (the largest
   eigenvalue of the semi-discretisation is c_p |k| with
@@ -1851,7 +1851,7 @@ Rates of the seeds' edge rows: 3.8, 4.1, 3.4 at δ = 0.005 and 3.6, 3.8,
   less at the fine end: 3.8× at 4900 nodes and 2.9× at 10,000 (4.7e-3
   against 1.81e-2, 1.68e-3 against 4.8e-3 at δ = 0.005), only 1.6× at
   19,600 (8.3e-4 against 1.30e-3), its rates having fallen to 2.1–2.6
-  there against the naive floor's 3.7–3.9 (the #61 pass corrected this
+  there against the naive floor's 3.7–3.9 (the demo#61 pass corrected this
   sentence, which read "above it at 19,600", backwards): 19-node degree-3 rows are third order in the first
   derivatives with a small constant, and with rtol = 0 they cover the
   19δ tails on both sides of both edges, 44–72% of the nodes. That is
@@ -1907,7 +1907,7 @@ Row for row the flat table of §5.3 (there: seeds +6.3e-2, +7.8e-2,
 jump-aware +4.9e-2 at 1.0002). The rotation of every seed stencil into
 its own frame, the tilted normals and the curved rows change the
 rightmost eigenvalues by 10% and the RK4 amplification not at all: the
-stability answer of #39 carries over to the curved edge unchanged, with
+stability answer of demo#39 carries over to the curved edge unchanged, with
 the 30-node Δ³ footprint on the seed rows. The energy ratios above one
 at 2h (1.6% growth over t = 1) are what max |R| = 1.0004 allows and the
 same as flat; the resolved edge is the naive scheme's case anyway.
@@ -2062,18 +2062,18 @@ the 2048 × 4096 grid of δ = 0.0025, and are cached; the 24 curved seed
 operators about an hour on 6–12 workers; the sweep 12 min from the
 caches, the spectra 23 min, the clip 21 min.
 
-### 5.7 The standing alternative on the scattered nodes (#69, `--modes widen1 widen2 cell cell2 bandlimit`, 2026-09-20)
+### 5.7 The standing alternative on the scattered nodes (demo#69, `--modes widen1 widen2 cell cell2 bandlimit`, 2026-09-20)
 
 The 2-D half of section 2.1: the naive RBF-FD operator of section 5.2 on a
 changed medium, against the true medium's reference, on the flat geometry
-through δ = 0.0025 and 0.01 (the #40 references and node sets) and the
-curved one through δ = 0.0025, 0.005 and 0.01 (the #42 product-grid
+through δ = 0.0025 and 0.01 (the demo#40 references and node sets) and the
+curved one through δ = 0.0025, 0.005 and 0.01 (the demo#42 product-grid
 references). Five treatments of the coefficients the naive operator samples
 (`wave2d/treatments.py: TreatedMedium2D`; `scripts/wave2d_stiff.py`, the
 comparator modes; results `paper/data/wave2d_stiff_cmp.json` and
 `wave2d_stiff_cmp_a0.02.json`):
 
-- *widened, h / 2h* (T0 of #69): the same tanh profile with
+- *widened, h / 2h* (T0 of demo#69): the same tanh profile with
   `edge_width = max(δ, mh)`, the naive operator built on it (a resolved
   edge is left alone, so the run then equals the naive one);
 - *cell mean, h / 2h* (T2): the wave moduli K = λ + 2μ and μ averaged

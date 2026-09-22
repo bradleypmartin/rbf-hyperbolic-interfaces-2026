@@ -1,5 +1,5 @@
 """Fourier pseudo-spectral references for smooth media: Fourier in x on a
-flat medium (issue #41), and on a product grid for a curved one (#42).
+flat medium (issue demo#41), and on a product grid for a curved one (demo#42).
 
 The references of :mod:`.exact` need a state that depends on y only. An
 oblique plane wave does not, but on a flat medium the coefficients still
@@ -249,7 +249,7 @@ def run_fourier(
     return out
 
 
-# --- the product grid (#42) -----------------------------------------------------
+# --- the product grid (demo#42) -------------------------------------------------
 
 
 def _trig_basis(coords: np.ndarray, n: int, origin: float, order: int) -> np.ndarray:

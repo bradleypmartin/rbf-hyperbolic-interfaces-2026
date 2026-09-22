@@ -1,4 +1,4 @@
-"""Regenerate every figure and table fragment the manuscript uses (issue #54).
+"""Regenerate every figure and table fragment the manuscript uses (issue demo#54).
 
 House rule: ``paper/figures/`` comes from committed scripts and is never
 hand-edited. The convergence figures, the two seed-basis figures and every
@@ -10,7 +10,7 @@ operator caches under ``outputs/`` (minutes) and copies their PDFs in.
 Print figures pin ``SOURCE_DATE_EPOCH``, so a regenerated PDF is
 byte-identical to the committed one; ``--check`` regenerates the cached
 set into a temporary directory and fails on any difference, the gate the
-assembly pass (#61) can script.
+assembly pass (demo#61) can script.
 
     uv run python scripts/paper_figures.py            # from paper/data, ~10 s
     uv run python scripts/paper_figures.py --all      # + stills and spectra, ~50 min

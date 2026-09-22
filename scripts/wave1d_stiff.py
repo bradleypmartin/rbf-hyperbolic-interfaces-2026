@@ -1,4 +1,4 @@
-"""Stiff smooth edges: standard FD4 vs ODE-continued seed stencils (issue #27).
+"""Stiff smooth edges: standard FD4 vs ODE-continued seed stencils (issue demo#27).
 
 The layer of ``wave1d_convergence.py`` with its two edges smoothed into tanh
 transitions of width delta. The panels sweep delta from the dissertation's
@@ -10,13 +10,13 @@ nodes and the edge is the only thing under test.
 
 Also writes a snapshot at t = 1 on 100 nodes through an edge of width h/8,
 and the seeds themselves for one stencil across an edge. The errors and
-rates go to ``outputs/wave1d_stiff.json`` (and ``--data-dir``, #54); the
+rates go to ``outputs/wave1d_stiff.json`` (and ``--data-dir``, demo#54); the
 convergence and seed figures are drawn by ``rbf_hyperbolic_interfaces.stiff_figures``
 from those records, so ``scripts/paper_figures.py`` can redraw them in print
 style without this run. ``--style print --format pdf`` draws them that way
 here.
 
-``--comparators`` (issue #69) also runs the standard scheme on a changed
+``--comparators`` (issue demo#69) also runs the standard scheme on a changed
 medium, the standing alternative to an interface stencil: the edge widened
 to ``max(delta, h)`` and ``max(delta, 2h)`` (``widen1``, ``widen2``), the
 cell-averaged compliance and density of Tornberg & Engquist (2006) over
@@ -86,7 +86,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--comparators",
         action="store_true",
-        help="also run the coefficient treatments of #69 through the standard "
+        help="also run the coefficient treatments of demo#69 through the standard "
         f"scheme ({', '.join(COMPARATORS)})",
     )
     parser.add_argument("--snapshot-n", type=int, default=100)
