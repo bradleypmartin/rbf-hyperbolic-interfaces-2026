@@ -82,10 +82,11 @@ PDFs in. Print figures pin `SOURCE_DATE_EPOCH=0`, so a regenerated PDF is
 byte-identical to the committed one; `--check` is the gate demo#61 scripts.
 
 `data/` itself is refreshed by the drivers, from the caches under
-`outputs/` (see CLAUDE.md for the runtimes):
+`outputs/` (see CLAUDE.md for the runtimes); one command per file, with the
+arguments that file records:
 
 ```bash
-uv run python scripts/wave1d_stiff.py --data-dir paper/data
+uv run python scripts/wave1d_stiff.py --comparators --data-dir paper/data
 uv run python scripts/wave2d_stiff.py --data-dir paper/data
 uv run python scripts/wave2d_stiff.py --direction 1 2 --widths 0.0025 0.01 \
     --modes naive aware ablate --seed-floor --data-dir paper/data
@@ -93,6 +94,10 @@ uv run python scripts/wave2d_stiff.py --amplitude 0.02 --widths 0 0.0025 0.005 0
     --seed-floor --truncation --snapshot-width 0.005 --data-dir paper/data
 uv run python scripts/wave2d_stiff.py --amplitude 0.02 --widths 0.005 --seed-rtol 1e-3 \
     --no-snapshot --data-dir paper/data
+uv run python scripts/wave2d_stiff.py --modes naive widen1 widen2 cell cell2 bandlimit \
+    --widths 0.0025 0.01 --no-snapshot --data-dir paper/data
+uv run python scripts/wave2d_stiff.py --modes naive widen1 widen2 cell cell2 bandlimit \
+    --amplitude 0.02 --widths 0.0025 0.005 0.01 --no-snapshot --data-dir paper/data
 uv run python scripts/wave2d_stiff_eigenvalues.py --n 2500 --run --floor --data-dir paper/data
 uv run python scripts/wave2d_stiff_eigenvalues.py --n 2500 --run --amplitude 0.02 \
     --data-dir paper/data
