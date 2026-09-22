@@ -172,8 +172,9 @@ src/rbf_hyperbolic_interfaces/   library code
 scripts/         drivers that write figures and clips to outputs/;
                  paper_figures.py (the manuscript's figures and tables from
                  paper/data/, demo#54); paper_numbers.py (the cache-backed
-                 numbers in main.tex, demo#61)
-tests/           pytest, 245 tests; every numerical routine has one
+                 numbers in main.tex, demo#61, --data-dir for another cache);
+                 compare_caches.py (two results caches, record by record, #6)
+tests/           pytest, 261 tests; every numerical routine has one
 docs/            stiff-features.md (Part 3) with its figures in figures/,
                  decisions-log.md (Part 2 record, what happened when,
                  decisions), paper-index.md, split-commit-map.txt
@@ -226,7 +227,10 @@ uv run python scripts/paper_figures.py        # paper/figures/ from paper/data/:
                                               # drivers (~50 min from the outputs/ caches, the
                                               # two n = 2500 spectra most of it); --check
                                               # verifies byte identity of the cached set
-uv run python scripts/paper_numbers.py        # the cache-backed numbers in main.tex
+uv run python scripts/paper_numbers.py        # the cache-backed numbers in main.tex;
+                                              # --data-dir <dir> checks another cache
+uv run python scripts/compare_caches.py paper/data <dir>   # a rebuilt cache against the
+                                              # committed one, record by record (#6)
 ./papers/fetch_papers.sh                      # public papers, checksum-checked
 (cd paper && tectonic main.tex)               # the manuscript → paper/main.pdf
 (cd paper && tectonic --keep-intermediates main.tex && uv run python make_arxiv.py)
