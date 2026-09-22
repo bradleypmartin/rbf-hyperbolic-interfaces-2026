@@ -4,7 +4,7 @@ Both 2-D drivers need field values away from the nodes they were computed
 on: on a pixel grid to draw colour maps, and on a coarse node set to measure
 a coarse run against a fine reference. The interpolant is the local
 Gaussian-plus-polynomial fit behind the RBF-FD weights
-(:mod:`pdes_demo.wave2d.rbf`), evaluated at the target point instead of
+(:mod:`rbf_hyperbolic_interfaces.wave2d.rbf`), evaluated at the target point instead of
 differentiated at a node, so it is exact for the same polynomials as the
 solver and converges at the same order.
 
@@ -62,9 +62,9 @@ def resample_matrix(
 
     Each target point gets the ``stencil_size`` nearest source nodes (under
     periodic wrap) from its own material and the interpolation weights of
-    :func:`pdes_demo.wave2d.rbf.rbf_interpolation_weights`. ``one_sided=False``
-    lets stencils cross the interfaces; it exists to demonstrate why the
-    default does not.
+    :func:`rbf_hyperbolic_interfaces.wave2d.rbf.rbf_interpolation_weights`.
+    ``one_sided=False`` lets stencils cross the interfaces; it exists to demonstrate why
+    the default does not.
     """
     src = wrap(source.xy if isinstance(source, NodeSet) else np.asarray(source))
     tgt = wrap(np.asarray(target, dtype=float))

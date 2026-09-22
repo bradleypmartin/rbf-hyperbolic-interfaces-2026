@@ -15,7 +15,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pdes_demo.plotting import (
+from rbf_hyperbolic_interfaces.plotting import (
     AWARE,
     INK_MUTED,
     INK_SECONDARY,
@@ -23,7 +23,7 @@ from pdes_demo.plotting import (
     SURFACE,
     use_demo_style,
 )
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     LayeredMedium2D,
     SineInterface,
     make_node_set,

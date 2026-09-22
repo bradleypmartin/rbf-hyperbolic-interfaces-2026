@@ -1,6 +1,6 @@
-"""Coefficient treatments on scattered nodes (issue #69, T2).
+"""Coefficient treatments on scattered nodes (issue demo#69, T2).
 
-The 2-D twin of :mod:`pdes_demo.wave1d.treatments`: the coefficients the
+The 2-D twin of :mod:`rbf_hyperbolic_interfaces.wave1d.treatments`: the coefficients the
 naive RBF-FD operator samples at the nodes are replaced by kernel averages
 of the true medium over a square of side tied to the nominal spacing ``h``,
 and the unchanged naive operator runs on the result against the true

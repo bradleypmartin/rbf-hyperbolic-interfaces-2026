@@ -1,18 +1,18 @@
-"""Part 3 figures drawn from the results cache (issue #54).
+"""Part 3 figures drawn from the results cache (issue demo#54).
 
 The stiff drivers used to draw their convergence figures inline from the
 numbers they had just computed. The manuscript needs the same figures in
 print style, regenerated from the committed cache without the sweeps, so the
-drawing lives here and takes :class:`~pdes_demo.results_cache.ResultsCache`
-records: a driver passes the cache it has just filled, and
-``scripts/paper_figures.py`` passes one read from ``paper/data/``. The seed
-basis figures (1-D, and the 2-D cross-sections the manuscript asks for)
-compute their curves directly; they take seconds.
+drawing lives here and takes
+:class:`~rbf_hyperbolic_interfaces.results_cache.ResultsCache` records: a driver passes
+the cache it has just filled, and ``scripts/paper_figures.py`` passes one read from
+``paper/data/``. The seed basis figures (1-D, and the 2-D cross-sections the manuscript
+asks for) compute their curves directly; they take seconds.
 
 Every function draws in whatever rcParams are active
-(:func:`~pdes_demo.plotting.use_demo_style` or
-:func:`~pdes_demo.plotting.use_print_style`); ``print_mode`` picks the layout
-and the labels. Print figures are laid out at :data:`TEXTWIDTH_IN` so the
+(:func:`~rbf_hyperbolic_interfaces.plotting.use_demo_style` or
+:func:`~rbf_hyperbolic_interfaces.plotting.use_print_style`); ``print_mode`` picks the
+layout and the labels. Print figures are laid out at :data:`TEXTWIDTH_IN` so the
 fonts land at true size; demo figures keep the deck's wide layouts and their
 suptitles (a print figure gets its caption in LaTeX).
 """
@@ -239,7 +239,7 @@ def comparators_1d(
     modes: tuple[str, ...] = ("naive", "cell", "cell2", "bandlimit", "aware"),
 ) -> Path:
     """Error vs resolution per edge width for the standard scheme on the
-    treated media of #69, against the sampled medium and the seeds (notes
+    treated media of demo#69, against the sampled medium and the seeds (notes
     §2.1, ``wave1d_stiff_comparators``). The widened edges are left out:
     they never beat the sampled medium."""
     if widths is None:
@@ -579,7 +579,7 @@ def seeds_2d(out: Path, *, print_mode: bool = False, h: float = 0.02) -> Path:
     """Cross-sections of the elastic seeds of a straight edge in the normal
     coordinate: the jump limit, an edge of width h/4 and one of width 2h,
     against the monomials, for the members of :data:`SEED_MEMBERS_2D`
-    (the manuscript's figure of the 2-D basis, #54)."""
+    (the manuscript's figure of the 2-D basis, demo#54)."""
     y_grid = np.linspace(-1.2, 1.2, 241)
     cases = [
         (r"jump ($\delta \to 0$)" if print_mode else "jump (delta -> 0)", 1e-6),

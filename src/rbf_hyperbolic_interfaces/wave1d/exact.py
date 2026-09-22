@@ -103,12 +103,12 @@ def exact_solution(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Exact (u, f) at time ``t`` for the right-going Gaussian pulse problem.
 
-    The initial data are those of :func:`~pdes_demo.wave1d.domain.right_going_pulse`
-    with the same ``center`` and ``sharpness``. The ray sum assumes a clean
-    start: the pulse must sit in the background material with its tails
-    below ``tail_tol`` at both interfaces, otherwise the part of the tail
-    already across an interface has no ray to carry it and the reference
-    would be silently wrong there.
+    The initial data are those of
+    :func:`~rbf_hyperbolic_interfaces.wave1d.domain.right_going_pulse` with the same
+    ``center`` and ``sharpness``. The ray sum assumes a clean start: the pulse must sit
+    in the background material with its tails below ``tail_tol`` at both interfaces,
+    otherwise the part of the tail already across an interface has no ray to carry it
+    and the reference would be silently wrong there.
     """
     x = np.asarray(x, dtype=float)
     if medium.in_layer(np.array([center]))[0]:

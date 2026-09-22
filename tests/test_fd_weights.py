@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pdes_demo.fd_weights import fornberg_weights
+from rbf_hyperbolic_interfaces.fd_weights import fornberg_weights
 
 
 def test_centred_fd4_first_derivative() -> None:

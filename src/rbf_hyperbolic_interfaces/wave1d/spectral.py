@@ -1,4 +1,4 @@
-"""Fourier pseudo-spectral reference solution for smooth-edged layers (#30).
+"""Fourier pseudo-spectral reference solution for smooth-edged layers (demo#30).
 
 The ray-sum exact solution only covers jump edges. With ``edge_width > 0``
 the coefficients are smooth and periodic, so a Fourier pseudo-spectral
@@ -77,8 +77,8 @@ def run_spectral(
     reference of known accuracy; it is capped at the CFL step.
 
     ``initial`` replaces the right-going pulse by samples ``(u0, f0)`` on the
-    grid's nodes; :func:`pdes_demo.wave2d.exact.spectral_plane_wave` uses it
-    to hand over the exact image of the 2-D initial state.
+    grid's nodes; :func:`rbf_hyperbolic_interfaces.wave2d.exact.spectral_plane_wave`
+    uses it to hand over the exact image of the 2-D initial state.
     """
     grid = periodic_grid(n)
     d = spla.LinearOperator((n, n), matvec=spectral_derivative, dtype=float)

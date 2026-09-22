@@ -10,7 +10,7 @@ The medium is a background material everywhere except one layer
 layer edges are the interfaces where naive finite differences break down.
 
 With ``edge_width > 0`` the two edges are smooth tanh transitions of that
-scale instead of jumps (issue #27): the same layer, swept from the
+scale instead of jumps (issue demo#27): the same layer, swept from the
 dissertation's discontinuity through the "twilight zone" of edges too steep
 for a grid to resolve, to a gentle transition every scheme handles.
 """
@@ -28,7 +28,7 @@ class Medium1D(Protocol):
     """What the solvers ask of a medium: speed, density and impedance at points
     and the fastest speed for the time step. :class:`LayeredMedium` satisfies
     it, and so does the 1-D image of a flat 2-D medium that
-    :mod:`pdes_demo.wave2d.exact` hands to the spectral solver.
+    :mod:`rbf_hyperbolic_interfaces.wave2d.exact` hands to the spectral solver.
     """
 
     @property

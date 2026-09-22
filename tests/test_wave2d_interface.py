@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     LayeredMedium2D,
     SineInterface,
@@ -10,7 +10,7 @@ from pdes_demo.wave2d import (
     make_node_set,
     run,
 )
-from pdes_demo.wave2d.interface import (
+from rbf_hyperbolic_interfaces.wave2d.interface import (
     closest_point,
     continuity_matrix,
     derivative_matrices,
@@ -20,7 +20,7 @@ from pdes_demo.wave2d.interface import (
     pde_operator,
     rotation_matrices,
 )
-from pdes_demo.wave2d.rbf import monomial_exponents, rbf_fd_weights
+from rbf_hyperbolic_interfaces.wave2d.rbf import monomial_exponents, rbf_fd_weights
 
 BG = ElasticMaterial(lam=1.0, mu=1.0, rho=1.0)
 LAYER = ElasticMaterial(lam=4.0, mu=4.0, rho=2.0)

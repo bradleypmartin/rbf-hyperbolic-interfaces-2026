@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     LayeredMedium2D,
     exact_plane_wave,
     make_node_set,

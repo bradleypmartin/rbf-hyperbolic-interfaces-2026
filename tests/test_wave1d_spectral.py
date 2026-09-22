@@ -1,10 +1,16 @@
-"""Fourier pseudo-spectral reference (issue #30)."""
+"""Fourier pseudo-spectral reference (issue demo#30)."""
 
 import numpy as np
 import pytest
 
-from pdes_demo.wave1d import LayeredMedium, Material, gaussian, periodic_grid, run
-from pdes_demo.wave1d.spectral import (
+from rbf_hyperbolic_interfaces.wave1d import (
+    LayeredMedium,
+    Material,
+    gaussian,
+    periodic_grid,
+    run,
+)
+from rbf_hyperbolic_interfaces.wave1d.spectral import (
     energy,
     interpolate,
     reference_size,

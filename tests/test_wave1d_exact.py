@@ -1,8 +1,13 @@
 import numpy as np
 import pytest
 
-from pdes_demo.wave1d import LayeredMedium, Material, exact_solution, right_going_pulse
-from pdes_demo.wave1d.domain import periodic_grid
+from rbf_hyperbolic_interfaces.wave1d import (
+    LayeredMedium,
+    Material,
+    exact_solution,
+    right_going_pulse,
+)
+from rbf_hyperbolic_interfaces.wave1d.domain import periodic_grid
 
 MEDIUM = LayeredMedium(layer=Material(c=2.0, rho=1.0), layer_width=0.5)  # Z: 1 -> 2
 

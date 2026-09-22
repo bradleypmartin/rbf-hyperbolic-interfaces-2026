@@ -1,6 +1,11 @@
 import numpy as np
 
-from pdes_demo.wave2d import minimal_image, periodic_knn, stencil_offsets, wrap
+from rbf_hyperbolic_interfaces.wave2d import (
+    minimal_image,
+    periodic_knn,
+    stencil_offsets,
+    wrap,
+)
 
 
 def _brute_force_knn(xy: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:

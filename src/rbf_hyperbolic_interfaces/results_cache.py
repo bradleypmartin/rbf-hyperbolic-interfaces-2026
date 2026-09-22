@@ -1,13 +1,13 @@
-"""Results cache for the Part 3 drivers (issue #54).
+"""Results cache for the Part 3 drivers (issue demo#54).
 
 The stiff drivers (``scripts/wave1d_stiff.py``, ``scripts/wave2d_stiff.py``,
 ``scripts/wave2d_stiff_eigenvalues.py``) cache their *inputs* under
-``outputs/`` (spectral references, seed operators) but until #54 printed
+``outputs/`` (spectral references, seed operators) but until demo#54 printed
 their *results* to the terminal only, so the convergence tables lived in
 ``docs/stiff-features.md`` alone. This module gives every driver one JSON
 file of records that the manuscript's figures and tables regenerate from
 without the sweeps (``scripts/paper_figures.py``), and that the assembly
-pass (#61) can script its number check against.
+pass (demo#61) can script its number check against.
 
 Schema (``SCHEMA`` below), one file per driver invocation::
 
@@ -45,6 +45,12 @@ Every record carries ``kind`` and the keys of its kind:
 
 Records are plain dicts so the schema can grow by adding keys; readers
 select on the keys they know (:meth:`ResultsCache.select`).
+
+The ``schema`` string names the file format, not an import path, so it keeps
+the ``pdes-demo`` prefix of the talk repository this package was split out
+of (as ``pdes_demo``; now ``rbf_hyperbolic_interfaces``). :meth:`ResultsCache.read`
+rejects any other string, and changing it would rewrite every committed JSON
+in ``paper/data/`` for no change in content.
 """
 
 from __future__ import annotations

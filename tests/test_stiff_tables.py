@@ -1,9 +1,9 @@
-"""Table fragments of #54 on a synthetic cache: formatting and layout, no sweeps."""
+"""Table fragments of demo#54 on a synthetic cache: formatting and layout, no sweeps."""
 
 import pytest
 
-from pdes_demo.results_cache import ResultsCache
-from pdes_demo.stiff_tables import (
+from rbf_hyperbolic_interfaces.results_cache import ResultsCache
+from rbf_hyperbolic_interfaces.stiff_tables import (
     rates_cell,
     sci,
     table_1d,

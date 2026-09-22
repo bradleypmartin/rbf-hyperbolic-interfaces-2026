@@ -1,0 +1,8 @@
+# Mechanical, repository-wide rewrites that `git blame` should look through.
+# GitHub's blame view reads this file; on the command line pass
+# --ignore-revs-file .git-blame-ignore-revs, or set blame.ignoreRevsFile.
+
+# Package renamed to rbf_hyperbolic_interfaces
+f4d10791204b6c8538dddbef4b7d72fd6143f204
+# Demo issue references rewritten as demo#N
+3205b44b8b0f1c119e3c7a17443272979e0ad85c

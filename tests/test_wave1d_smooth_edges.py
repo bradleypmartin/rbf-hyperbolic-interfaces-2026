@@ -1,10 +1,15 @@
-"""Smooth-edged layer (issue #29): a tanh edge of width ``edge_width``."""
+"""Smooth-edged layer (issue demo#29): a tanh edge of width ``edge_width``."""
 
 import numpy as np
 import pytest
 
-from pdes_demo.wave1d import LayeredMedium, Material, exact_solution, periodic_grid
-from pdes_demo.wave1d.operators import _crossed_interfaces, _stencil
+from rbf_hyperbolic_interfaces.wave1d import (
+    LayeredMedium,
+    Material,
+    exact_solution,
+    periodic_grid,
+)
+from rbf_hyperbolic_interfaces.wave1d.operators import _crossed_interfaces, _stencil
 
 
 def test_zero_edge_width_is_the_jump_medium_bit_for_bit() -> None:

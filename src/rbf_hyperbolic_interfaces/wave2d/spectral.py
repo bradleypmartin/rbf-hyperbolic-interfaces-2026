@@ -1,5 +1,5 @@
 """Fourier pseudo-spectral references for smooth media: Fourier in x on a
-flat medium (issue #41), and on a product grid for a curved one (#42).
+flat medium (issue demo#41), and on a product grid for a curved one (demo#42).
 
 The references of :mod:`.exact` need a state that depends on y only. An
 oblique plane wave does not, but on a flat medium the coefficients still
@@ -11,14 +11,14 @@ each x-mode ``k`` obeys the 1-D system in y with ``d/dx -> 2 pi i k``, the
 material multiplies pointwise in y without mixing modes, and the modes
 never talk to each other. So the reference is one complex-coefficient
 Fourier pseudo-spectral solve in y per mode, all modes marched together as
-one array with the RK4 loop of :mod:`pdes_demo.wave1d.spectral`: y
+one array with the RK4 loop of :mod:`rbf_hyperbolic_interfaces.wave1d.spectral`: y
 derivatives by FFT along y, x derivatives by the mode number. It shares
 nothing with the RBF-FD stencils under test and converges exponentially in
-y once the edge is resolved (:func:`~pdes_demo.wave1d.spectral.reference_size`
-sets the grid for a tanh edge). Which modes are carried is read off the
-initial data: those whose x-Fourier coefficients on an ``n_x`` grid are
-above ``tol`` of the largest, 13 for the (1, 2) train of
-:func:`~.domain.oblique_p_wave` at sharpness 15 and one for the normal
+y once the edge is resolved
+(:func:`~rbf_hyperbolic_interfaces.wave1d.spectral.reference_size` sets the grid for a
+tanh edge). Which modes are carried is read off the initial data: those whose x-Fourier
+coefficients on an ``n_x`` grid are above ``tol`` of the largest, 13 for the (1, 2)
+train of :func:`~.domain.oblique_p_wave` at sharpness 15 and one for the normal
 pulse. The Fourier derivative is skew-adjoint, so the elastic energy of
 :func:`ModeState.energy` is conserved by the semi-discretisation and the
 time step sets the accuracy, as in 1-D.
@@ -189,12 +189,13 @@ def run_fourier(
     ``initial(xy) -> (5, n)``: one :class:`ModeState` per snapshot time
     (``t_end`` alone by default), integrated with RK4.
 
-    ``n_y`` defaults to :func:`~pdes_demo.wave1d.spectral.reference_size`
-    of the edge (4096 at delta = 0.0025, 1024 at 0.01); ``n_x`` only has to
-    hold the initial data's x-modes. The step is ``cfl * h_y / c_max``
-    capped at ``dt``: Fourier + RK4 is stable to ``cfl * pi < 2.8`` and the
-    RK4 error at ``dt = 5e-5`` is about 1e-10 for the pulses used here
-    (``tests/test_wave2d_oblique.py`` halves the step and doubles the grid).
+    ``n_y`` defaults to
+    :func:`~rbf_hyperbolic_interfaces.wave1d.spectral.reference_size` of the edge (4096
+    at delta = 0.0025, 1024 at 0.01); ``n_x`` only has to hold the initial data's
+    x-modes. The step is ``cfl * h_y / c_max`` capped at ``dt``: Fourier + RK4 is stable
+    to ``cfl * pi < 2.8`` and the RK4 error at ``dt = 5e-5`` is about 1e-10 for the
+    pulses used here (``tests/test_wave2d_oblique.py`` halves the step and doubles the
+    grid).
     """
     if not medium.is_flat:
         raise ValueError("the Fourier-in-x reference needs flat interfaces")
@@ -248,7 +249,7 @@ def run_fourier(
     return out
 
 
-# --- the product grid (#42) -----------------------------------------------------
+# --- the product grid (demo#42) -------------------------------------------------
 
 
 def _trig_basis(coords: np.ndarray, n: int, origin: float, order: int) -> np.ndarray:
@@ -344,11 +345,11 @@ def run_fourier_2d(
     as soon as it is taken (a clip wants the fields at its nodes for
     hundreds of frames, not hundreds of 20 MB grids).
 
-    ``n_y`` defaults to :func:`~pdes_demo.wave1d.spectral.reference_size`
-    of the edge and ``n_x`` to ``n_y / 2``. The step is
-    ``cfl / (c_max sqrt(n_x^2 + n_y^2))``, capped at ``dt`` when given:
-    the largest eigenvalue of the semi-discretisation is ``c_p |k|`` with
-    ``|k| < pi sqrt(n_x^2 + n_y^2)``, and RK4 holds the imaginary axis to
+    ``n_y`` defaults to
+    :func:`~rbf_hyperbolic_interfaces.wave1d.spectral.reference_size` of the edge and
+    ``n_x`` to ``n_y / 2``. The step is ``cfl / (c_max sqrt(n_x^2 + n_y^2))``, capped at
+    ``dt`` when given: the largest eigenvalue of the semi-discretisation is ``c_p |k|``
+    with ``|k| < pi sqrt(n_x^2 + n_y^2)``, and RK4 holds the imaginary axis to
     2.83, so ``cfl < 0.9`` is stable and 0.5 leaves the RK4 error near
     ``1e-8`` for the pulses used here (the driver halves it once). FFTs
     run on ``workers`` threads (all cores by default).

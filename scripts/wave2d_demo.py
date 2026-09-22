@@ -19,7 +19,7 @@ interface.
     uv run python scripts/wave2d_demo.py --amplitude 0.02 --edge-width 0.005   # Part 3
 
 ``--edge-width delta`` smooths the curved interfaces into tanh edges of that
-width (Part 3, #42): the aware solver is then the seed-stencil operator and
+width (Part 3, demo#42): the aware solver is then the seed-stencil operator and
 the reference the product-grid Fourier solution of ``wave2d/spectral.py``,
 evaluated at the nodes frame by frame.
 """
@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FFMpegWriter, FuncAnimation
 
-from pdes_demo.plotting import (
+from rbf_hyperbolic_interfaces.plotting import (
     ERROR_CMAP,
     FIELD_CMAP,
     INK,
@@ -41,7 +41,7 @@ from pdes_demo.plotting import (
     INK_SECONDARY,
     use_demo_style,
 )
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     LayeredMedium2D,
     NodeSet,
     SineInterface,

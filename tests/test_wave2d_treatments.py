@@ -1,11 +1,15 @@
-"""Coefficient treatments on scattered nodes (issue #69, T2)."""
+"""Coefficient treatments on scattered nodes (issue demo#69, T2)."""
 
 import numpy as np
 import pytest
 from scipy.integrate import quad
 
-from pdes_demo.wave2d import LayeredMedium2D, SineInterface, build_operators
-from pdes_demo.wave2d.treatments import TreatedMedium2D
+from rbf_hyperbolic_interfaces.wave2d import (
+    LayeredMedium2D,
+    SineInterface,
+    build_operators,
+)
+from rbf_hyperbolic_interfaces.wave2d.treatments import TreatedMedium2D
 
 H = 0.02
 
@@ -111,7 +115,7 @@ def test_curved_edge_average_follows_the_curve() -> None:
 
 
 def test_treated_medium_builds_the_naive_operator() -> None:
-    from pdes_demo.wave2d import make_node_set, run
+    from rbf_hyperbolic_interfaces.wave2d import make_node_set, run
 
     medium = _flat(0.01)
     nodes = make_node_set(medium, 400, seed=0)

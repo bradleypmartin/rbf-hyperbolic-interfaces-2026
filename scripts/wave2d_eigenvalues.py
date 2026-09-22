@@ -8,9 +8,9 @@ chosen time step. Dense eigenvalue solves, so keep n small (900 nodes is
 4500 eigenvalues and takes a few seconds; 2500 nodes takes minutes).
 
 With ``--edge-width delta`` the interfaces are smooth tanh edges (Part 3,
-#37): flat, coefficients sampled at the stencil centres. ``--mode aware``
+demo#37): flat, coefficients sampled at the stencil centres. ``--mode aware``
 rebuilds the interface rows: the piecewise-polynomial stencils for a jump,
-the seed stencils for a smooth edge (#39). ``scripts/wave2d_stiff_eigenvalues.py``
+the seed stencils for a smooth edge (demo#39). ``scripts/wave2d_stiff_eigenvalues.py``
 runs the comparison across widths.
 
     uv run python scripts/wave2d_eigenvalues.py
@@ -25,9 +25,22 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pdes_demo.plotting import AWARE, INK_MUTED, INK_SECONDARY, NAIVE, use_demo_style
-from pdes_demo.wave2d import LayeredMedium2D, SineInterface, make_node_set
-from pdes_demo.wave2d.operators import build_operators, hyperviscosity_gamma
+from rbf_hyperbolic_interfaces.plotting import (
+    AWARE,
+    INK_MUTED,
+    INK_SECONDARY,
+    NAIVE,
+    use_demo_style,
+)
+from rbf_hyperbolic_interfaces.wave2d import (
+    LayeredMedium2D,
+    SineInterface,
+    make_node_set,
+)
+from rbf_hyperbolic_interfaces.wave2d.operators import (
+    build_operators,
+    hyperviscosity_gamma,
+)
 
 
 def rk4_boundary(n_pts: int = 800) -> np.ndarray:

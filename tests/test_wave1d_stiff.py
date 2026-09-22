@@ -1,21 +1,25 @@
-"""ODE-continued seed stencils for stiff smooth edges (issues #31, #32)."""
+"""ODE-continued seed stencils for stiff smooth edges (issues demo#31, demo#32)."""
 
 import numpy as np
 import pytest
 from scipy.integrate import quad
 
-from pdes_demo.fd_weights import fornberg_weights
-from pdes_demo.wave1d import (
+from rbf_hyperbolic_interfaces.fd_weights import fornberg_weights
+from rbf_hyperbolic_interfaces.wave1d import (
     LayeredMedium,
     Material,
     build_operators,
     periodic_grid,
     run,
 )
-from pdes_demo.wave1d.domain import Interface
-from pdes_demo.wave1d.operators import aware_rows, interface_weights
-from pdes_demo.wave1d.spectral import interpolate, run_spectral, spectral_derivative
-from pdes_demo.wave1d.stiff import seed_basis, stiff_weights
+from rbf_hyperbolic_interfaces.wave1d.domain import Interface
+from rbf_hyperbolic_interfaces.wave1d.operators import aware_rows, interface_weights
+from rbf_hyperbolic_interfaces.wave1d.spectral import (
+    interpolate,
+    run_spectral,
+    spectral_derivative,
+)
+from rbf_hyperbolic_interfaces.wave1d.stiff import seed_basis, stiff_weights
 
 XS = np.array([-0.025, -0.015, -0.005, 0.005, 0.015])
 XE = -0.005
