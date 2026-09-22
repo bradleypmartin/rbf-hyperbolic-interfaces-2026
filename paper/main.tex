@@ -267,7 +267,12 @@ already make.
   disclosed at the end of the paper, with a test for every numerical
   routine, in which every figure and table of this paper is regenerated
   by a committed script from a results cache
-  (\url{https://github.com/bradleypmartin/20260930-zd-ai-pdes-demo/tree/manuscript-v1},
+% A URL line has no glue to stretch, and this one no longer fits on one
+% line (#5); \url overran the margin by 49pt. The \hfil pair is a break
+% that ends the line ragged when taken and cancels when it is not.
+  (\href{https://github.com/bradleypmartin/rbf-hyperbolic-interfaces-2026/tree/manuscript-v1}%
+  {\nolinkurl{https://github.com/bradleypmartin/rbf-hyperbolic-interfaces-2026/tree/}%
+  \hfil\penalty0\hfilneg\nolinkurl{manuscript-v1}},
   the tag of this version).
 \end{enumerate}
 
