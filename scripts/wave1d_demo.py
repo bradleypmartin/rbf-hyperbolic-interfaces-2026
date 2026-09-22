@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FFMpegWriter, FuncAnimation
 
-from pdes_demo.plotting import (
+from rbf_hyperbolic_interfaces.plotting import (
     COLORS,
     INK_MUTED,
     INK_SECONDARY,
@@ -29,7 +29,7 @@ from pdes_demo.plotting import (
     LAYER_FILL,
     use_demo_style,
 )
-from pdes_demo.wave1d import (
+from rbf_hyperbolic_interfaces.wave1d import (
     LayeredMedium,
     Material,
     exact_solution,

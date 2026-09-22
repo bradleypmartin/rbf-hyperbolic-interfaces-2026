@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
 
-from pdes_demo.plotting import (
+from rbf_hyperbolic_interfaces.plotting import (
     AWARE,
     INK_MUTED,
     INK_SECONDARY,
@@ -38,9 +38,9 @@ from pdes_demo.plotting import (
     use_demo_style,
     use_print_style,
 )
-from pdes_demo.results_cache import ResultsCache
-from pdes_demo.wave1d import periodic_grid
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.results_cache import ResultsCache
+from rbf_hyperbolic_interfaces.wave1d import periodic_grid
+from rbf_hyperbolic_interfaces.wave2d import (
     LayeredMedium2D,
     NodeSet,
     Operators,
@@ -52,7 +52,10 @@ from pdes_demo.wave2d import (
     make_node_set,
     run,
 )
-from pdes_demo.wave2d.exact import plane_wave_from_1d, spectral_plane_wave_1d
+from rbf_hyperbolic_interfaces.wave2d.exact import (
+    plane_wave_from_1d,
+    spectral_plane_wave_1d,
+)
 
 VARIANTS = {
     "naive": "plain 30-node degree-4 stencils everywhere",

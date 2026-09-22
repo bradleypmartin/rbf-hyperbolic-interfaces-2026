@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 from scipy.special import eval_genlaguerre
 
-from pdes_demo.wave2d import LayeredMedium2D, make_node_set
-from pdes_demo.wave2d.operators import build_operators
-from pdes_demo.wave2d.rbf import (
+from rbf_hyperbolic_interfaces.wave2d import LayeredMedium2D, make_node_set
+from rbf_hyperbolic_interfaces.wave2d.operators import build_operators
+from rbf_hyperbolic_interfaces.wave2d.rbf import (
     laplacian_power_of_gaussian,
     laplacian_power_of_monomials,
     monomial_exponents,

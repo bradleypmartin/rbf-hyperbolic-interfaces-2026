@@ -1,7 +1,7 @@
 """Elastic seed bases for a straight stiff feature (issue #38; Part 3, 2-D chain).
 
-The 2-D twin of :mod:`pdes_demo.wave1d.stiff`. A stencil whose nodes see a
-material edge too steep for the node spacing keeps its Gaussian RBF part and
+The 2-D twin of :mod:`rbf_hyperbolic_interfaces.wave1d.stiff`. A stencil whose nodes see
+a material edge too steep for the node spacing keeps its Gaussian RBF part and
 swaps the polynomial augmentation of :mod:`.interface` for *seeds*: functions
 that look like the monomials ``x'^a y'^b`` at the evaluation node and are
 continued through the edge by what the elastic operator allows. They are the

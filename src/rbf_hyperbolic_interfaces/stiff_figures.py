@@ -3,16 +3,16 @@
 The stiff drivers used to draw their convergence figures inline from the
 numbers they had just computed. The manuscript needs the same figures in
 print style, regenerated from the committed cache without the sweeps, so the
-drawing lives here and takes :class:`~pdes_demo.results_cache.ResultsCache`
-records: a driver passes the cache it has just filled, and
-``scripts/paper_figures.py`` passes one read from ``paper/data/``. The seed
-basis figures (1-D, and the 2-D cross-sections the manuscript asks for)
-compute their curves directly; they take seconds.
+drawing lives here and takes
+:class:`~rbf_hyperbolic_interfaces.results_cache.ResultsCache` records: a driver passes
+the cache it has just filled, and ``scripts/paper_figures.py`` passes one read from
+``paper/data/``. The seed basis figures (1-D, and the 2-D cross-sections the manuscript
+asks for) compute their curves directly; they take seconds.
 
 Every function draws in whatever rcParams are active
-(:func:`~pdes_demo.plotting.use_demo_style` or
-:func:`~pdes_demo.plotting.use_print_style`); ``print_mode`` picks the layout
-and the labels. Print figures are laid out at :data:`TEXTWIDTH_IN` so the
+(:func:`~rbf_hyperbolic_interfaces.plotting.use_demo_style` or
+:func:`~rbf_hyperbolic_interfaces.plotting.use_print_style`); ``print_mode`` picks the
+layout and the labels. Print figures are laid out at :data:`TEXTWIDTH_IN` so the
 fonts land at true size; demo figures keep the deck's wide layouts and their
 suptitles (a print figure gets its caption in LaTeX).
 """

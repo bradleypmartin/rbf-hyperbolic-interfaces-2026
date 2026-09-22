@@ -25,9 +25,22 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pdes_demo.plotting import AWARE, INK_MUTED, INK_SECONDARY, NAIVE, use_demo_style
-from pdes_demo.wave2d import LayeredMedium2D, SineInterface, make_node_set
-from pdes_demo.wave2d.operators import build_operators, hyperviscosity_gamma
+from rbf_hyperbolic_interfaces.plotting import (
+    AWARE,
+    INK_MUTED,
+    INK_SECONDARY,
+    NAIVE,
+    use_demo_style,
+)
+from rbf_hyperbolic_interfaces.wave2d import (
+    LayeredMedium2D,
+    SineInterface,
+    make_node_set,
+)
+from rbf_hyperbolic_interfaces.wave2d.operators import (
+    build_operators,
+    hyperviscosity_gamma,
+)
 
 
 def rk4_boundary(n_pts: int = 800) -> np.ndarray:

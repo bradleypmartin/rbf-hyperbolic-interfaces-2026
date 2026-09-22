@@ -69,7 +69,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
 
-from pdes_demo.plotting import (
+from rbf_hyperbolic_interfaces.plotting import (
     ERROR_CMAP,
     FIELD_CMAP,
     INK,
@@ -79,11 +79,11 @@ from pdes_demo.plotting import (
     use_demo_style,
     use_print_style,
 )
-from pdes_demo.results_cache import ResultsCache
-from pdes_demo.stiff_figures import convergence_2d
-from pdes_demo.wave1d import periodic_grid
-from pdes_demo.wave1d.spectral import reference_size
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.results_cache import ResultsCache
+from rbf_hyperbolic_interfaces.stiff_figures import convergence_2d
+from rbf_hyperbolic_interfaces.wave1d import periodic_grid
+from rbf_hyperbolic_interfaces.wave1d.spectral import reference_size
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     GridState,
     LayeredMedium2D,
@@ -101,8 +101,11 @@ from pdes_demo.wave2d import (
     run_fourier,
     run_fourier_2d,
 )
-from pdes_demo.wave2d.exact import plane_wave_from_1d, spectral_plane_wave_1d
-from pdes_demo.wave2d.treatments import TreatedMedium2D
+from rbf_hyperbolic_interfaces.wave2d.exact import (
+    plane_wave_from_1d,
+    spectral_plane_wave_1d,
+)
+from rbf_hyperbolic_interfaces.wave2d.treatments import TreatedMedium2D
 
 MODE_SHORT = {
     "naive": "naive",
@@ -140,7 +143,8 @@ def parse_args() -> argparse.Namespace:
         "medium against the true medium's reference: the edge widened to "
         "max(delta, h) / max(delta, 2h) (widen1 / widen2), the cell means of the "
         "wave moduli (harmonic) and density over h / 2h (cell / cell2), and the "
-        "band-limited coefficients (bandlimit); pdes_demo.wave2d.treatments",
+        "band-limited coefficients (bandlimit); "
+        "rbf_hyperbolic_interfaces.wave2d.treatments",
     )
     parser.add_argument(
         "--direction",
@@ -512,7 +516,7 @@ def run_medium(nodes: NodeSet, medium: LayeredMedium2D, mode: str):
     edge widened to what the node spacing resolves (``widen1``, ``widen2``;
     a resolved edge is left alone, so the run then equals the naive one), or
     the coefficients averaged over one or two cells or band-limited
-    (:class:`~pdes_demo.wave2d.treatments.TreatedMedium2D`). Other modes
+    (:class:`~rbf_hyperbolic_interfaces.wave2d.treatments.TreatedMedium2D`). Other modes
     run on the true medium."""
     if mode.startswith("widen"):
         cells = int(mode[len("widen") :])

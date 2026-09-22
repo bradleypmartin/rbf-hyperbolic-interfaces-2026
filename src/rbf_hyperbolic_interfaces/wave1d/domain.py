@@ -28,7 +28,7 @@ class Medium1D(Protocol):
     """What the solvers ask of a medium: speed, density and impedance at points
     and the fastest speed for the time step. :class:`LayeredMedium` satisfies
     it, and so does the 1-D image of a flat 2-D medium that
-    :mod:`pdes_demo.wave2d.exact` hands to the spectral solver.
+    :mod:`rbf_hyperbolic_interfaces.wave2d.exact` hands to the spectral solver.
     """
 
     @property

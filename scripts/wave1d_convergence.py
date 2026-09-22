@@ -14,8 +14,19 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pdes_demo.plotting import COLORS, INK_MUTED, INK_SECONDARY, LABELS, use_demo_style
-from pdes_demo.wave1d import LayeredMedium, exact_solution, periodic_grid, run
+from rbf_hyperbolic_interfaces.plotting import (
+    COLORS,
+    INK_MUTED,
+    INK_SECONDARY,
+    LABELS,
+    use_demo_style,
+)
+from rbf_hyperbolic_interfaces.wave1d import (
+    LayeredMedium,
+    exact_solution,
+    periodic_grid,
+    run,
+)
 
 
 def rel_error(n: int, medium: LayeredMedium, mode: str, t_end: float) -> float:

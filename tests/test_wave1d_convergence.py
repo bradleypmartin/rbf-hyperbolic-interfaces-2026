@@ -3,8 +3,13 @@
 import numpy as np
 import pytest
 
-from pdes_demo.wave1d import LayeredMedium, exact_solution, periodic_grid, run
-from pdes_demo.wave1d.operators import stencil_crossings
+from rbf_hyperbolic_interfaces.wave1d import (
+    LayeredMedium,
+    exact_solution,
+    periodic_grid,
+    run,
+)
+from rbf_hyperbolic_interfaces.wave1d.operators import stencil_crossings
 
 
 def _rel_l2_error(
@@ -49,7 +54,7 @@ def test_thin_layer_double_cross_stays_fourth_order() -> None:
 
 
 def test_uniform_medium_translation_error_is_small() -> None:
-    from pdes_demo.wave1d import Material
+    from rbf_hyperbolic_interfaces.wave1d import Material
 
     medium = LayeredMedium(layer=Material(c=1.0, rho=1.0))
     err = _rel_l2_error(400, medium, "naive", t_end=0.5)

@@ -2,14 +2,14 @@ import numpy as np
 import pytest
 import scipy.sparse as sp
 
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     LayeredMedium2D,
     make_node_set,
     minimal_image,
     plane_p_wave,
 )
-from pdes_demo.wave2d.operators import (
+from rbf_hyperbolic_interfaces.wave2d.operators import (
     build_operators,
     elastic_block,
     hyperviscosity_gamma,

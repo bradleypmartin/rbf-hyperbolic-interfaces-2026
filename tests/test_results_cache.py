@@ -7,7 +7,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pdes_demo.results_cache import KINDS, SCHEMA, ResultsCache, json_ready
+from rbf_hyperbolic_interfaces.results_cache import (
+    KINDS,
+    SCHEMA,
+    ResultsCache,
+    json_ready,
+)
 
 
 def _cache() -> ResultsCache:

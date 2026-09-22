@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FFMpegWriter, FuncAnimation
 
-from pdes_demo.plotting import (
+from rbf_hyperbolic_interfaces.plotting import (
     ERROR_CMAP,
     FIELD_CMAP,
     INK,
@@ -41,7 +41,7 @@ from pdes_demo.plotting import (
     INK_SECONDARY,
     use_demo_style,
 )
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     LayeredMedium2D,
     NodeSet,
     SineInterface,

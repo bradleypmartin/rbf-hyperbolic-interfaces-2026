@@ -1,7 +1,7 @@
 [project]
-name = "pdes-demo"
+name = "rbf-hyperbolic-interfaces"
 version = "0.1.0"
-description = "Python re-implementations of RBF-FD / interface-aware FD wave solvers from B. Martin's 2016 CU Boulder dissertation, built with Claude for a 2026-09-30 Ziff Davis demo"
+description = "Interface-aware FD and RBF-FD wave solvers for layered media, ported from B. Martin's 2016 CU Boulder dissertation, and ODE-continued seed stencils for material edges too steep for the grid"
 authors = [
     { name = "Brad Martin", email = "20822557+bradleypmartin@users.noreply.github.com" }
 ]

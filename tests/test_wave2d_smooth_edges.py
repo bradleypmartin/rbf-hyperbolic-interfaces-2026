@@ -4,9 +4,9 @@ the seed-aware operator (#39, #40)."""
 import numpy as np
 import pytest
 
-from pdes_demo.wave1d import LayeredMedium
-from pdes_demo.wave1d.spectral import reference_size
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave1d import LayeredMedium
+from rbf_hyperbolic_interfaces.wave1d.spectral import reference_size
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     LayeredMedium2D,
     SineInterface,
@@ -19,7 +19,7 @@ from pdes_demo.wave2d import (
     run,
     spectral_plane_wave,
 )
-from pdes_demo.wave2d.exact import _as_1d_medium, _MappedMedium1D
+from rbf_hyperbolic_interfaces.wave2d.exact import _as_1d_medium, _MappedMedium1D
 
 FLAT = LayeredMedium2D()
 UNIFORM = LayeredMedium2D(layer=FLAT.background)

@@ -1,9 +1,14 @@
 import numpy as np
 import pytest
 
-from pdes_demo.wave1d import LayeredMedium, Material, build_operators, periodic_grid
-from pdes_demo.wave1d.domain import Interface
-from pdes_demo.wave1d.operators import (
+from rbf_hyperbolic_interfaces.wave1d import (
+    LayeredMedium,
+    Material,
+    build_operators,
+    periodic_grid,
+)
+from rbf_hyperbolic_interfaces.wave1d.domain import Interface
+from rbf_hyperbolic_interfaces.wave1d.operators import (
     continuity_matrices,
     interface_weights,
     piecewise_bases,

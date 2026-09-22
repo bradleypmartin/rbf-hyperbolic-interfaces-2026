@@ -4,21 +4,21 @@ stiff feature."""
 import numpy as np
 import pytest
 
-from pdes_demo.fd_weights import fornberg_weights
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.fd_weights import fornberg_weights
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     LayeredMedium2D,
     make_node_set,
     minimal_image,
     periodic_knn,
 )
-from pdes_demo.wave2d.interface import (
+from rbf_hyperbolic_interfaces.wave2d.interface import (
     evaluate_basis,
     interface_basis,
     interface_weights,
 )
-from pdes_demo.wave2d.rbf import monomial_exponents, rbf_fd_weights
-from pdes_demo.wave2d.seeds import (
+from rbf_hyperbolic_interfaces.wave2d.rbf import monomial_exponents, rbf_fd_weights
+from rbf_hyperbolic_interfaces.wave2d.seeds import (
     SeedChain,
     basis_columns,
     chain_matrix,

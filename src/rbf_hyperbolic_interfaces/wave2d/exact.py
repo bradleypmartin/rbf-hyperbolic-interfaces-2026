@@ -3,8 +3,8 @@
 With flat interfaces and a plane pulse that depends on y only, the 2-D
 elastic system reduces to the 1-D two-way wave equation in y for the pair
 (v, h): ``rho v_t = h_y``, ``h_t = (lam + 2 mu) v_y``, while ``u = g = 0``
-and ``f_t = lam v_y`` follows h. The 1-D solvers of :mod:`pdes_demo.wave1d`
-handle exactly that after a change of variables:
+and ``f_t = lam v_y`` follows h. The 1-D solvers of
+:mod:`rbf_hyperbolic_interfaces.wave1d` handle exactly that after a change of variables:
 
     x = 1 - 2 y      (maps y = 0.75 to x = -0.5 and -y travel to +x travel)
     c' = 2 c_p       (dx = -2 dy)
@@ -63,11 +63,11 @@ class _MappedMedium1D:
     ``rho' = rho / 2`` and ``K' = 2 (lam + 2 mu)`` at every point, so
     ``c' = 2 c_p`` with the local P speed, and an edge of width delta in y is
     one of width 2 delta in x. Built pointwise rather than as a
-    :class:`~pdes_demo.wave1d.domain.LayeredMedium` because that class blends
-    c and rho linearly across an edge while the 2-D medium blends lam, mu and
+    :class:`~rbf_hyperbolic_interfaces.wave1d.domain.LayeredMedium` because that class
+    blends c and rho linearly across an edge while the 2-D medium blends lam, mu and
     rho, which makes K linear in the blend weight and c_p not; the two
     conventions agree only in the jump limit. Satisfies
-    :class:`~pdes_demo.wave1d.domain.Medium1D`.
+    :class:`~rbf_hyperbolic_interfaces.wave1d.domain.Medium1D`.
     """
 
     def __init__(self, medium: LayeredMedium2D) -> None:
@@ -153,8 +153,8 @@ def spectral_plane_wave_1d(
 
     Resolution: ``reference_size(2 * edge_width)`` 1-D nodes unless ``n_ref``
     is given (2048 at delta = 0.005); ``dt`` and ``cfl`` go to
-    :func:`~pdes_demo.wave1d.spectral.run_spectral`. The default CFL gives
-    dt = 5e-5 at 2048 nodes, where doubling the grid or halving the step
+    :func:`~rbf_hyperbolic_interfaces.wave1d.spectral.run_spectral`. The default CFL
+    gives dt = 5e-5 at 2048 nodes, where doubling the grid or halving the step
     changes the result by under 3e-10 at t = 1 for the default pulse; pass
     ``dt`` to pin the step when comparing grid sizes. Cost is the 1-D run:
     about 4 s at 2048 nodes to t = 1, 14 s at 8192 nodes to t = 0.3.

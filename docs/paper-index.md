@@ -27,7 +27,7 @@ Printed page = PDF page − 9 (Chapter 1 begins on printed p. 1 = PDF p. 10).
 | 123–124 | Ch. 6 Conclusions | Closing slide |
 | 125– | Bibliography | Citations |
 
-Code that implements §2.1: `src/pdes_demo/wave1d/operators.py` (docstrings
+Code that implements §2.1: `src/rbf_hyperbolic_interfaces/wave1d/operators.py` (docstrings
 cite the equation numbers above).
 
 ## OpenAI, *Finite Time Blowup for Navier–Stokes* (`openai-2026-finite-time-blowup-navier-stokes.pdf`, 166 pp.)

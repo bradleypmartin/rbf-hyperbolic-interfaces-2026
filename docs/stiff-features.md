@@ -12,7 +12,7 @@ functions obtained from ODEs?
 
 Short answer, from the experiment in section 2: yes, and the construction
 is the dissertation's interface construction with the jump replaced by the
-edge profile. Code: `src/pdes_demo/wave1d/stiff.py` (the seeds and the
+edge profile. Code: `src/rbf_hyperbolic_interfaces/wave1d/stiff.py` (the seeds and the
 weights), `spectral.py` (the reference solution), `domain.py`
 (`LayeredMedium(edge_width=...)`), `scripts/wave1d_stiff.py` (the figures),
 `tests/test_wave1d_stiff.py`. The 2-D proof of concept (#36–#42, flat

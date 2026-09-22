@@ -1,6 +1,6 @@
 """LaTeX table fragments of the Part 3 manuscript from the results cache (#54).
 
-Each writer takes a :class:`~pdes_demo.results_cache.ResultsCache` and
+Each writer takes a :class:`~rbf_hyperbolic_interfaces.results_cache.ResultsCache` and
 returns a booktabs ``tabular`` fragment for ``\\input``, headed by a
 ``% GENERATED`` comment naming the script and the cache file so nobody
 edits it by hand (bolza-bending's ``control_table.tex`` pattern). Numbers

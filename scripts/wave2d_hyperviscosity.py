@@ -18,8 +18,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import NullFormatter
 
-from pdes_demo.plotting import INK_MUTED, INK_SECONDARY, use_demo_style
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.plotting import INK_MUTED, INK_SECONDARY, use_demo_style
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     LayeredMedium2D,
     build_operators,

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     LayeredMedium2D,
     build_operators,
@@ -12,7 +12,7 @@ from pdes_demo.wave2d import (
     run,
     stable_dt,
 )
-from pdes_demo.wave2d.simulate import hyperviscosity_extreme
+from rbf_hyperbolic_interfaces.wave2d.simulate import hyperviscosity_extreme
 
 FLAT = LayeredMedium2D()
 UNIFORM = LayeredMedium2D(layer=ElasticMaterial(lam=1.0, mu=1.0, rho=1.0))

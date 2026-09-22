@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from scipy.special import sici
 
-from pdes_demo.wave1d import LayeredMedium, Material, periodic_grid
-from pdes_demo.wave1d.treatments import TreatedMedium, widened
+from rbf_hyperbolic_interfaces.wave1d import LayeredMedium, Material, periodic_grid
+from rbf_hyperbolic_interfaces.wave1d.treatments import TreatedMedium, widened
 
 LAYER = Material(c=2.0, rho=1.5)
 
@@ -122,7 +122,7 @@ def test_c_max_sees_the_gibbs_overshoot_of_the_sinc_kernel_only() -> None:
 
 def test_treated_medium_runs_through_the_naive_scheme() -> None:
     """The wrapper satisfies Medium1D: ``run(mode="naive")`` takes it as is."""
-    from pdes_demo.wave1d import run
+    from rbf_hyperbolic_interfaces.wave1d import run
 
     medium = LayeredMedium(edge_width=0.0025)
     grid = periodic_grid(100)
@@ -146,8 +146,12 @@ def _error(n: int, medium: LayeredMedium, run_medium, t_end: float = 1.0) -> flo
     """Relative l2 error in f at ``t_end`` of the naive scheme on
     ``run_medium`` against the true medium's reference (the notes' setup:
     sharpness 60, centre -0.6)."""
-    from pdes_demo.wave1d import exact_solution, run
-    from pdes_demo.wave1d.spectral import interpolate, reference_size, run_spectral
+    from rbf_hyperbolic_interfaces.wave1d import exact_solution, run
+    from rbf_hyperbolic_interfaces.wave1d.spectral import (
+        interpolate,
+        reference_size,
+        run_spectral,
+    )
 
     grid = periodic_grid(n)
     snaps = run(
@@ -179,7 +183,7 @@ def test_one_cell_average_of_a_jump_on_a_cell_boundary_changes_nothing() -> None
     one-cell ramp of Tornberg & Engquist ends exactly at the nearest nodes
     and the sampled coefficients are the true ones to rounding, so the runs
     agree to rounding. The two-cell average does reach those nodes."""
-    from pdes_demo.wave1d import run
+    from rbf_hyperbolic_interfaces.wave1d import run
 
     medium = LayeredMedium()
     grid = periodic_grid(200)
@@ -217,7 +221,7 @@ def test_two_cell_average_is_second_order_at_a_jump_and_the_others_first() -> No
 def test_treatments_gain_little_through_an_unresolved_edge() -> None:
     """At h = 4 delta the cell and band-limited media cut the naive error by
     a factor between 1.2 and 3 while the seeds cut it by more than 50."""
-    from pdes_demo.wave1d import run
+    from rbf_hyperbolic_interfaces.wave1d import run
 
     medium = LayeredMedium(edge_width=0.0025)
     n = 200
@@ -240,7 +244,11 @@ def test_treatments_gain_little_through_an_unresolved_edge() -> None:
     ref_err = _error(n, medium, medium, 0.6)  # same reference path, naive
     assert ref_err == naive
     # The seeds against the same reference:
-    from pdes_demo.wave1d.spectral import interpolate, reference_size, run_spectral
+    from rbf_hyperbolic_interfaces.wave1d.spectral import (
+        interpolate,
+        reference_size,
+        run_spectral,
+    )
 
     ref_grid, ref = run_spectral(
         medium,

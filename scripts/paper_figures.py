@@ -26,16 +26,16 @@ import tempfile
 import time
 from pathlib import Path
 
-from pdes_demo.plotting import use_print_style
-from pdes_demo.results_cache import ResultsCache
-from pdes_demo.stiff_figures import (
+from rbf_hyperbolic_interfaces.plotting import use_print_style
+from rbf_hyperbolic_interfaces.results_cache import ResultsCache
+from rbf_hyperbolic_interfaces.stiff_figures import (
     comparators_1d,
     convergence_1d,
     convergence_2d,
     seeds_1d,
     seeds_2d,
 )
-from pdes_demo.stiff_tables import (
+from rbf_hyperbolic_interfaces.stiff_tables import (
     table_1d,
     table_1d_comparators,
     table_2d,

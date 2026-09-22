@@ -2,8 +2,8 @@
 
 import pytest
 
-from pdes_demo.results_cache import ResultsCache
-from pdes_demo.stiff_tables import (
+from rbf_hyperbolic_interfaces.results_cache import ResultsCache
+from rbf_hyperbolic_interfaces.stiff_tables import (
     rates_cell,
     sci,
     table_1d,

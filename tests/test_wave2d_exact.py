@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     LayeredMedium2D,
     SineInterface,

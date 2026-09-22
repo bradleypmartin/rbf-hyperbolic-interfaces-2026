@@ -4,7 +4,7 @@ the true normal, route (a) seed operators, and the product-grid reference."""
 import numpy as np
 import pytest
 
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     ElasticMaterial,
     LayeredMedium2D,
     SineInterface,
@@ -16,8 +16,8 @@ from pdes_demo.wave2d import (
     run_fourier,
     run_fourier_2d,
 )
-from pdes_demo.wave2d.interface import closest_point
-from pdes_demo.wave2d.seeds import normal_profile, seed_basis
+from rbf_hyperbolic_interfaces.wave2d.interface import closest_point
+from rbf_hyperbolic_interfaces.wave2d.seeds import normal_profile, seed_basis
 
 A = 0.02
 CURVED = LayeredMedium2D(lower=SineInterface(0.25, A), upper=SineInterface(0.5, A))

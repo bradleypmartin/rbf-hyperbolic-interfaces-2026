@@ -4,7 +4,7 @@ Fourier-in-x reference, and the tangential-seed ablation."""
 import numpy as np
 import pytest
 
-from pdes_demo.wave2d import (
+from rbf_hyperbolic_interfaces.wave2d import (
     LayeredMedium2D,
     build_operators,
     make_node_set,
@@ -16,8 +16,8 @@ from pdes_demo.wave2d import (
     run_fourier,
     spectral_plane_wave,
 )
-from pdes_demo.wave2d.rbf import monomial_exponents
-from pdes_demo.wave2d.seeds import normal_profile, seed_basis
+from rbf_hyperbolic_interfaces.wave2d.rbf import monomial_exponents
+from rbf_hyperbolic_interfaces.wave2d.seeds import normal_profile, seed_basis
 
 FLAT = LayeredMedium2D()
 UNIFORM = LayeredMedium2D(layer=FLAT.background, edge_width=0.01)

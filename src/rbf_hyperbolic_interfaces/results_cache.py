@@ -45,6 +45,12 @@ Every record carries ``kind`` and the keys of its kind:
 
 Records are plain dicts so the schema can grow by adding keys; readers
 select on the keys they know (:meth:`ResultsCache.select`).
+
+The ``schema`` string names the file format, not an import path, so it keeps
+the ``pdes-demo`` prefix of the talk repository this package was split out
+of (as ``pdes_demo``; now ``rbf_hyperbolic_interfaces``). :meth:`ResultsCache.read`
+rejects any other string, and changing it would rewrite every committed JSON
+in ``paper/data/`` for no change in content.
 """
 
 from __future__ import annotations

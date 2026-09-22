@@ -12,16 +12,16 @@ import matplotlib
 import numpy as np
 import pytest
 
-from pdes_demo.plotting import use_demo_style, use_print_style
-from pdes_demo.results_cache import ResultsCache
-from pdes_demo.stiff_figures import (
+from rbf_hyperbolic_interfaces.plotting import use_demo_style, use_print_style
+from rbf_hyperbolic_interfaces.results_cache import ResultsCache
+from rbf_hyperbolic_interfaces.stiff_figures import (
     SEED_MEMBERS_2D,
     comparators_1d,
     convergence_1d,
     convergence_2d,
     seed_sections_2d,
 )
-from pdes_demo.wave2d import LayeredMedium2D
+from rbf_hyperbolic_interfaces.wave2d import LayeredMedium2D
 
 matplotlib.use("Agg")
 

@@ -83,7 +83,7 @@ clip.
 
 | Path | Contents |
 | --- | --- |
-| `src/pdes_demo/` | Library. `wave1d/`: FD stencils across interfaces, RK4, exact ray-sum solution; for Part 3, smooth tanh edges, a Fourier pseudo-spectral reference and ODE-continued seed stencils. `wave2d/`: node sets, periodic kNN, Gaussian RBF-FD weights, interface-aware stencils, hyperviscosity, sparse elastic operators, RK4, analytic plane-wave reference, one-sided resampling; for Part 3, smooth tanh edges on flat interfaces and a spectral normal-incidence reference. Shared Fornberg weights and plotting palette. |
+| `src/rbf_hyperbolic_interfaces/` | Library. `wave1d/`: FD stencils across interfaces, RK4, exact ray-sum solution; for Part 3, smooth tanh edges, a Fourier pseudo-spectral reference and ODE-continued seed stencils. `wave2d/`: node sets, periodic kNN, Gaussian RBF-FD weights, interface-aware stencils, hyperviscosity, sparse elastic operators, RK4, analytic plane-wave reference, one-sided resampling; for Part 3, smooth tanh edges on flat interfaces and a spectral normal-incidence reference. Shared Fornberg weights and plotting palette. |
 | `scripts/` | Drivers for the figures and clips; `check_slide_quotes.py` |
 | `tests/` | pytest suite (convergence and analytic checks) |
 | `docs/` | `demo-outline.md` (results tables, decisions log, what happened when), `navier-stokes-notes.md` (sourced notes for Part 1), `paper-index.md` (page ranges per PDF), `stiff-features.md` and `figures/` (Part 3) |

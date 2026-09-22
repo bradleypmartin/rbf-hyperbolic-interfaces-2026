@@ -4,7 +4,7 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ua="Mozilla/5.0 (pdes-demo fetch script)"
+ua="Mozilla/5.0 (rbf-hyperbolic-interfaces fetch script)"
 
 # name|url|sha256
 papers=(

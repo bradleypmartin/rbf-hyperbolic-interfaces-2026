@@ -149,7 +149,7 @@ Papers: `papers/README.md`. **Before reading a PDF, check
 ## Repo layout
 
 ```
-src/pdes_demo/   library code
+src/rbf_hyperbolic_interfaces/   library code
   fd_weights.py    Fornberg FD weights (shared)
   plotting.py      matplotlib style; blue = interface-aware, orange = naive;
                    aqua / violet single-hue maps for 2-D fields / errors;

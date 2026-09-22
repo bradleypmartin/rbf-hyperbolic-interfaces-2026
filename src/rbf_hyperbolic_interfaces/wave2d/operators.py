@@ -15,9 +15,9 @@
 across the interfaces; that is the wrong-but-standard treatment the demo
 contrasts against. ``mode="aware"`` replaces the rows of nodes near an
 interface with the coupled piecewise-polynomial stencils of
-:mod:`pdes_demo.wave2d.interface` (dissertation §3.3) for a jump, and with
-the seed stencils of :mod:`pdes_demo.wave2d.seeds` for a smooth edge
-(``medium.is_smooth``, Part 3): every row whose stencil sees varying
+:mod:`rbf_hyperbolic_interfaces.wave2d.interface` (dissertation §3.3) for a jump, and
+with the seed stencils of :mod:`rbf_hyperbolic_interfaces.wave2d.seeds` for a smooth
+edge (``medium.is_smooth``, Part 3): every row whose stencil sees varying
 material, the 1-D rule of ``wave1d.operators``.
 """
 
@@ -102,14 +102,15 @@ def build_operators(
 ) -> Operators:
     """Operators on ``nodes``; ``mode="aware"`` rebuilds the rows of nodes within
     ``interface_band * h`` of an interface with the coupled stencils of
-    :mod:`pdes_demo.wave2d.interface` (19 nodes, degree 3, as in the MATLAB).
+    :mod:`rbf_hyperbolic_interfaces.wave2d.interface` (19 nodes, degree 3, as in the
+    MATLAB).
 
     For a smooth edge (``medium.is_smooth``) the rebuilt rows are instead
     those whose ``interface_stencil`` nearest nodes see different material
     values, ``LayeredMedium2D.varies_over`` with ``seed_rtol`` (exact
     inequality by default, which reaches about ``19 edge_width`` from an
     edge centre), and they get the seed stencils of
-    :mod:`pdes_demo.wave2d.seeds`: ``interface_stencil`` nodes for the
+    :mod:`rbf_hyperbolic_interfaces.wave2d.seeds`: ``interface_stencil`` nodes for the
     elastic rows, and for the hyperviscosity rows the naive footprint of
     ``seed_hyper_stencil`` (default ``stencil_size``) nodes with the same
     seeds annihilated, since a 19-node stencil carrying 20 coupled

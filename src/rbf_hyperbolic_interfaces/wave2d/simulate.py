@@ -2,8 +2,8 @@
 
 The semi-discrete system is ``s_t = (L + gamma H) s`` with ``L`` the block
 elastic operator and ``H`` the block hyperviscosity of
-:mod:`pdes_demo.wave2d.operators`; one sparse matrix-vector product per RK
-stage, exactly as ``executeRbfSimulation.m`` does for the RBF part.
+:mod:`rbf_hyperbolic_interfaces.wave2d.operators`; one sparse matrix-vector product per
+RK stage, exactly as ``executeRbfSimulation.m`` does for the RBF part.
 """
 
 import math

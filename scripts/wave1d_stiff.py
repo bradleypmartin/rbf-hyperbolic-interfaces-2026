@@ -11,8 +11,8 @@ nodes and the edge is the only thing under test.
 Also writes a snapshot at t = 1 on 100 nodes through an edge of width h/8,
 and the seeds themselves for one stencil across an edge. The errors and
 rates go to ``outputs/wave1d_stiff.json`` (and ``--data-dir``, #54); the
-convergence and seed figures are drawn by ``pdes_demo.stiff_figures`` from
-those records, so ``scripts/paper_figures.py`` can redraw them in print
+convergence and seed figures are drawn by ``rbf_hyperbolic_interfaces.stiff_figures``
+from those records, so ``scripts/paper_figures.py`` can redraw them in print
 style without this run. ``--style print --format pdf`` draws them that way
 here.
 
@@ -23,7 +23,7 @@ cell-averaged compliance and density of Tornberg & Engquist (2006) over
 one cell and over two (``cell``, ``cell2``; on this cell-centred grid a jump
 sits on a cell boundary, so the one-cell average never reaches a node at
 delta = 0) and the band-limited ones of Koene et al. (2022) (``bandlimit``),
-all from :mod:`pdes_demo.wave1d.treatments`, each measured against the
+all from :mod:`rbf_hyperbolic_interfaces.wave1d.treatments`, each measured against the
 true medium's reference and written to the cache as further modes.
 
     uv run python scripts/wave1d_stiff.py
@@ -40,7 +40,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pdes_demo.plotting import (
+from rbf_hyperbolic_interfaces.plotting import (
     COLORS,
     INK,
     INK_MUTED,
@@ -50,16 +50,25 @@ from pdes_demo.plotting import (
     use_demo_style,
     use_print_style,
 )
-from pdes_demo.results_cache import ResultsCache
-from pdes_demo.stiff_figures import (
+from rbf_hyperbolic_interfaces.results_cache import ResultsCache
+from rbf_hyperbolic_interfaces.stiff_figures import (
     DEMO_LABELS_1D,
     comparators_1d,
     convergence_1d,
     seeds_1d,
 )
-from pdes_demo.wave1d import LayeredMedium, exact_solution, periodic_grid, run
-from pdes_demo.wave1d.spectral import interpolate, reference_size, run_spectral
-from pdes_demo.wave1d.treatments import TreatedMedium, widened
+from rbf_hyperbolic_interfaces.wave1d import (
+    LayeredMedium,
+    exact_solution,
+    periodic_grid,
+    run,
+)
+from rbf_hyperbolic_interfaces.wave1d.spectral import (
+    interpolate,
+    reference_size,
+    run_spectral,
+)
+from rbf_hyperbolic_interfaces.wave1d.treatments import TreatedMedium, widened
 
 REF_DT = 5e-5
 COMPARATORS = ("widen1", "widen2", "cell", "cell2", "bandlimit")
