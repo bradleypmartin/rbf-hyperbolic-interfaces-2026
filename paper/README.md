@@ -263,8 +263,9 @@ section of `main.tex` can be read against them.
   code (#5). They came with their history (`git filter-repo`, #2), not as a
   snapshot, because the disclosure section's statements are checked
   against the repository's history. That text is unchanged: the pull
-  requests and their Sonnet reviews stay in the demo (demo#35–demo#77), and
-  the root [README](../README.md) points at them.
+  requests stay in the demo (the 20 merged ones numbered 35–77), with the
+  Sonnet reviews recorded on them as comments or in their descriptions,
+  and the root [README](../README.md) points at them.
 - **`\date`.** Hand-fixed; `make_arxiv.py` prints it. Set it to the
   submission date, rebuild, commit `main.tex` and `main.pdf` together,
   then tag.
