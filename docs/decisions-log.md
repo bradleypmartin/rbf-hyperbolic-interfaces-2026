@@ -1,127 +1,22 @@
-# Demo outline — 2026-09-30, 30 minutes
+# Decisions log
 
-Audience: Ziff Davis coworkers from several parts of the org. Bright tech
-workers; assume no background in numerical PDEs or PDEs at all. This is a
-high-level share-out about mathematical simulation and what a domain expert
-experiences collaborating with current AI. **No live coding**: everything is
-prepared in advance (three clips + a 19-page slide deck PDF). Thesis of the
-talk (revised 2026-09-19, deck title *AI and Applied Math circa September
-2026*): one pattern at every scale, agents' power paired with a human's
-intuition in a field, seen twice:
+The record of how this repository's code got to where it is: the problem
+statements and results of the dissertation replication (Part 2), what
+happened when, and the decisions behind the code, the notes and the
+manuscript. Part 3's results live in
+[`stiff-features.md`](stiff-features.md), not here, and from demo#42 on the
+choices are recorded where they were made: the curved feature and the
+comparators in the notes (§5.6, §5.7, §2.1), the manuscript's in
+[`paper/README.md`](../paper/README.md) (*Pre-submission decisions*).
 
-1. Autonomous, frontier-scale proof generation (OpenAI / Navier–Stokes).
-2. Collaborative, verifiable, human-in-the-loop computational work (Claude
-   Code + my dissertation methods).
+Carried from `docs/demo-outline.md` in
+[`bradleypmartin/20260930-zd-ai-pdes-demo`](https://github.com/bradleypmartin/20260930-zd-ai-pdes-demo),
+the talk repository Parts 2 and 3 were built in; the demo tag
+`part3-pre-split` holds the original, talk outline included. Part 1 (the
+Navier–Stokes half of the talk), the slide list and the talk schedule stayed
+there, and so did the decisions that only concern the deck.
 
-## Part 1 — Navier–Stokes (≈15 min)
-
-### Verified facts (source in parentheses; PDFs in `papers/`)
-
-- 2026-09-08: OpenAI posts *On the Navier–Stokes Millennium Prize Problem*
-  linking a 166-page manuscript, *Finite Time Blowup for Navier–Stokes*, and a
-  Lean 4 repository. (Blog URL and PDF; PDF creation date 2026-09-08.)
-- Abstract, verbatim: "For every positive viscosity, we construct a solution
-  of the three-dimensional incompressible Navier–Stokes equations that starts
-  from rest and develops unbounded velocity in finite time while maintaining
-  uniformly bounded kinetic energy." (manuscript p. 1)
-- Theorem 1.1: for every ν > 0 there is a smooth force f, compactly supported
-  in space and time, and smooth (u, p) on R³ × [0, 1) with u(·, 0) = 0,
-  support in a fixed compact set K, sup‖u(t)‖_L² < ∞ and
-  limsup_{t↑1} ‖u(t)‖_L∞ = ∞. Hence no global smooth finite-energy solution
-  with that force and datum. This is alternative **(C)** of Fefferman's Clay
-  statement; compact support gives the torus case, alternative **(D)**
-  (Corollary 10.6). (manuscript p. 1; Clay statement p. 2)
-- Mechanism (manuscript §2): an axisymmetric, self-similar collapsing vortex
-  (radial width shrinks faster than axial length; inward spiral + axial
-  outflow spins it up). The background alone leaves a momentum residual that
-  blows up. Spatially oscillatory pulses are added whose nonlinear momentum
-  flux cancels the singular part of that residual, and further corrections
-  make the leftover force extend smoothly through t = 1.
-- Companion result: unforced Euler blowup from smooth compactly supported
-  divergence-free data on R³. (Lean repo README; Euler PDF linked there.)
-- Lean 4 formalization: `openai/NavierStokesAndEuler`, Apache-2.0, created
-  2026-09-08, Lean 4.34.0-rc2 + Mathlib, with instructions for independent
-  checking via "Comparator". ~1.9k stars on 2026-09-17. (GitHub API)
-- Prior work the paper positions itself against (manuscript §1.1): Leray 1934
-  weak solutions; Caffarelli–Kohn–Nirenberg partial regularity; Escauriaza–
-  Seregin–Šverák; Tao's blowup for an *averaged* NS; Buckmaster–Vicol
-  nonuniqueness of weak solutions; Albritton–Brué–Colombo nonunique
-  Leray–Hopf solutions with forcing; Córdoba–Martínez-Zoroa forced Euler
-  blowup and the hypodissipative NS extension with Zheng.
-
-### Reported in press
-
-Verified against CNBC, Fortune, and The Week on 2026-09-17; see
-`docs/navier-stokes-notes.md` for the attributed details. The Alpöge–Buckmaster
-preprint and Buckmaster's statement were read the same day; what remains
-unread is paywalled press (Nature's controversy section, New Scientist, the
-Economist, NYT, WSJ).
-
-### Discussion prompts
-
-- **Letter vs. spirit.** Fefferman's (C)/(D) explicitly allow a smooth force.
-  The result is squarely within the official statement, but the intuition
-  most people have about "does turbulence blow up" is about unforced flow.
-  Where does that leave the Millennium problem?
-- **Machine-checked ≠ accepted.** Lean certifies the formal theorem. Whether
-  the formal statement is the Clay statement, and whether the formalization
-  is faithful, is still a human review step. "Independent judgment pending"
-  is the honest status.
-- **Credit and conduct** when labs race on rumors of each other's results.
-- **Compute concentration.** Whatever the exact numbers, this scale of search
-  is not available to an academic group. What does that do to the field?
-- **What is still human here?** Problem selection, the physical picture in
-  §2, judging significance, deciding what to formalize.
-
-### Slides (`slides/talk.tex`; culled 2026-09-19 for demo#18, 19 pages, no backup)
-
-Budget: title, a framing slide, two section slides, seven content slides per
-part, and a links slide. About two minutes a slide. Backup slides were dropped;
-the equations, the stability figure, and the numbers tables live in the repo.
-
-1. Title. 2. Why this talk (thesis, roadmap).
-3. Fluids, Newton, and a question from 1934 (no equations; flow diagram of
-   the two outcomes; "a counterexample may use a smooth force" is the hinge).
-4. What happened, in two weeks (TikZ timeline, Aug 15 – Sep 17, colour by
-   party).
-5. The claim, and the picture behind it (abstract verbatim; vortex schematic
-   after Fig. 1; what it is not).
-6. How it was produced, in OpenAI's own account (number tiles: agents, hours,
-   tokens, Lean, cost; press discrepancy in the source line).
-7. The parallel story, and the dispute (Alpöge–Buckmaster; two columns, both
-   primary sources).
-8. What "machine-checked" does and does not mean (Lean vs human checks).
-9. Reactions, and questions to argue about (four quotes, three prompts).
-10–16. Part 2 (section; my corner + problem in one picture; 1-D ringing +
-   clip; 2-D nodes; 2-D snapshot (curved case) + clips; 1-D and 2-D convergence on one
-   slide, left panels cropped by `build.sh`; the collaboration with number
-   tiles; comparison table).
-17. For the curious (links; on screen during questions).
-
-Speaker script with timings: `slides/notes.md`.
-
-## Part 2 — Working with Claude on my dissertation (≈15 min)
-
-### Narrative
-
-"In 2016 I wrote this in MATLAB. Today I don't have a MATLAB license, and
-the code is nine years old. With Claude Code I re-derived the method, ported
-it to Python, and verified it against analytic results in an afternoon."
-
-### Deliverables (as built)
-
-- `slides/talk.pdf`: 19-page Beamer deck built with tectonic; `slides/notes.md`
-  speaker script with clip cues; `slides/clips.html` keyboard clip player.
-- Clip 1, `slides/videos/wave1d_naive_vs_aware_coarse.mp4` (10 s): 1-D, 100
-  nodes, standard vs interface-aware FD, an error strip under each panel; no
-  exact curve drawn, no legends (video pass, 2026-09-19).
-- Clip 2, `slides/videos/wave2d_naive_vs_aware.mp4` (8 s): 2-D, flat
-  interfaces, 10,000 nodes, |v| from both solvers and error maps against the
-  exact solution.
-- Clip 3, `slides/videos/wave2d_naive_vs_aware_curved.mp4` (8 s): the curved
-  case (`--amplitude 0.02`), error maps against a 40,000-node interface-aware
-  run. Cued on 12/16, whose still shows the reference wave once and then both
-  error maps.
+## Part 2: the dissertation replication
 
 ### 1-D problem
 
@@ -129,19 +24,6 @@ Two-way wave equation on periodic [-1, 1) in first-order form (u = particle
 velocity, f = stress): ρ u_t = f_x, f_t = ρ c² u_x. Gaussian pulse starts at
 x = -0.5 moving right; heterogeneous layer on [0, w) with (c₂, ρ₂). Equispaced
 4th-order FD in space, RK4 in time.
-
-Demo beats:
-
-1. Baseline: naive FD straight across the interface. Show the spurious
-   oscillation / wrong reflection amplitude.
-2. Interface-aware stencils: piecewise polynomials that satisfy the PDE's
-   continuity conditions across the jump; weights come from solving a small
-   dense system per affected node.
-3. The thin-layer "double-cross": one stencil spanning both sides of a layer
-   thinner than the stencil. Compare naive vs. treated as w shrinks below h.
-4. Verification: reflected/transmitted amplitudes vs. the analytic impedance
-   formulas (Z = ρc); convergence order plot.
-5. Animation.
 
 ### 1-D results (2026-09-17, `scripts/wave1d_convergence.py`)
 
@@ -163,7 +45,7 @@ under each panel. Running longer does not widen the gap much (both errors
 grow; ratio stays ~5-10x), so the clip stops at t = 1.25, just before the
 transmitted pulse wraps around the periodic domain.
 
-**Coarse clip for the talk** (`outputs/wave1d_naive_vs_aware_coarse.mp4`,
+**Coarse clip** (`outputs/wave1d_naive_vs_aware_coarse.mp4`,
 Brad's suggestion: ~100 points with a 2x layer is where the naive ringing is
 obvious). 100 nodes and a wider pulse, `--sharpness 150` (about 4 nodes
 across; the default 600 is only 2 nodes wide at this spacing and dispersion
@@ -273,16 +155,12 @@ CFL 0.5 capped by the hyperviscosity spectrum.
 
 ## What happened
 
-The original plan budgeted Sep 18–26 for the 1-D and 2-D work and Sep 27–28
-for the deck. It landed in two working days.
-
 | Date | Work |
 | --- | --- |
-| Sep 17 | Scaffold, papers, plan. 1-D port with the exact ray-sum reference (demo#4). 2-D in five PRs: node sets (demo#10), RBF-FD weights and sparse operators (demo#11), RK4 with analytic validation and the hyperviscosity study (demo#12), interface-aware stencils (demo#14), clips, convergence figure and one-sided resampler (demo#15). Coarse 1-D clip (demo#16). Sourced Navier–Stokes notes, Beamer deck, speaker script, `clips.html` (demo#17). GitHub Pages (demo#20). Four bugs found and fixed the same day: a ray-pruning sign error and two latent exact-solver bugs in 1-D, a driver crash in 2-D. |
-| Sep 19 | Deck culled to seven content slides per part, no backups (demo#21). Slide-by-slide tweak pass (demo#22). Spot changes: new title and thesis, aqua/violet 2-D maps, convergence factors corrected (demo#23). Video pass: clips re-rendered, 1-D clip without the exact curve or legends, 12/16 still reduced to three columns (demo#25). Docs pass (demo#19). Part 3 after the freeze (demo#27, not in the talk): smooth tanh edges, spectral reference, ODE-continued seed stencils, knee experiment, notes with verified related work and a 2-D design (demo#28–demo#34). |
-| Sep 20–28 | Watch Clay and OpenAI for updates; update the timeline slide if anything moves. |
-| Sep 29 | Rehearse with `slides/notes.md`; trim 8/16 then 14/16 if long; freeze; tag `talk-2026-09-30`. |
-| Sep 30 | Talk. |
+| Sep 17 | Scaffold, papers, plan. 1-D port with the exact ray-sum reference (demo#4). 2-D in five PRs: node sets (demo#10), RBF-FD weights and sparse operators (demo#11), RK4 with analytic validation and the hyperviscosity study (demo#12), interface-aware stencils (demo#14), clips, convergence figure and one-sided resampler (demo#15). Coarse 1-D clip (demo#16). Four bugs found and fixed the same day: a ray-pruning sign error and two latent exact-solver bugs in 1-D, a driver crash in 2-D. |
+| Sep 19 | Part 3 after the talk's freeze (demo#27): smooth tanh edges, spectral reference, ODE-continued seed stencils, knee experiment, notes with verified related work and a 2-D design (demo#28–demo#34, one PR). The 2-D chain, flat: smooth flat edges (demo#36), naive baseline (demo#37), elastic seeds (demo#38), seed weights and the stability question (demo#39), the δ sweep (demo#40), oblique incidence (demo#41). |
+| Sep 20 | Curved edges (demo#42), the last of the 2-D chain. The standing alternative measured head to head (demo#69). The manuscript (demo#51): scaffold (demo#52), literature pass and `LITERATURE.md` (demo#53), results cache, figures and tables (demo#54), §1–§7 (demo#55–demo#60), assembly (demo#61), arXiv packaging (demo#62). |
+| Sep 22 | Split out of the talk repository into this one (#1): history import (#2), package rename and `demo#N` rewrite (#3), docs (#4), manuscript link (#5). |
 
 ## Decisions log
 
@@ -290,9 +168,6 @@ for the deck. It landed in two working days.
   `FD4wave1DAC.m` (not RBF-FD in 1-D).
 - 2026-09-17: 2-D targets the full elastic system, conditional on 1-D and
   2-D prep going well.
-- 2026-09-17: Delivery is two prepared two-panel videos (naive vs
-  interface-aware, same resolution) plus a short slide deck PDF. No live
-  coding. Audience assumed to have no PDE background.
 - 2026-09-17: Repo is intentionally public. Nothing in Brad's own work is
   secret; keep it in mind, don't commit PDFs or anything employer-related.
 - 2026-09-17: 2-D work is an epic (demo#2) with sub-issues demo#5 domain, demo#6
@@ -319,34 +194,11 @@ for the deck. It landed in two working days.
 - 2026-09-17: 2-D colour maps use two single-hue sequential ramps from the
   1-D palette, blue for |v| and orange for error; the orange steps were
   derived from the blue ramp's OKLCH lightness ladder so the two read alike.
-- 2026-09-17: Slides are **Beamer (metropolis) built with tectonic**, not
-  Marp: fully offline, math and figures are trivial, and the PDF is the
-  deliverable anyway. Avenir Next on macOS with a Latin Modern fallback.
-- 2026-09-17: `slides/figures/*.png` (2.5 MB), `slides/videos/*.mp4`
-  (~10 MB), and `slides/talk.pdf` are all committed so the talk is
-  self-contained from a fresh clone. Brad's call: commit `talk.pdf` on every
-  change; re-commit a clip only when its content changed.
-- 2026-09-17: The dispute gets one slide, two columns, one primary source
-  each (Buckmaster's statement; OpenAI's post), no adjudication. Cost
-  figures come from Science (Chen: "millions of dollars"); the New Scientist
-  "$15 million" is not used because the primary source gives no cost.
-- 2026-09-17: Audience framing for Part 2: no equations on the main path,
-  one TikZ picture of a stencil straddling a corner, results as "halve the
-  error" vs "divide by 16". Beginner links (3Blue1Brown, Khan Academy,
-  Wikipedia) on the last slide.
-- 2026-09-19: Deck budget is title, framing, two section frames, seven
-  content frames per part, links; no backup slides (detail lives in the repo).
-  Slides are referred to by footer number (n/16); PDF page = n + 3.
-- 2026-09-19: Deck retitled *AI and Applied Math circa September 2026:
-  excitement, ethics, and individual exploration*; thesis flipped to one
-  pattern at every scale. The assistant is named (Claude Fable 5.1). The
-  landing page and the clip player take their titles from the deck.
 - 2026-09-19: 2-D colour maps are aqua (field) and violet (error), derived
   from the same OKLCH lightness ladder, so blue and orange mean "which
-  method" everywhere in the deck. Supersedes the blue/orange maps above.
-  Timeline slide: OpenAI orange, Alpöge–Buckmaster blue, Clay grey.
-- 2026-09-19: Clip 1 draws no exact curve and no legends; the error strips
-  carry the comparison. The 12/16 still shows the reference wave once, then
+  method" everywhere. Supersedes the blue/orange maps above.
+- 2026-09-19: The 1-D clip draws no exact curve and no legends; the error
+  strips carry the comparison. The 2-D still shows the reference wave once, then
   each method's error map, because the two solvers' waves cannot be told
   apart by eye at 10,000 nodes; the clips keep both waves. Clips stay at
   120 dpi and the 2-D ones square.
@@ -442,3 +294,19 @@ for the deck. It landed in two working days.
   u-component seeds are fine. Forecast for demo#42: measure the jump-aware
   operator's order at curved interfaces against a floor that contains
   the converted waves before judging the curved seeds.
+- 2026-09-22: Part 3 and the manuscript move out of the talk repository
+  into this one (#1), before `manuscript-v1` is tagged, so that each
+  repository regenerates its own deliverables and the tag the paper links
+  to sits next to the code. The history comes along through
+  `git filter-repo` with the talk-only paths dropped, because the
+  manuscript's disclosure checks its statements against the repository's
+  history; `docs/split-commit-map.txt` maps the old SHAs to the new and the
+  demo tag `part3-pre-split` holds the old ones. The package is renamed
+  `pdes_demo` → `rbf_hyperbolic_interfaces`; the results cache's `schema`
+  string keeps its `pdes-demo` prefix because it names a format. The demo's
+  issue references are rewritten once as `demo#N` (both rewrites in
+  `.git-blame-ignore-revs`), so a bare `#N` means this repository. The
+  Part 2 core is forked, not shared: frozen at the talk state there,
+  evolving here. The manuscript's disclosure text stays as it is; its
+  pull requests and their reviews stay in the demo (35–77), and the README
+  points at them.
