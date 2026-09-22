@@ -222,3 +222,13 @@ __marimo__/
 papers/*.pdf
 # Generated figures / animations / data
 outputs/
+# Arrays and clips belong in outputs/ only (a driver's --out can point elsewhere)
+*.npz
+*.npy
+*.mp4
+# Only the manuscript and its figures are committed as PDFs (public repo)
+*.pdf
+!paper/main.pdf
+!paper/figures/*.pdf
+.env*
+.DS_Store
