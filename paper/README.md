@@ -147,7 +147,7 @@ clean `arxiv/` and writes `arxiv.tar.gz` (2.3 MB). Both are gitignored.
 
 What it does beyond copying, each a gate rather than a hope:
 
-- **Comments are stripped** (322 whole-line comments from `main.tex`, 267
+- **Comments are stripped** (325 whole-line comments from `main.tex`, 267
   from `references.bib`, the `GENERATED` header of each fragment). The
   `% TRACE` and `% NOTATION` blocks and the dated `VERIFIED` notes are
   load-bearing *in the repository*, where the ledger and this README point
@@ -252,8 +252,19 @@ section of `main.tex` can be read against them.
 - **Repository link.** §1's contribution 6 points at the tag
   `manuscript-v1` (GPT-6 Astra's demo#61 finding: a versioned link, not the
   moving default branch). A Zenodo DOI is a v2 option.
-- **Repo home.** The manuscript stays in this repository for v1; the
-  code, tests and notes it quotes are here.
+- **Repo home.** Moved before submission, on 2026-09-22 (epic #1). The
+  manuscript, the code and tests it describes, the notes and ledger it
+  quotes and the results cache grew up in the talk repository,
+  [`20260930-zd-ai-pdes-demo`](https://github.com/bradleypmartin/20260930-zd-ai-pdes-demo)
+  (demo#27, demo#51). They moved here so that each repository regenerates
+  its own deliverables, the talk there and the manuscript here. The
+  manuscript was unsubmitted and `manuscript-v1` untagged (the endorsement
+  is pending), so the tag and §1's link could move too and sit next to the
+  code (#5). They came with their history (`git filter-repo`, #2), not as a
+  snapshot, because the disclosure section's statements are checked
+  against the repository's history. That text is unchanged: the pull
+  requests and their Sonnet reviews stay in the demo (demo#35–demo#77), and
+  the root [README](../README.md) points at them.
 - **`\date`.** Hand-fixed; `make_arxiv.py` prints it. Set it to the
   submission date, rebuild, commit `main.tex` and `main.pdf` together,
   then tag.
@@ -270,10 +281,12 @@ section of `main.tex` can be read against them.
 
 ## Submitting
 
-1. Merge the demo#62 pull request. On the submission day, if it is no longer
-   2026-09-20, set `\date`, rebuild, commit `main.tex` and `main.pdf`.
-2. Tag that commit on `main` and push the tag:
+1. On the submission day, if it is no longer 2026-09-20, set `\date`,
+   rebuild, commit `main.tex` and `main.pdf`, and merge to `main`.
+2. Tag that commit on `main` of this repository, not the demo (§1's link
+   names this one), and push the tag:
    `git tag -a manuscript-v1 -m "manuscript v1, as submitted to arXiv" && git push origin manuscript-v1`.
+   Open the link in `main.pdf` and check it resolves to the tagged tree.
 3. From `paper/` at that commit:
    `tectonic --keep-intermediates main.tex && uv run python make_arxiv.py`;
    every gate green.
