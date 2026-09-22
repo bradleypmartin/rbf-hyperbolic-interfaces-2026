@@ -1,0 +1,35 @@
+[project]
+name = "pdes-demo"
+version = "0.1.0"
+description = "Python re-implementations of RBF-FD / interface-aware FD wave solvers from B. Martin's 2016 CU Boulder dissertation, built with Claude for a 2026-09-30 Ziff Davis demo"
+authors = [
+    { name = "Brad Martin", email = "20822557+bradleypmartin@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "scipy>=1.18.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.8",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "NPY"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

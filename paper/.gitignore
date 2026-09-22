@@ -1,0 +1,14 @@
+# LaTeX build intermediates (main.pdf is committed on purpose; see README.md)
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# arXiv packaging output
+arxiv/
+arxiv.tar.gz
