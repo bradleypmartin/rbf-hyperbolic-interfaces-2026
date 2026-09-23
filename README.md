@@ -71,7 +71,7 @@ repository"; this is where to find them.
 
 ```sh
 uv sync                                  # Python 3.13 venv with numpy / scipy / matplotlib
-uv run pytest                            # 245 tests: convergence orders and analytic comparisons
+uv run pytest                            # 261 tests: convergence orders and analytic comparisons
 ./papers/fetch_papers.sh                 # public reference PDFs (gitignored), checksum-checked
 (cd paper && tectonic main.tex)          # the manuscript → paper/main.pdf
 ```
@@ -104,12 +104,68 @@ seed operators under `outputs/`; [`CLAUDE.md`](CLAUDE.md) lists the flags
 behind each experiment and its running time, and
 [`paper/README.md`](paper/README.md) the build and the arXiv packaging.
 
+## Reproducing the manuscript
+
+Every figure, table and number in `paper/` comes from this repository alone.
+The runs below were made on 2026-09-22 (issue #6) on an Apple M4 Pro, 14
+cores, 48 GB, macOS 26.5; the drivers default to all cores but two.
+
+**From the caches** (`outputs/` already holds the references and seed
+operators), with the figures written straight into `paper/figures/`:
+
+```sh
+uv run python scripts/paper_figures.py --all   # 50 min: 25 files from paper/data in
+                                               # 6 s, the rest through the drivers
+uv run python scripts/paper_figures.py --check # seconds: byte identity of the cached set
+uv run python scripts/paper_numbers.py         # seconds: 362 checks against paper/data
+```
+
+`--all` regenerates all 31 files byte-identically, the stills and spectra
+included, because print figures pin `SOURCE_DATE_EPOCH`. The two n = 2500
+spectra are 24 and 25 minutes of the 50.
+
+**From nothing** (a fresh clone, an empty `outputs/`): run the driver list
+in [`paper/README.md`](paper/README.md) with `--data-dir` pointed at a
+scratch directory, then compare that cache with the committed one:
+
+```sh
+uv run python scripts/compare_caches.py paper/data <scratch dir>
+uv run python scripts/paper_numbers.py --data-dir <scratch dir>
+```
+
+The whole sequence took **7 h 38 min**, nearly all of it building the
+references and seed operators that `outputs/` otherwise holds:
+
+| Run | Cold |
+| --- | --- |
+| The 7 Part 2 drivers above, at their defaults | 1 s – 1 min each |
+| `wave1d_stiff.py --comparators` | 1 min |
+| `wave2d_stiff.py` (flat δ sweep) | 11 min |
+| `wave2d_stiff.py --direction 1 2` (oblique) | 16 min |
+| `wave2d_stiff.py --amplitude 0.02` (curved, 4 widths) | 4 h 46 min |
+| `wave2d_stiff.py --amplitude 0.02 --seed-rtol 1e-3` | 4 min |
+| `wave2d_stiff.py --modes naive widen1 …` (flat, curved) | 6 min, 29 min |
+| `wave2d_stiff_eigenvalues.py --n 2500` (flat, curved) | 25 min, 24 min |
+| `wave2d_stiff_eigenvalues.py --n 900 --variants …` | 7 min |
+| `paper_figures.py --all` | 46 min |
+
+A cold cache reproduces the committed one exactly where the arithmetic is
+serial — 7 of the 10 files agree to the last bit — and to about 1.5e-10 in
+the three curved files, where threaded reference solves reorder a sum. Of
+the 31 figures and fragments, 30 come out byte-identical and the curved
+snapshot differs only in the trailing digits of two coordinates.
+
+`paper/main.pdf` is the one artefact that is not byte-reproducible: it
+embeds its build time, and a different build of the same tectonic release
+recompresses the embedded rasters differently. Rebuilds render
+pixel-identically, and `make_arxiv.py` gates on the extracted text.
+
 ## Layout
 
 | Path | Contents |
 | --- | --- |
 | `src/rbf_hyperbolic_interfaces/` | Library. `wave1d/`: FD stencils across interfaces, RK4, exact ray-sum solution; for Part 3, smooth tanh edges, a Fourier pseudo-spectral reference, ODE-continued seed stencils and the coefficient treatments they are compared with. `wave2d/`: node sets, periodic kNN, Gaussian RBF-FD weights, interface-aware stencils, hyperviscosity, sparse elastic operators, RK4, plane-wave references, one-sided resampling; for Part 3, smooth flat and curved edges, elastic seeds marched along the normal, Fourier references and the coefficient treatments. Shared Fornberg weights, plotting palette, results cache, and the Part 3 figures and tables. |
-| `scripts/` | Drivers for the figures, clips and results cache; `paper_figures.py` and `paper_numbers.py` for the manuscript |
+| `scripts/` | Drivers for the figures, clips and results cache; `paper_figures.py` and `paper_numbers.py` for the manuscript, `compare_caches.py` to check a rebuilt cache against `paper/data` |
 | `tests/` | pytest suite (convergence and analytic checks) |
 | `docs/` | `stiff-features.md` and `figures/` (Part 3), `decisions-log.md` (Part 2 record, what happened when, decisions), `paper-index.md` (page ranges per PDF), `split-commit-map.txt` (demo SHA → SHA here) |
 | `paper/` | The Part 3 manuscript: `main.tex` → `main.pdf` (tectonic), `references.bib`, the results cache `data/`, `figures/`, `make_arxiv.py`; see its README |

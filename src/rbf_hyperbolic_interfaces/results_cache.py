@@ -16,7 +16,8 @@ Schema (``SCHEMA`` below), one file per driver invocation::
       "script":  "scripts/wave2d_stiff.py",
       "args":    {...},                 # the parsed argparse namespace
       "date":    "2026-09-20",
-      "git_sha": "ccc31ee",             # HEAD when the run started, if known
+      "git_sha": "ccc31ee",             # HEAD when the run started, if known;
+                                        # "ccc31ee-dirty" from an edited tree
       "records": [ {...}, ... ]
     }
 
@@ -89,18 +90,29 @@ KINDS = {
 
 
 def git_sha(cwd: Path | None = None) -> str | None:
-    """Short SHA of HEAD, or ``None`` outside a repository."""
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
+    """Short SHA of HEAD, or ``None`` outside a repository.
+
+    A run from a tree with uncommitted changes gets ``"<sha>-dirty"``: the SHA
+    alone would name code the run did not use, which is how the 1-D comparator
+    records of demo#69 came to carry the SHA of a commit made before the
+    treatments module existed (#6).
+    """
+
+    def run(*args: str) -> str | None:
+        try:
+            out = subprocess.run(
+                ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
+            )
+        except (OSError, subprocess.CalledProcessError):
+            return None
+        return out.stdout.strip()
+
+    sha = run("rev-parse", "--short", "HEAD")
+    if not sha:
         return None
-    return out.stdout.strip() or None
+    # Tracked changes only: an untracked scratch file is not code the run used.
+    changes = run("status", "--porcelain", "--untracked-files=no")
+    return f"{sha}-dirty" if changes else sha
 
 
 def json_ready(value: Any) -> Any:

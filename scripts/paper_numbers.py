@@ -12,6 +12,7 @@ here; their ``% TRACE`` comments say so.
 
     uv run python scripts/paper_numbers.py          # prints one line per check
     uv run python scripts/paper_numbers.py --quiet  # failures only
+    uv run python scripts/paper_numbers.py --data-dir <dir>  # another cache (#6)
 
 Add a line to CHECKS whenever the manuscript quotes a new cache-backed
 number, with the section it appears in.
@@ -29,10 +30,22 @@ DATA = ROOT / "paper" / "data"
 NS = [2500, 4900, 10000, 19600]
 N1 = [100, 200, 400, 800, 1600]
 
-CACHE = {p.stem: json.loads(p.read_text()) for p in sorted(DATA.glob("*.json"))}
+# Filled by load(); the helpers below read it, so the CHECKS table stays as quoted.
+CACHE = {}
+
+
+def load(data_dir):
+    """Replace CACHE with the ``*.json`` files of ``data_dir``, keyed by stem."""
+    paths = sorted(Path(data_dir).glob("*.json"))
+    if not paths:
+        raise SystemExit(f"no *.json in {data_dir}")
+    CACHE.clear()
+    CACHE.update({p.stem: json.loads(p.read_text()) for p in paths})
 
 
 def records(name, **filters):
+    if name not in CACHE:
+        raise SystemExit(f"{name}.json is missing from the data dir")
     out = [
         r
         for r in CACHE[name]["records"]
@@ -1172,10 +1185,17 @@ def build_checks():  # noqa: PLR0915 (a table, not logic)
     return C
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--quiet", action="store_true", help="print failures only")
-    args = ap.parse_args()
+    ap.add_argument(
+        "--data-dir",
+        type=Path,
+        default=DATA,
+        help="results cache to check (default paper/data)",
+    )
+    args = ap.parse_args(argv)
+    load(args.data_dir)
     checks = build_checks()
     failed = 0
     for ok, section, what, value, quoted, kind in checks:

@@ -1,6 +1,7 @@
 """The results cache of demo#54: schema, round trip, selection. No sweeps run here."""
 
 import json
+import subprocess
 from argparse import Namespace
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from rbf_hyperbolic_interfaces.results_cache import (
     KINDS,
     SCHEMA,
     ResultsCache,
+    git_sha,
     json_ready,
 )
 
@@ -102,3 +104,44 @@ def test_json_ready_handles_nested_numpy() -> None:
     out = json_ready({"a": (np.float64(1.5), [np.int32(2)]), "p": Path("x/y")})
     assert out == {"a": [1.5, [2]], "p": "x/y"}
     assert type(out["a"][0]) is float
+
+
+def _git(repo: Path, *args: str) -> str:
+    """Run git in ``repo`` with an identity of its own, and return its stdout."""
+    out = subprocess.run(
+        ["git", "-c", "user.email=t@example.com", "-c", "user.name=T", *args],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return out.stdout.strip()
+
+
+@pytest.fixture
+def repo(tmp_path: Path) -> Path:
+    _git(tmp_path, "init", "-q", "-b", "main")
+    (tmp_path / "code.py").write_text("x = 1\n")
+    _git(tmp_path, "add", "code.py")
+    _git(tmp_path, "commit", "-q", "-m", "first")
+    return tmp_path
+
+
+def test_git_sha_is_head_in_a_clean_tree(repo: Path) -> None:
+    assert git_sha(repo) == _git(repo, "rev-parse", "--short", "HEAD")
+
+
+def test_git_sha_marks_a_run_from_a_dirty_tree(repo: Path) -> None:
+    """The defect of #6: a SHA alone would name code the run did not use."""
+    (repo / "code.py").write_text("x = 2\n")
+    head = _git(repo, "rev-parse", "--short", "HEAD")
+    assert git_sha(repo) == f"{head}-dirty"
+
+
+def test_git_sha_ignores_untracked_files(repo: Path) -> None:
+    (repo / "scratch.txt").write_text("notes\n")
+    assert "-dirty" not in git_sha(repo)
+
+
+def test_git_sha_is_none_outside_a_repository(tmp_path: Path) -> None:
+    assert git_sha(tmp_path / "nowhere") is None
