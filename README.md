@@ -25,7 +25,7 @@ for arXiv.
   with [`LITERATURE.md`](LITERATURE.md) as its novelty ledger: the claim is
   itemised there and every "not found" is tied to the search that produced
   it. Drafted, assembled and packaged for arXiv; not yet submitted (the
-  endorsement is pending).
+  endorsement is pending, [#13](https://github.com/bradleypmartin/rbf-hyperbolic-interfaces-2026/issues/13)).
 
 ## Where it came from
 
@@ -208,10 +208,12 @@ lists what was ported and what was not.
       (2026-09-19 to 20)
 - [x] Manuscript drafted, assembled and packaged for arXiv (2026-09-20)
 - [x] Moved here from the talk repository with its history (#1, 2026-09-22)
-- [ ] Every manuscript figure, table and number regenerates from this repo
-      alone (#6)
+- [x] Every manuscript figure, table and number regenerates from this repo
+      alone, warm and cold (#6)
 - [ ] Submit to arXiv (math.NA, cross-list physics.comp-ph) and tag
-      `manuscript-v1` here
+      `manuscript-v1` here — tracked in
+      [#13](https://github.com/bradleypmartin/rbf-hyperbolic-interfaces-2026/issues/13),
+      waiting on the endorsement
 
 ## License
 
