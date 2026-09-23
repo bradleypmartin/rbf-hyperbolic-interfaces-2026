@@ -17,13 +17,13 @@ CC BY 4.0 (`paper/`).
   built from ODE-continued "seeds" instead of monomials. Canonical notes:
   `docs/stiff-features.md` (derivation §1 and §4, results §2 and §5).
 - **The manuscript.** `paper/`, the arXiv write-up of Part 3; `LITERATURE.md`
-  is its novelty ledger. Packaged, unsubmitted (endorsement pending).
+  is its novelty ledger. Packaged, unsubmitted (endorsement pending, #13).
 
 "Part 2" and "Part 3" are the numbering of the talk this work grew up in
 (Part 1, Navier–Stokes, stayed there; see *Provenance*). Epic #1 moved it
-here on 2026-09-22; what remains of it is #6 (every manuscript figure, table
-and number regenerates from this repo alone) and #7 (move the open
-manuscript work here, open the submission tracker).
+here on 2026-09-22 and this side of it is done; what remains of the epic is
+the demo's own pruning (demo#78, demo#79). The manuscript's submission is
+tracked in #13.
 
 Papers: `papers/README.md`. **Before reading a PDF, check
 `docs/paper-index.md`** for the page ranges that matter and read only those
@@ -101,7 +101,7 @@ dirichlet-bridge repos). Its rules:
 - The pre-submission decisions (math.NA + physics.comp-ph, endorsement,
   CC BY 4.0, date, length) and the submission steps are in
   `paper/README.md`. Left to Brad: the submission and the `manuscript-v1`
-  tag, here; §1 item 6 links it.
+  tag, here; §1 item 6 links it. #13 is the tracker (successor to demo#62).
 
 ## Provenance
 

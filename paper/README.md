@@ -287,6 +287,12 @@ section of `main.tex` can be read against them.
 
 ## Submitting
 
+Tracked in [#13](https://github.com/bradleypmartin/rbf-hyperbolic-interfaces-2026/issues/13),
+which succeeded demo#62 when the manuscript moved here (#7). It also carries the
+v2 candidates: renaming the reused letters, a tolerance-driven switch from the
+seed march to the jump weights, the oblique train on the curved geometry, a
+Zenodo DOI.
+
 1. On the submission day, if it is no longer 2026-09-20, set `\date`,
    rebuild, commit `main.tex` and `main.pdf`, and merge to `main`.
 2. Tag that commit on `main` of this repository, not the demo (§1's link
